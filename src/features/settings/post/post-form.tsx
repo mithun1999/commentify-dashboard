@@ -258,7 +258,7 @@ export function PostForm() {
                 href={liSearchUrl}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='text-sm text-gray-500 hover:underline mr-20'
+                className='mr-20 text-sm text-gray-500 hover:underline'
               >
                 Preview LinkedIn posts for these keywords
               </a>
@@ -445,15 +445,15 @@ export function PostForm() {
           {isGeographyExpanded && (
             <div className='mt-4 space-y-3'>
               <div className='flex flex-wrap gap-3'>
-                 {['Global','Europe', 'Asia', 'US', 'India'].map((region) => {
-                const isSelected = geography === region
-                const displayName = {
-                  Global: 'Global',
-                  Europe: 'Europe',
-                  Asia: 'Asia (excluding India)',
-                  US :'US',
-                  India : 'India'
-                }[region]
+                {['Global', 'Europe', 'Asia', 'US', 'India'].map((region) => {
+                  const isSelected = geography === region
+                  const displayName = {
+                    Global: 'Global',
+                    Europe: 'Europe',
+                    Asia: 'Asia (excluding India)',
+                    US: 'US',
+                    India: 'India',
+                  }[region]
 
                   return (
                     <button

@@ -6,7 +6,6 @@ interface User {
   avatar: string
 }
 
-
 interface BaseNavItem {
   title: string
   badge?: string
@@ -14,7 +13,7 @@ interface BaseNavItem {
 }
 
 type NavLink = BaseNavItem & {
-  url: LinkProps['to']
+  url: string
   items?: never
 }
 
@@ -30,19 +29,22 @@ interface NavGroup {
   items: NavItem[]
 }
 
-
-
 interface BottomGroups {
   title: string
   items: NavItem[]
 }
 
-
-
 interface SidebarData {
   user: User
   navGroups: NavGroup[]
-  bottomGroups : BottomGroups[]
+  bottomGroups: BottomGroups[]
 }
 
-export type { SidebarData, NavGroup, NavItem, NavCollapsible, NavLink, BottomGroups }
+export type {
+  SidebarData,
+  NavGroup,
+  NavItem,
+  NavCollapsible,
+  NavLink,
+  BottomGroups,
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import { LogOut, User, CreditCard, Settings } from 'lucide-react'
+import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { signOut } from '@/features/auth/utils/auth.util'
-import { useAuthStore } from '@/stores/auth.store'
 
 export function ProfileDropdown() {
   const router = useRouter()
@@ -29,7 +29,8 @@ export function ProfileDropdown() {
   useEffect(() => {
     if (session?.user) {
       setUser({
-        name: session.user.user_metadata?.full_name || session.user.email || 'User',
+        name:
+          session.user.user_metadata?.full_name || session.user.email || 'User',
         email: session.user.email || '',
         avatar: session.user.user_metadata?.avatar_url,
       })
@@ -95,7 +96,7 @@ export function ProfileDropdown() {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to='/settings' className='w-full'>
+            <Link to='/settings/post' className='w-full'>
               <Settings className='mr-2 h-4 w-4' />
               Settings
               <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>

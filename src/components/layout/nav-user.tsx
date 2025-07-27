@@ -7,6 +7,7 @@ import {
   Settings,
   HelpCircle,
 } from 'lucide-react'
+import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -24,7 +25,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { signOut } from '@/features/auth/utils/auth.util'
-import { useAuthStore } from '@/stores/auth.store'
 
 export function NavUser() {
   const { isMobile } = useSidebar()
@@ -40,7 +40,8 @@ export function NavUser() {
   useEffect(() => {
     if (session?.user) {
       setUser({
-        name: session.user.user_metadata?.full_name || session.user.email || 'User',
+        name:
+          session.user.user_metadata?.full_name || session.user.email || 'User',
         email: session.user.email || '',
         avatar: session.user.user_metadata?.avatar_url,
       })

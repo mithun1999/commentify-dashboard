@@ -24,6 +24,7 @@ export const useDeleteProfile = () => {
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
       })
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       toast(
         error?.response?.data?.message ||
@@ -50,6 +51,7 @@ export const useLinkProfile = () => {
         })
       }
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       toast(error?.message || 'Something went wrong while linking profile', {
         type: 'error',

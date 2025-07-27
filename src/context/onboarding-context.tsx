@@ -136,7 +136,6 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   )
 }
 
-// Custom hook to use the onboarding context
 export function useOnboarding() {
   const context = useContext(OnboardingContext)
   if (context === undefined) {

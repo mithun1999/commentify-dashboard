@@ -1,5 +1,5 @@
-import { QueryService } from '@/services/query.service'
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
+import { QueryService } from '@/services/query.service'
 import { toast } from 'react-toastify'
 import {
   approvePosts,

@@ -26,7 +26,9 @@ export const checkIsExtensionInstalled = async (
   })
 }
 
-export const linkLinkedInProfileFromExtension = async (): Promise<any> => {
+export const linkLinkedInProfileFromExtension = async (): 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+Promise<any> => {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
       envConfig.chromeExtensionId,
@@ -65,7 +67,9 @@ export const handleResponseFromExtension = async () => {
     const response = await linkLinkedInProfileFromExtension()
     if (response?.profileUrn) {
       toast('Connected', { type: 'success' })
-      queryClient.invalidateQueries(ProfileQueryEnum.GET_ALL_PROFILE)
+      queryClient.invalidateQueries({
+          queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+        })
     } else if (response?.errorCode && response?.message) {
       toast(response.message, { type: 'error' })
     } else if (response?.message) {
@@ -73,7 +77,9 @@ export const handleResponseFromExtension = async () => {
     } else {
       window.open('https://www.linkedin.com', '_blank')
     }
-  } catch (error: any) {
+  } 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  catch (error: any) {
     toast(error ?? error?.message ?? 'Something went wrong while connected', {
       type: 'error',
     })

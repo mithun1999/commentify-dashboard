@@ -49,7 +49,7 @@ export const sidebarData: SidebarData = {
       ],
     },
   ],
-  bottomGroups :[
+  bottomGroups: [
     {
       title: 'Function',
       items: [
@@ -64,6 +64,6 @@ export const sidebarData: SidebarData = {
           icon: IconCash,
         },
       ],
-    }
-  ]
+    },
+  ],
 }

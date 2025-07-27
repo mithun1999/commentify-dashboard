@@ -10,7 +10,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { handleServerError } from '@/utils/handle-server-error'
 import { FontProvider } from './context/font-context'
-import { ProfileProvider } from './context/profile.context'
+import { ProfileProvider } from './context/profile-context'
 import { ThemeProvider } from './context/theme-context'
 import { signOut } from './features/auth/utils/auth.util'
 // Add this import
@@ -22,7 +22,6 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-
         if (failureCount >= 0 && import.meta.env.DEV) return false
         if (failureCount > 3 && import.meta.env.PROD) return false
 

@@ -1,8 +1,8 @@
 import {
   IProduct,
   IProductVariant,
-} from '@/features/pricing/interface/price.interface'
-import { ISubscription } from '@/features/subscription/interface/subscription.interface'
+} from '@/features/pricing/interfaces/price.interface'
+import { ISubscription } from '@/features/subscription/interfaces/subscription.interface'
 
 export enum UserSubscriptionStatus {
   IN_TRIAL = 'in-trial',

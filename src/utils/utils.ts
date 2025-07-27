@@ -20,21 +20,23 @@ export const checkIsExtensionInstalled = async (
   })
 }
 
-export const linkLinkedInProfileFromExtension = async (): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
-      envConfig.chromeExtensionId,
-      { type: LINK_LI_ACCOUNT },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError.message)
-        } else {
-          resolve(response)
+export const linkLinkedInProfileFromExtension =
+  async (): // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Promise<any> => {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        envConfig.chromeExtensionId,
+        { type: LINK_LI_ACCOUNT },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError.message)
+          } else {
+            resolve(response)
+          }
         }
-      }
-    )
-  })
-}
+      )
+    })
+  }
 
 export const getProfileDetailsFromExtension =
   async (): Promise<IProfileResponseFromExtension> => {
@@ -59,7 +61,9 @@ export const handleResponseFromExtension = async () => {
     const response = await linkLinkedInProfileFromExtension()
     if (response?.profileUrn) {
       toast('Connected', { type: 'success' })
-      queryClient.invalidateQueries({queryKey: [ProfileQueryEnum.GET_ALL_PROFILE]})
+      queryClient.invalidateQueries({
+        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+      })
     } else if (response?.errorCode && response?.message) {
       toast(response.message, { type: 'error' })
     } else if (response?.message) {
@@ -67,15 +71,16 @@ export const handleResponseFromExtension = async () => {
     } else {
       window.open('https://www.linkedin.com', '_blank')
     }
-} catch (error: unknown) {
-  const errorMessage = error instanceof Error 
-    ? error.message 
-    : 'Something went wrong while connecting';
-  
-  toast(errorMessage, {
-    type: 'error',
-  });
-  
-  window.open('https://www.linkedin.com', '_blank');
-}
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Something went wrong while connecting'
+
+    toast(errorMessage, {
+      type: 'error',
+    })
+
+    window.open('https://www.linkedin.com', '_blank')
+  }
 }

@@ -341,14 +341,14 @@ export function PostSettingsStep() {
         {isGeographyExpanded && (
           <div className='mt-4 space-y-3'>
             <div className='flex flex-wrap gap-3'>
-              {['Global','Europe', 'Asia', 'US', 'India'].map((region) => {
+              {['Global', 'Europe', 'Asia', 'US', 'India'].map((region) => {
                 const isSelected = geography === region
                 const displayName = {
                   Global: 'Global',
                   Europe: 'Europe',
                   Asia: 'Asia (excluding India)',
-                  US :'US',
-                  India : 'India'
+                  US: 'US',
+                  India: 'India',
                 }[region]
                 return (
                   <button

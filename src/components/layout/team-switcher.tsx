@@ -3,8 +3,9 @@ import * as React from 'react'
 import { useState } from 'react'
 import { LinkedInLogoIcon } from '@radix-ui/react-icons'
 import { ChevronsUpDown, Plus } from 'lucide-react'
+import { useAuthStore } from '@/stores/auth.store'
 import { getProfileDetailsFromExtension } from '@/utils/utils'
-import { useProfile } from '@/context/profile.context'
+import { useProfile } from '@/context/use-profile'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,20 +33,30 @@ export function TeamSwitcher() {
   const [isLinking, setIsLinking] = useState(false)
   const { isLinkingProfile, linkProfile } = useLinkProfile()
 
+  const session = useAuthStore((state) => state.session)
+  const userId = session?.user?.id
+
+  const userProfiles = React.useMemo(() => {
+    return profiles?.filter((p) => p.ownerId === userId) || []
+  }, [profiles, userId])
+
   const { activeProfile, setActiveProfile } = useProfile()
 
   const handleLinking = async () => {
     setIsLinking(true)
     const profileDetails = await getProfileDetailsFromExtension()
-    await  linkProfile(profileDetails)
+    await linkProfile(profileDetails)
     setIsLinking(false)
   }
 
+  const hasInitialized = React.useRef(false)
+
   React.useEffect(() => {
-    if (profiles && profiles.length > 0 && !activeProfile) {
-      setActiveProfile(profiles[0])
+    if (!hasInitialized.current && !isLoading && userProfiles.length > 0) {
+      setActiveProfile(userProfiles[0])
+      hasInitialized.current = true
     }
-  }, [profiles, activeProfile, setActiveProfile])
+  }, [isLoading, userProfiles, setActiveProfile])
 
   if (isLoading) {
     return (
@@ -67,7 +78,9 @@ export function TeamSwitcher() {
             className='gap-2'
           >
             <LinkedInLogoIcon className='h-5 w-5' />
-            {isLinking || isLinkingProfile ? 'Connecting...' : 'Connect Linkedin Profile'}
+            {isLinking || isLinkingProfile
+              ? 'Connecting...'
+              : 'Connect Linkedin Profile'}
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

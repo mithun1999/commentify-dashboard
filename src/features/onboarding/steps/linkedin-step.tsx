@@ -15,9 +15,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { IProfile } from '@/features/linkedin-profile/interface/profile.interface'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
+import { IProfile } from '@/features/users/interface/profile.interface'
 import {
   useGetAllProfileQuery,
   useLinkProfile,
@@ -87,7 +87,6 @@ export function LinkedInStep() {
     try {
       // Link the profile (data already collected)
       await linkProfile(extensionProfileData)
-
     } catch (error) {
       console.error('Error linking profile:', error)
     } finally {
