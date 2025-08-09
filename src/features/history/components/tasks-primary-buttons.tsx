@@ -1,9 +1,9 @@
 import { IconDownload, IconPlus } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
-import { useTasks } from '../context/tasks-context'
+import { useHistoryStore } from '../store/history.store'
 
 export function TasksPrimaryButtons() {
-  const { setOpen } = useTasks()
+  const setOpen = useHistoryStore((s) => s.setOpen)
   return (
     <div className='flex gap-2'>
       <Button

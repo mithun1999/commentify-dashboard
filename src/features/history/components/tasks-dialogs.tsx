@@ -1,66 +1,61 @@
-import { showSubmittedData } from '@/utils/show-submitted-data'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { useTasks } from '../context/tasks-context'
+import { Task } from '../data/schema'
+import { useDeletePostComments } from '../query/post.query'
+import { useHistoryStore } from '../store/history.store'
+import { PostCommentDrawer } from './post-comment-drawer'
 import { TasksImportDialog } from './tasks-import-dialog'
 import { TasksMutateDrawer } from './tasks-mutate-drawer'
 
 export function TasksDialogs() {
-  const { open, setOpen, currentRow, setCurrentRow } = useTasks()
+  const open = useHistoryStore((s) => s.open)
+  const setOpen = useHistoryStore((s) => s.setOpen)
+  const currentRow = useHistoryStore((s) => s.currentRow) as Task | null
+  const setCurrentRow = useHistoryStore((s) => s.setCurrentRow)
+  const { deletePostComments, isDeletingPostComments } = useDeletePostComments(
+    () => setOpen(null)
+  )
   return (
     <>
       <TasksMutateDrawer
         key='task-create'
         open={open === 'create'}
-        onOpenChange={() => setOpen('create')}
+        onOpenChange={(v) => setOpen(v ? 'create' : null)}
       />
 
       <TasksImportDialog
         key='tasks-import'
         open={open === 'import'}
-        onOpenChange={() => setOpen('import')}
+        onOpenChange={(v) => setOpen(v ? 'import' : null)}
       />
 
       {currentRow && (
         <>
-          <TasksMutateDrawer
-            key={`task-update-${currentRow.id}`}
+          <PostCommentDrawer
             open={open === 'update'}
-            onOpenChange={() => {
-              setOpen('update')
-              setTimeout(() => {
-                setCurrentRow(null)
-              }, 500)
-            }}
-            currentRow={currentRow}
+            onOpenChange={(v) => setOpen(v ? 'update' : null)}
+            // @ts-expect-error migrate types from Task to IPost later
+            post={currentRow}
           />
 
           <ConfirmDialog
             key='task-delete'
             destructive
             open={open === 'delete'}
-            onOpenChange={() => {
-              setOpen('delete')
-              setTimeout(() => {
-                setCurrentRow(null)
-              }, 500)
-            }}
+            onOpenChange={(v) => setOpen(v ? 'delete' : null)}
+            isLoading={isDeletingPostComments}
             handleConfirm={() => {
-              setOpen(null)
-              setTimeout(() => {
-                setCurrentRow(null)
-              }, 500)
-              showSubmittedData(
-                currentRow,
-                'The following task has been deleted:'
-              )
+              const id = (currentRow as unknown as { id?: string })?.id
+              if (id) {
+                deletePostComments({ ids: [id] })
+                setTimeout(() => setCurrentRow(null), 500)
+              }
             }}
             className='max-w-md'
-            title={`Delete this task: ${currentRow.id} ?`}
+            title={`Delete Comment`}
             desc={
               <>
-                You are about to delete a task with the ID{' '}
-                <strong>{currentRow.id}</strong>. <br />
-                This action cannot be undone.
+                You are about to permanently delete this comment from the
+                approval list. This action cannot be undone.
               </>
             }
             confirmText='Delete'

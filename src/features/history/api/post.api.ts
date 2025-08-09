@@ -1,10 +1,14 @@
 import { axiosInstance } from '@/utils/axios.util'
 import { IPost } from '../interface/post.interface'
 
-export async function getCompletedPosts(pageParam: number, limit = 50) {
+export async function getCompletedPosts(
+  profileId: string,
+  pageParam: number,
+  limit = 50
+) {
   const { data } = await axiosInstance({
     method: 'GET',
-    url: `/post/completed?page=${pageParam}&limit=${limit}`,
+    url: `/post/completed/${profileId}?page=${pageParam}&limit=${limit}`,
   })
   return data as {
     docs: IPost[]
@@ -13,10 +17,14 @@ export async function getCompletedPosts(pageParam: number, limit = 50) {
   }
 }
 
-export async function getPendingPosts(pageParam: number, limit = 10) {
+export async function getPendingPosts(
+  profileId: string,
+  pageParam: number,
+  limit = 10
+) {
   const { data } = await axiosInstance({
     method: 'GET',
-    url: `/post/pending?page=${pageParam}&limit=${limit}`,
+    url: `/post/pending/${profileId}?page=${pageParam}&limit=${limit}`,
   })
   return data as {
     docs: IPost[]
@@ -49,6 +57,15 @@ export async function approvePosts(payload: {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/comment-scheduler/schedule`,
+    data: payload,
+  })
+  return data
+}
+
+export async function deletePostComments(payload: { ids: string[] }) {
+  const { data } = await axiosInstance({
+    method: 'DELETE',
+    url: `/post/bulk`,
     data: payload,
   })
   return data

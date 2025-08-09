@@ -6,18 +6,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useTasks } from '../context/tasks-context'
-import { labels } from '../data/data'
-import { taskSchema } from '../data/schema'
+import { useApprovePosts } from '../query/post.query'
+import { useHistoryStore } from '../store/history.store'
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>
@@ -26,9 +20,12 @@ interface DataTableRowActionsProps<TData> {
 export function DataTableRowActions<TData>({
   row,
 }: DataTableRowActionsProps<TData>) {
-  const task = taskSchema.parse(row.original)
-
-  const { setOpen, setCurrentRow } = useTasks()
+  const setOpen = useHistoryStore((s) => s.setOpen)
+  const setCurrentRow = useHistoryStore((s) => s.setCurrentRow)
+  const status = useHistoryStore((s) => s.status)
+  const { approvePosts, isApprovingPosts } = useApprovePosts(() =>
+    setOpen(null)
+  )
 
   return (
     <DropdownMenu modal={false}>
@@ -42,41 +39,43 @@ export function DataTableRowActions<TData>({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end' className='w-[160px]'>
-        <DropdownMenuItem
-          onClick={() => {
-            setCurrentRow(task)
-            setOpen('update')
-          }}
-        >
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled>Make a copy</DropdownMenuItem>
-        <DropdownMenuItem disabled>Favorite</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={task.label}>
-              {labels.map((label) => (
-                <DropdownMenuRadioItem key={label.value} value={label.value}>
-                  {label.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            setCurrentRow(task)
-            setOpen('delete')
-          }}
-        >
-          Delete
-          <DropdownMenuShortcut>
-            <IconTrash size={16} />
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
+        {status === 'pending' && (
+          <>
+            <DropdownMenuItem
+              onClick={() => {
+                setCurrentRow(row.original as unknown)
+                setOpen('update')
+              }}
+            >
+              Edit comment
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setCurrentRow(row.original as unknown)
+                const { activityUrn, profileId } = row.original as unknown as {
+                  activityUrn: string
+                  profileId: string
+                }
+                approvePosts({ posts: [{ activityUrn, profileId }] })
+              }}
+              disabled={isApprovingPosts}
+            >
+              {isApprovingPosts ? 'Approving…' : 'Approve'}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                setCurrentRow(row.original as unknown)
+                setOpen('delete')
+              }}
+            >
+              Delete
+              <DropdownMenuShortcut>
+                <IconTrash size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

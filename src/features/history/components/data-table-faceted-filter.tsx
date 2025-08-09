@@ -1,6 +1,5 @@
-import * as React from 'react'
+import React from 'react'
 import { CheckIcon, PlusCircledIcon } from '@radix-ui/react-icons'
-import { Column } from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,7 +10,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from '@/components/ui/command'
 import {
   Popover,
@@ -20,23 +18,28 @@ import {
 } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 
-interface DataTableFacetedFilterProps<TData, TValue> {
-  column?: Column<TData, TValue>
+interface DataTableFacetedFilterProps {
   title?: string
   options: {
     label: string
     value: string
     icon?: React.ComponentType<{ className?: string }>
   }[]
+  singleSelect?: boolean
+  selected?: string
+  onChangeSelected?: (value: string) => void
 }
 
-export function DataTableFacetedFilter<TData, TValue>({
-  column,
+export function DataTableFacetedFilter({
   title,
   options,
-}: DataTableFacetedFilterProps<TData, TValue>) {
-  const facets = column?.getFacetedUniqueValues()
-  const selectedValues = new Set(column?.getFilterValue() as string[])
+  singleSelect = false,
+  selected,
+  onChangeSelected,
+}: DataTableFacetedFilterProps) {
+  const selectedValues = new Set(selected ? [selected] : [])
+
+  // No column binding; selected is controlled via props
 
   return (
     <Popover>
@@ -91,15 +94,15 @@ export function DataTableFacetedFilter<TData, TValue>({
                   <CommandItem
                     key={option.value}
                     onSelect={() => {
-                      if (isSelected) {
-                        selectedValues.delete(option.value)
+                      if (singleSelect) {
+                        // Single-select behavior: toggle selection, keep only one value
+                        if (!isSelected) {
+                          onChangeSelected?.(option.value)
+                        }
                       } else {
-                        selectedValues.add(option.value)
+                        // Multi-select not supported without column binding
+                        onChangeSelected?.(option.value)
                       }
-                      const filterValues = Array.from(selectedValues)
-                      column?.setFilterValue(
-                        filterValues.length ? filterValues : undefined
-                      )
                     }}
                   >
                     <div
@@ -116,28 +119,10 @@ export function DataTableFacetedFilter<TData, TValue>({
                       <option.icon className='text-muted-foreground mr-2 h-4 w-4' />
                     )}
                     <span>{option.label}</span>
-                    {facets?.get(option.value) && (
-                      <span className='ml-auto flex h-4 w-4 items-center justify-center font-mono text-xs'>
-                        {facets.get(option.value)}
-                      </span>
-                    )}
                   </CommandItem>
                 )
               })}
             </CommandGroup>
-            {selectedValues.size > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => column?.setFilterValue(undefined)}
-                    className='justify-center text-center'
-                  >
-                    Clear filters
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
           </CommandList>
         </Command>
       </PopoverContent>

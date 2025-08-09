@@ -1,14 +1,9 @@
-import { DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu'
-import { MixerHorizontalIcon } from '@radix-ui/react-icons'
+import { useState } from 'react'
 import { Table } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
+import { useHistoryStore } from '../store/history.store'
+import { useApprovePosts, useDeletePostComments } from '../query/post.query'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>
@@ -17,40 +12,64 @@ interface DataTableViewOptionsProps<TData> {
 export function DataTableViewOptions<TData>({
   table,
 }: DataTableViewOptionsProps<TData>) {
+  const selectedStatus = useHistoryStore((s) => s.status)
+  const anySelected = table.getSelectedRowModel().rows.length > 0
+  const { deletePostComments, isDeletingPostComments } = useDeletePostComments()
+  const { approvePosts, isApprovingPosts } = useApprovePosts(() => {
+    table.resetRowSelection()
+  })
+
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant='outline'
-          size='sm'
-          className='ml-auto hidden h-8 lg:flex'
-        >
-          <MixerHorizontalIcon className='mr-2 h-4 w-4' />
-          View
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align='end' className='w-[150px]'>
-        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {table
-          .getAllColumns()
-          .filter(
-            (column) =>
-              typeof column.accessorFn !== 'undefined' && column.getCanHide()
-          )
-          .map((column) => {
-            return (
-              <DropdownMenuCheckboxItem
-                key={column.id}
-                className='capitalize'
-                checked={column.getIsVisible()}
-                onCheckedChange={(value) => column.toggleVisibility(!!value)}
-              >
-                {column.id}
-              </DropdownMenuCheckboxItem>
-            )
-          })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className='ml-auto hidden h-8 items-center gap-2 lg:flex'>
+      {selectedStatus === 'pending' && (
+        <>
+          <Button
+            size='sm'
+            className='ml-auto hidden h-8 lg:flex'
+            disabled={!anySelected || isApprovingPosts}
+            onClick={() => {
+              const posts = table
+                .getSelectedRowModel()
+                .rows.map((r) => r.original as { activityUrn: string; profileId: string })
+                .map(({ activityUrn, profileId }) => ({ activityUrn, profileId }))
+              if (posts.length > 0) approvePosts({ posts })
+            }}
+            aria-busy={isApprovingPosts}
+          >
+            {isApprovingPosts ? 'Approving…' : 'Approve'}
+          </Button>
+          <Button
+            size='sm'
+            variant='outline'
+            className='ml-auto hidden h-8 lg:flex'
+            disabled={!anySelected || isDeletingPostComments}
+            onClick={() => setIsConfirmOpen(true)}
+            aria-busy={isDeletingPostComments}
+          >
+            {isDeletingPostComments ? 'Deleting…' : 'Delete'}
+          </Button>
+          <ConfirmDialog
+            open={isConfirmOpen}
+            onOpenChange={setIsConfirmOpen}
+            destructive
+            title='Delete selected comments'
+            desc='You are about to permanently delete the selected comments from the approval list. This action cannot be undone.'
+            isLoading={isDeletingPostComments}
+            handleConfirm={() => {
+              const ids = table
+                .getSelectedRowModel()
+                .rows.map((r) => (r.original as { _id: string })._id)
+              if (ids.length > 0) {
+                deletePostComments({ ids })
+              }
+              setIsConfirmOpen(false)
+            }}
+            confirmText='Delete'
+          />
+        </>
+      )}
+    </div>
   )
 }

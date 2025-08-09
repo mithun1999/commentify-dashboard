@@ -9,6 +9,7 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
 import SkipToMain from '@/components/skip-to-main'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import GeneralError from '@/features/errors/general-error'
 
 export const Route = createFileRoute('/_authenticated')({
@@ -22,6 +23,8 @@ function RouteComponent() {
   const isSignedIn = useAuthStore((state) => state?.session?.user?.id)
   const isSessionLoaded = useAuthStore((state) => state?.isSessionLoaded)
   const { data: user, isFetched, isLoading } = useGetUserQuery()
+  // Preload user profiles and set default activeProfile globally
+  useGetAllProfileQuery()
 
   useEffect(() => {
     if (isSessionLoaded && !isSignedIn) {
