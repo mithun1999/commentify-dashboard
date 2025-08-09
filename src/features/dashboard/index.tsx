@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useProfile } from '@/context/use-profile'
+import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 import {
   Card,
   CardContent,
@@ -17,7 +17,7 @@ import { Overview } from './components/overview'
 import { RecentSales } from './components/recent-sales'
 
 export default function Dashboard() {
-  const { linkedInStats } = useProfile()
+  const { data: linkedInStats } = useGetLinkedInStats()
   const [showFollowers, setShowFollowers] = useState(true)
 
   return (
@@ -33,7 +33,7 @@ export default function Dashboard() {
       {/* ===== Main ===== */}
       <Main>
         <div className='mb-2 flex items-center justify-between space-y-2'>
-          <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Profile Stats</h1>
         </div>
         <Tabs
           orientation='vertical'

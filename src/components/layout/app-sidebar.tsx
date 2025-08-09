@@ -18,13 +18,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
-        {sidebarData.navGroups.map((props) => (
-          <NavGroup key={props.title} {...props} />
+        {sidebarData.navGroups.map((props, index) => (
+          <NavGroup key={index} {...props} />
         ))}
       </SidebarContent>
 
-      {sidebarData.bottomGroups.map((props) => (
-        <NavGroup key={props.title} {...props} />
+      {sidebarData.bottomGroups.map((props, index) => (
+        <NavGroup key={index} {...props} />
       ))}
       <SidebarFooter>
         <NavUser />

@@ -18,10 +18,9 @@ export const sidebarData: SidebarData = {
 
   navGroups: [
     {
-      title: 'General',
       items: [
         {
-          title: 'Dashboard',
+          title: 'Stats',
           url: '/',
           icon: IconLayoutDashboard,
         },
@@ -51,7 +50,6 @@ export const sidebarData: SidebarData = {
   ],
   bottomGroups: [
     {
-      title: 'Function',
       items: [
         {
           title: 'Feature Request',

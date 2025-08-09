@@ -1,11 +1,10 @@
 // src/components/team-switcher.tsx
-import * as React from 'react'
 import { useState } from 'react'
 import { LinkedInLogoIcon } from '@radix-ui/react-icons'
 import { ChevronsUpDown, Plus } from 'lucide-react'
-import { useAuthStore } from '@/stores/auth.store'
+import { useProfileStore } from '@/stores/profile.store'
+// import { useAuthStore } from '@/stores/auth.store'
 import { getProfileDetailsFromExtension } from '@/utils/utils'
-import { useProfile } from '@/context/use-profile'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,14 +32,12 @@ export function TeamSwitcher() {
   const [isLinking, setIsLinking] = useState(false)
   const { isLinkingProfile, linkProfile } = useLinkProfile()
 
-  const session = useAuthStore((state) => state.session)
-  const userId = session?.user?.id
+  // Keep in sync if needed in future; currently unused
+  // const session = useAuthStore((state) => state.session)
+  // Default active profile is handled globally in the query hook
 
-  const userProfiles = React.useMemo(() => {
-    return profiles?.filter((p) => p.ownerId === userId) || []
-  }, [profiles, userId])
-
-  const { activeProfile, setActiveProfile } = useProfile()
+  const activeProfile = useProfileStore((s) => s.activeProfile)
+  const setActiveProfile = useProfileStore((s) => s.setActiveProfile)
 
   const handleLinking = async () => {
     setIsLinking(true)
@@ -49,14 +46,7 @@ export function TeamSwitcher() {
     setIsLinking(false)
   }
 
-  const hasInitialized = React.useRef(false)
-
-  React.useEffect(() => {
-    if (!hasInitialized.current && !isLoading && userProfiles.length > 0) {
-      setActiveProfile(userProfiles[0])
-      hasInitialized.current = true
-    }
-  }, [isLoading, userProfiles, setActiveProfile])
+  // no-op
 
   if (isLoading) {
     return (
@@ -90,13 +80,13 @@ export function TeamSwitcher() {
   const getStatusColor = (status: ProfileStatusEnum) => {
     switch (status) {
       case ProfileStatusEnum.OK:
-        return 'text-green-500'
+        return 'text-green-600'
       case ProfileStatusEnum.ACTION_REQUIRED:
-        return 'text-red-500'
+        return 'text-red-600'
       case ProfileStatusEnum.DEACTIVATED:
-        return 'text-yellow-500'
+        return 'text-yellow-600'
       default:
-        return 'text-gray-500'
+        return 'text-gray-400'
     }
   }
 
@@ -139,7 +129,7 @@ export function TeamSwitcher() {
             <DropdownMenuLabel className='text-muted-foreground text-xs'>
               LinkedIn Profiles
             </DropdownMenuLabel>
-            {profiles.map((profile) => (
+            {(profiles || []).map((profile) => (
               <DropdownMenuItem
                 key={profile._id}
                 onClick={() => setActiveProfile(profile)}

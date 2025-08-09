@@ -2,14 +2,14 @@
 
 import { FileWarning } from 'lucide-react'
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
-import { useProfile } from '@/context/use-profile'
+import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 
 interface OverviewProps {
   showFollowers: boolean
 }
 
 export function Overview({ showFollowers }: OverviewProps) {
-  const { linkedInStats } = useProfile()
+  const { data: linkedInStats } = useGetLinkedInStats()
 
   const growth = showFollowers
     ? (linkedInStats?.followersStats?.growth ?? [])

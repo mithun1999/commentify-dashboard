@@ -29,3 +29,32 @@ export interface IProfileResponseFromExtension {
 }
 
 export interface ILinkProfilePayload extends IProfileResponseFromExtension {}
+
+export interface ILinkedInStats {
+  followersStats: {
+    followersGrowth: number
+    followersGrowthPercent: number
+    weeklyFollowersGrowth: number
+    weeklyFollowersGrowthPercent: number
+    fromDate: string
+    toDate: string
+    growth: {
+      followersCount: number
+      followersGrowth: number
+      followersGrowthPercent: number
+      period: string
+    }[]
+  }
+  profileViewerStats: {
+    profileViewersGrowth: number
+    profileViewersGrowthPercent: number
+    weeklyProfileViewersGrowth: number
+    weeklyProfileViewersGrowthPercent: number
+    profileViewersGrowthSinceStartedUsingThisApp: number
+    profileViewersGrowthSinceStartedUsingThisAppPercent: number
+    fromDate: string
+    toDate: string
+    growth: []
+    isPremium: boolean
+  }
+}

@@ -1,5 +1,5 @@
 import { axiosInstance } from '@/utils/axios.util'
-import { ILinkProfilePayload, IProfile } from '../interface/profile.interface'
+import { ILinkProfilePayload, ILinkedInStats, IProfile } from '../interface/profile.interface'
 
 export async function getAllProfile() {
   const { data } = await axiosInstance({
@@ -24,4 +24,12 @@ export async function linkProfile(payload: ILinkProfilePayload) {
     data: payload,
   })
   return data as { profile: IProfile; isExisting: boolean }
+}
+
+export async function getLinkedInStats(profileId: string) {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/li-stats/${profileId}`,
+  })
+  return data as ILinkedInStats
 }
