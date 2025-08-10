@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -11,8 +12,10 @@ import {
   Info,
   Hash,
   ArrowLeft,
+  AlertCircle,
 } from 'lucide-react'
-import { showSubmittedData } from '@/utils/show-submitted-data'
+import { useProfileStore } from '@/stores/profile.store'
+// import { showSubmittedData } from '@/utils/show-submitted-data'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -40,13 +43,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { CommentLengthEnum } from '@/features/settings/enum/setting.enum'
+import {
+  useCreateCommentSettingQuery,
+  useUpdateCommentSettingQuery,
+} from '@/features/settings/query/setting.query'
 
 const commentSettingsSchema = z.object({
   about: z.string().min(10, {
     message: 'Profile description must be at least 10 characters.',
   }),
   length: z.enum(['short', 'medium', 'long']),
-  commentsPerDay: z.number().min(0).max(100),
   turnOnEmoji: z.boolean(),
   turnOnExclamations: z.boolean(),
   turnOnHashtags: z.boolean(),
@@ -57,8 +64,8 @@ const commentSettingsSchema = z.object({
 type CommentSettingsValues = z.infer<typeof commentSettingsSchema>
 
 const defaultValues: Partial<CommentSettingsValues> = {
+  about: '',
   length: 'medium',
-  commentsPerDay: 10,
   turnOnEmoji: true,
   turnOnExclamations: true,
   turnOnHashtags: false,
@@ -67,35 +74,86 @@ const defaultValues: Partial<CommentSettingsValues> = {
 }
 
 export function CommentsForm({ prev }: { prev?: () => void }) {
+  const activeProfile = useProfileStore((s) => s.activeProfile)
   const { data: user } = useGetUserQuery()
-  const userPlan = user?.subscribedProduct?.name?.toLowerCase() as
-    | 'starter'
-    | 'pro'
-    | 'premium'
+  const userPlan =
+    (user?.subscribedProduct?.name?.toLowerCase() as
+      | 'starter'
+      | 'pro'
+      | 'premium') ?? 'starter'
+  const { createCommentSetting, isCreatingCommentSetting } =
+    useCreateCommentSettingQuery()
+  const { updateCommentSetting, isUpdatingCommentSetting } =
+    useUpdateCommentSettingQuery()
 
-  const shouldDisplayTagAuthorSetting =
-    planSetting['tagAuthor']?.[userPlan] ?? false
-  const shouldDisplayCommentRulesSetting =
-    planSetting['commentRules']?.[userPlan] ?? false
+  const shouldDisplayTagAuthorSetting = Boolean(
+    planSetting['tagAuthor']?.[userPlan]
+  )
+  const shouldDisplayCommentRulesSetting = Boolean(
+    planSetting['commentRules']?.[userPlan]
+  )
 
   const form = useForm<CommentSettingsValues>({
     resolver: zodResolver(commentSettingsSchema),
     defaultValues,
   })
 
-  const onSubmit = (_data: CommentSettingsValues) => {
-    // Prepare payload for API (extend when integrating backend)
-    // const payload = { ...data }
-    showSubmittedData('Settings updated')
+  const populateCommentSettingData = () => {
+    const existingCommentSetting = activeProfile?.setting?.commentSetting
+    if (existingCommentSetting) {
+      const valuesNow = form.getValues()
+      form.reset({
+        about: activeProfile?.about ?? valuesNow.about,
+        length: (existingCommentSetting as any)?.length ?? valuesNow.length,
+        turnOnEmoji:
+          typeof existingCommentSetting.turnOnEmoji === 'boolean'
+            ? existingCommentSetting.turnOnEmoji
+            : valuesNow.turnOnEmoji,
+        turnOnExclamations:
+          typeof existingCommentSetting.turnOnExclamations === 'boolean'
+            ? existingCommentSetting.turnOnExclamations
+            : valuesNow.turnOnExclamations,
+        turnOnHashtags:
+          typeof existingCommentSetting.turnOnHashtags === 'boolean'
+            ? existingCommentSetting.turnOnHashtags
+            : valuesNow.turnOnHashtags,
+        tagAuthor:
+          typeof existingCommentSetting.tagAuthor === 'boolean'
+            ? existingCommentSetting.tagAuthor
+            : valuesNow.tagAuthor,
+        rules: existingCommentSetting.rules ?? valuesNow.rules,
+      })
+    }
+  }
 
-    // If you need to call an API:
-    // if (activeProfile?._id) {
-    //   updateOrCreateSetting({
-    //     profileId: activeProfile._id,
-    //     commentSetting: payload,
-    //     userPlan
-    //   })
-    // }
+  useEffect(() => {
+    populateCommentSettingData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile?.setting])
+
+  const onSubmit = (data: CommentSettingsValues) => {
+    if (!activeProfile?._id) return
+    const plan = (userPlan ?? 'starter') as 'starter' | 'pro' | 'premium'
+
+    const existingCommentSetting = activeProfile?.setting?.commentSetting
+
+    const payload = {
+      profileId: activeProfile._id,
+      userPlan: plan,
+      turnOnEmoji: data.turnOnEmoji,
+      turnOnExclamations: data.turnOnExclamations,
+      turnOnHashtags: data.turnOnHashtags,
+      tagAuthor: data?.tagAuthor ?? false,
+      length: data.length as CommentLengthEnum,
+      rules: data.rules,
+    }
+
+    const hasExisting = Boolean(existingCommentSetting?._id)
+    if (hasExisting) {
+      updateCommentSetting(payload)
+    } else {
+      createCommentSetting(payload)
+    }
   }
 
   return (
@@ -136,55 +194,21 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
               <FormControl>
                 <Textarea
                   placeholder="I'm a digital marketer... I help people... I've helped 50+ founders to... After many failures, I learned that..."
-                  className='min-h-[120px]'
+                  className='min-h-[80px]'
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage>
+                {form.formState.errors.about && (
+                  <div className='text-destructive flex items-center gap-2 text-sm'>
+                    <AlertCircle className='h-4 w-4' />
+                    {form.formState.errors.about.message}
+                  </div>
+                )}
+              </FormMessage>
             </FormItem>
           )}
         />
-
-        {/* Additional Rules Section */}
-        {shouldDisplayCommentRulesSetting && (
-          <FormField
-            control={form.control}
-            name='rules'
-            render={({ field }) => (
-              <FormItem>
-                <div className='mb-2 flex items-center gap-2'>
-                  <Hash className='text-muted-foreground h-4 w-4' />
-                  <FormLabel className='text-foreground font-semibold'>
-                    Additional Comment Generation Rules
-                  </FormLabel>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                          <Info className='text-muted-foreground h-3 w-3' />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side='right' className='max-w-xs'>
-                        <p>
-                          Write additional rules to customize
-                          <br />
-                          how comments should be generated
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <FormControl>
-                  <Textarea
-                    placeholder="Write additional rules, e.g., Avoid phrases like 'Great post' or 'Nice work."
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
 
         {/* Comment Settings Section */}
         <div className='space-y-4'>
@@ -209,7 +233,7 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
             </TooltipProvider>
           </div>
 
-          <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
+          <div className='mb-8'>
             {/* Comment Length */}
             <FormField
               control={form.control}
@@ -232,51 +256,66 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                       <SelectItem value='long'>Long (25 words)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage>
+                    {form.formState.errors.length && (
+                      <div className='text-destructive flex items-center gap-2 text-sm'>
+                        <AlertCircle className='h-4 w-4' />
+                        {form.formState.errors.length.message}
+                      </div>
+                    )}
+                  </FormMessage>
                 </FormItem>
               )}
             />
-
-            {/* Comments Per Day */}
-            <FormField
-              control={form.control}
-              name='commentsPerDay'
-              render={({ field }) => (
-                <FormItem>
-                  <div className='flex items-center gap-2'>
-                    <FormLabel>Comments Per Day</FormLabel>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                            <Info className='text-muted-foreground h-3 w-3' />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side='right' className='max-w-xs'>
-                          <p>Set your preferred daily comment volume</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      min={0}
-                      max={100}
-                      {...field}
-                      onChange={(e) => {
-                        const val = Math.min(
-                          100,
-                          Math.max(0, Number(e.target.value))
-                        )
-                        field.onChange(val)
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          </div>
+          <div>
+            {/* Additional Rules Section */}
+            {shouldDisplayCommentRulesSetting && (
+              <FormField
+                control={form.control}
+                name='rules'
+                render={({ field }) => (
+                  <FormItem>
+                    <div className='mb-2 flex items-center gap-2'>
+                      <Hash className='text-muted-foreground h-4 w-4' />
+                      <FormLabel className='text-foreground font-semibold'>
+                        Additional Comment Generation Rules
+                      </FormLabel>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                              <Info className='text-muted-foreground h-3 w-3' />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side='right' className='max-w-xs'>
+                            <p>
+                              Write additional rules to customize
+                              <br />
+                              how comments should be generated
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Write additional rules, e.g., Avoid phrases like 'Great post' or 'Nice work."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage>
+                      {form.formState.errors.rules && (
+                        <div className='text-destructive flex items-center gap-2 text-sm'>
+                          <AlertCircle className='h-4 w-4' />
+                          {form.formState.errors.rules.message}
+                        </div>
+                      )}
+                    </FormMessage>
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
         </div>
 
@@ -317,6 +356,12 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                  {form.formState.errors.turnOnEmoji && (
+                    <div className='text-destructive mt-2 flex items-center gap-2 text-sm'>
+                      <AlertCircle className='h-4 w-4' />
+                      {form.formState.errors.turnOnEmoji.message}
+                    </div>
+                  )}
                 </FormItem>
               )}
             />
@@ -340,6 +385,12 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                  {form.formState.errors.turnOnExclamations && (
+                    <div className='text-destructive mt-2 flex items-center gap-2 text-sm'>
+                      <AlertCircle className='h-4 w-4' />
+                      {form.formState.errors.turnOnExclamations.message}
+                    </div>
+                  )}
                 </FormItem>
               )}
             />
@@ -363,6 +414,12 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                  {form.formState.errors.turnOnHashtags && (
+                    <div className='text-destructive mt-2 flex items-center gap-2 text-sm'>
+                      <AlertCircle className='h-4 w-4' />
+                      {form.formState.errors.turnOnHashtags.message}
+                    </div>
+                  )}
                 </FormItem>
               )}
             />
@@ -387,6 +444,12 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
+                    {form.formState.errors.tagAuthor && (
+                      <div className='text-destructive mt-2 flex items-center gap-2 text-sm'>
+                        <AlertCircle className='h-4 w-4' />
+                        {form.formState.errors.tagAuthor.message}
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
@@ -402,7 +465,14 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
               Back
             </Button>
           )}
-          <Button type='submit'>Update settings</Button>
+          <Button
+            type='submit'
+            disabled={isCreatingCommentSetting || isUpdatingCommentSetting}
+          >
+            {isCreatingCommentSetting || isUpdatingCommentSetting
+              ? 'Saving...'
+              : 'Update settings'}
+          </Button>
         </div>
       </form>
     </Form>

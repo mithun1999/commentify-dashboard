@@ -35,6 +35,7 @@ export interface ISetting {
     _id: string
     about?: string
     rules?: string
+    length?: CommentLengthEnum
   }
   ownerId: string
   profileId: string
@@ -69,7 +70,7 @@ export interface ICommentSettingForm {
   additionalNotes: string
   about: string
   tagAuthor?: boolean
-  length: CommentLengthEnum
+  length?: CommentLengthEnum
   rules?: string
 }
 
