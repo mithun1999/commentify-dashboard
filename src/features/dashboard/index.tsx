@@ -1,3 +1,4 @@
+import { IconFidgetSpinner } from '@tabler/icons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
@@ -9,7 +10,8 @@ import { Overview } from './components/overview'
 import { ProfileOverview } from './components/profile-overview'
 
 export default function Dashboard() {
-  const { data: linkedInStats } = useGetLinkedInStats()
+  const { data: linkedInStats, isLoading: isLoadingLinkedInStats } =
+    useGetLinkedInStats()
 
   // Formatting helpers
   const formatNumber = new Intl.NumberFormat('en-US')
@@ -91,143 +93,236 @@ export default function Dashboard() {
           className='space-y-4'
         >
           <TabsContent value='overview' className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Followers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>
-                    {followersValue !== undefined && followersValue !== null
-                      ? formatNumber.format(followersValue)
-                      : '--'}
-                  </div>
-                  <p className='text-muted-foreground text-xs'>
-                    {formatPercent(followersPercent)} {followersSuffix}
-                  </p>
-                </CardContent>
-              </Card>
+            {isLoadingLinkedInStats ? (
+              <div className='mt-10 flex w-full items-center justify-center'>
+                <Card>
+                  <CardContent>
+                    <div className='flex flex-col items-center justify-center text-center'>
+                      <IconFidgetSpinner className='animate-spin' />
+                      <p className='mt-2 text-sm'>
+                        <span className='font-bold'>
+                          Pulling your LinkedIn numbers{' '}
+                        </span>
+                        <br />
+                        <span className='text-muted-foreground text-sm'>
+                          Tip: Meaningful comments often get you more profile
+                          visits than the post itself.
+                        </span>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <>
+                {/* Fallback: nothing available at all */}
+                {!linkedInStats?.followersStats &&
+                !linkedInStats?.profileViewerStats &&
+                !linkedInStats?.postCommentStats ? (
+                  <Card className='mt-8 w-full'>
+                    <CardContent>
+                      <div className='flex flex-col items-center justify-center text-center'>
+                        <div className='text-4xl'>😕</div>
+                        <p className='mt-2'>
+                          <span className='font-bold'>
+                            We couldn’t pull your data right now…
+                          </span>
+                          <br />
+                          <span className='text-muted-foreground text-sm'>
+                            but here’s a quick tip:
+                            <br />
+                            💡 In comments, share a personal insight instead of
+                            just agreeing - it makes you more memorable.
+                          </span>
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    {/* LinkedIn summary cards (render only when available) */}
+                    {(linkedInStats?.followersStats ||
+                      linkedInStats?.profileViewerStats) && (
+                      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+                        {linkedInStats?.followersStats && (
+                          <>
+                            <Card>
+                              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                <CardTitle className='text-sm font-medium'>
+                                  Followers
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className='text-2xl font-bold'>
+                                  {followersValue !== undefined &&
+                                  followersValue !== null
+                                    ? formatNumber.format(followersValue)
+                                    : '--'}
+                                </div>
+                                <p className='text-muted-foreground text-xs'>
+                                  {formatPercent(followersPercent)}{' '}
+                                  {followersSuffix}
+                                </p>
+                              </CardContent>
+                            </Card>
 
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    New Followers (This Week)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>
-                    {weeklyFollowersValue !== undefined &&
-                    weeklyFollowersValue !== null
-                      ? formatNumber.format(weeklyFollowersValue)
-                      : '--'}
-                  </div>
-                  <p className='text-muted-foreground text-xs'>
-                    {formatPercent(weeklyFollowersPercent)} vs last week
-                  </p>
-                </CardContent>
-              </Card>
+                            <Card>
+                              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                <CardTitle className='text-sm font-medium'>
+                                  New Followers (This Week)
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className='text-2xl font-bold'>
+                                  {weeklyFollowersValue !== undefined &&
+                                  weeklyFollowersValue !== null
+                                    ? formatNumber.format(weeklyFollowersValue)
+                                    : '--'}
+                                </div>
+                                <p className='text-muted-foreground text-xs'>
+                                  {formatPercent(weeklyFollowersPercent)} vs
+                                  last week
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </>
+                        )}
 
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Profile Views
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>
-                    {profileViewsValue !== undefined &&
-                    profileViewsValue !== null
-                      ? formatNumber.format(profileViewsValue)
-                      : '--'}
-                  </div>
-                  <p className='text-muted-foreground text-xs'>
-                    {formatPercent(profileViewsPercent)} {profileViewsSuffix}
-                  </p>
-                </CardContent>
-              </Card>
+                        {linkedInStats?.profileViewerStats && (
+                          <>
+                            <Card>
+                              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                <CardTitle className='text-sm font-medium'>
+                                  Profile Views
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className='text-2xl font-bold'>
+                                  {profileViewsValue !== undefined &&
+                                  profileViewsValue !== null
+                                    ? formatNumber.format(profileViewsValue)
+                                    : '--'}
+                                </div>
+                                <p className='text-muted-foreground text-xs'>
+                                  {formatPercent(profileViewsPercent)}{' '}
+                                  {profileViewsSuffix}
+                                </p>
+                              </CardContent>
+                            </Card>
 
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Profile Views (This Week)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>
-                    {weeklyProfileViewsValue !== undefined &&
-                    weeklyProfileViewsValue !== null
-                      ? formatNumber.format(weeklyProfileViewsValue)
-                      : '--'}
-                  </div>
-                  <p className='text-muted-foreground text-xs'>
-                    {formatPercent(weeklyProfileViewsPercent)} vs last week
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+                            <Card>
+                              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                <CardTitle className='text-sm font-medium'>
+                                  Profile Views (This Week)
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className='text-2xl font-bold'>
+                                  {weeklyProfileViewsValue !== undefined &&
+                                  weeklyProfileViewsValue !== null
+                                    ? formatNumber.format(
+                                        weeklyProfileViewsValue
+                                      )
+                                    : '--'}
+                                </div>
+                                <p className='text-muted-foreground text-xs'>
+                                  {formatPercent(weeklyProfileViewsPercent)} vs
+                                  last week
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </>
+                        )}
+                      </div>
+                    )}
 
-            <div className='grid gap-4 lg:grid-cols-3'>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Comments Scheduled
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>
-                    {linkedInStats?.postCommentStats?.scheduled}
-                  </div>
-                </CardContent>
-              </Card>
+                    {/* Post comment stats (render only when available) */}
+                    {linkedInStats?.postCommentStats && (
+                      <div className='grid gap-4 lg:grid-cols-3'>
+                        <Card>
+                          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                            <CardTitle className='text-sm font-medium'>
+                              Comments Scheduled
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className='text-2xl font-bold'>
+                              {linkedInStats?.postCommentStats?.scheduled ??
+                                '--'}
+                            </div>
+                          </CardContent>
+                        </Card>
 
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Comments Pending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>
-                    {linkedInStats?.postCommentStats?.pending}
-                  </div>
-                </CardContent>
-              </Card>
+                        <Card>
+                          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                            <CardTitle className='text-sm font-medium'>
+                              Comments Pending
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className='text-2xl font-bold'>
+                              {linkedInStats?.postCommentStats?.pending ?? '--'}
+                            </div>
+                          </CardContent>
+                        </Card>
 
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Comments Posted
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>
-                    {linkedInStats?.postCommentStats?.completed}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                        <Card>
+                          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                            <CardTitle className='text-sm font-medium'>
+                              Comments Posted
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className='text-2xl font-bold'>
+                              {linkedInStats?.postCommentStats?.completed ??
+                                '--'}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
 
-            <Card className='w-full'>
-              <CardHeader className='flex flex-row items-center justify-between'>
-                <CardTitle>Followers Growth</CardTitle>
-              </CardHeader>
+                    {/* LinkedIn unavailable notice when only post stats exist */}
+                    {!linkedInStats?.followersStats &&
+                      !linkedInStats?.profileViewerStats &&
+                      linkedInStats?.postCommentStats && (
+                        <Card className='w-full'>
+                          <CardContent>
+                            <div className='text-muted-foreground flex items-center justify-center py-3 text-center text-sm'>
+                              We’re a little sad… we usually show your follower
+                              stats here, <br />
+                              but LinkedIn ghosted us this time 👻
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
 
-              <CardContent className='pl-2'>
-                <Overview />
-              </CardContent>
-            </Card>
+                    {/* Charts (render only when data available) */}
+                    {linkedInStats?.followersStats && (
+                      <Card className='w-full'>
+                        <CardHeader className='flex flex-row items-center justify-between'>
+                          <CardTitle>Followers Growth</CardTitle>
+                        </CardHeader>
+                        <CardContent className='pl-2'>
+                          <Overview />
+                        </CardContent>
+                      </Card>
+                    )}
 
-            <Card className='w-full'>
-              <CardHeader className='flex flex-row items-center justify-between'>
-                <CardTitle>Profile Viewers Growth</CardTitle>
-              </CardHeader>
-
-              <CardContent className='pl-2'>
-                <ProfileOverview />
-              </CardContent>
-            </Card>
+                    {linkedInStats?.profileViewerStats && (
+                      <Card className='w-full'>
+                        <CardHeader className='flex flex-row items-center justify-between'>
+                          <CardTitle>Profile Viewers Growth</CardTitle>
+                        </CardHeader>
+                        <CardContent className='pl-2'>
+                          <ProfileOverview />
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </TabsContent>
         </Tabs>
       </Main>

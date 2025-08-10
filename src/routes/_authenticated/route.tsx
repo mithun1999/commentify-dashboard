@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import Cookies from 'js-cookie'
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth.store'
+import { useProfileStore } from '@/stores/profile.store'
 import { cn } from '@/lib/utils'
 import { SearchProvider } from '@/context/search-context'
 import { SidebarProvider } from '@/components/ui/sidebar'
@@ -9,8 +10,8 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
 import SkipToMain from '@/components/skip-to-main'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
-import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import GeneralError from '@/features/errors/general-error'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 
 export const Route = createFileRoute('/_authenticated')({
   component: RouteComponent,
@@ -24,7 +25,8 @@ function RouteComponent() {
   const isSessionLoaded = useAuthStore((state) => state?.isSessionLoaded)
   const { data: user, isFetched, isLoading } = useGetUserQuery()
   // Preload user profiles and set default activeProfile globally
-  useGetAllProfileQuery()
+  const { isLoading: isLoadingProfiles } = useGetAllProfileQuery()
+  const activeProfile = useProfileStore((s) => s.activeProfile)
 
   useEffect(() => {
     if (isSessionLoaded && !isSignedIn) {
@@ -32,7 +34,12 @@ function RouteComponent() {
     }
   }, [isSessionLoaded, isSignedIn, navigate])
 
-  if (!isSessionLoaded || (!isFetched && isLoading)) return <MainLoader />
+  if (
+    !isSessionLoaded ||
+    (!isFetched && isLoading) ||
+    (isLoadingProfiles && !activeProfile)
+  )
+    return <MainLoader />
   if (!user && isFetched && !isLoading) return <GeneralError />
 
   return (
