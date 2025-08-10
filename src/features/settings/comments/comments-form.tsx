@@ -13,9 +13,9 @@ import {
   Hash,
   ArrowLeft,
   AlertCircle,
+  Lock,
 } from 'lucide-react'
 import { useProfileStore } from '@/stores/profile.store'
-// import { showSubmittedData } from '@/utils/show-submitted-data'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -26,7 +26,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -48,6 +47,7 @@ import {
   useCreateCommentSettingQuery,
   useUpdateCommentSettingQuery,
 } from '@/features/settings/query/setting.query'
+import { UnlockWrapper } from '../components/UnlockWrapper'
 
 const commentSettingsSchema = z.object({
   about: z.string().min(10, {
@@ -117,11 +117,14 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
           typeof existingCommentSetting.turnOnHashtags === 'boolean'
             ? existingCommentSetting.turnOnHashtags
             : valuesNow.turnOnHashtags,
-        tagAuthor:
-          typeof existingCommentSetting.tagAuthor === 'boolean'
+        tagAuthor: shouldDisplayTagAuthorSetting
+          ? typeof existingCommentSetting.tagAuthor === 'boolean'
             ? existingCommentSetting.tagAuthor
-            : valuesNow.tagAuthor,
-        rules: existingCommentSetting.rules ?? valuesNow.rules,
+            : valuesNow.tagAuthor
+          : false,
+        rules: shouldDisplayCommentRulesSetting
+          ? (existingCommentSetting.rules ?? valuesNow.rules)
+          : '',
       })
     }
   }
@@ -143,9 +146,11 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
       turnOnEmoji: data.turnOnEmoji,
       turnOnExclamations: data.turnOnExclamations,
       turnOnHashtags: data.turnOnHashtags,
-      tagAuthor: data?.tagAuthor ?? false,
+      tagAuthor: shouldDisplayTagAuthorSetting
+        ? (data?.tagAuthor ?? false)
+        : false,
       length: data.length as CommentLengthEnum,
-      rules: data.rules,
+      rules: shouldDisplayCommentRulesSetting ? data.rules : '',
     }
 
     const hasExisting = Boolean(existingCommentSetting?._id)
@@ -270,11 +275,11 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
           </div>
           <div>
             {/* Additional Rules Section */}
-            {shouldDisplayCommentRulesSetting && (
-              <FormField
-                control={form.control}
-                name='rules'
-                render={({ field }) => (
+            <FormField
+              control={form.control}
+              name='rules'
+              render={({ field }) => (
+                <UnlockWrapper isUnlocked={shouldDisplayCommentRulesSetting}>
                   <FormItem>
                     <div className='mb-2 flex items-center gap-2'>
                       <Hash className='text-muted-foreground h-4 w-4' />
@@ -302,6 +307,7 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                       <Textarea
                         placeholder="Write additional rules, e.g., Avoid phrases like 'Great post' or 'Nice work."
                         {...field}
+                        disabled={!shouldDisplayCommentRulesSetting}
                       />
                     </FormControl>
                     <FormMessage>
@@ -313,9 +319,9 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                       )}
                     </FormMessage>
                   </FormItem>
-                )}
-              />
-            )}
+                </UnlockWrapper>
+              )}
+            />
           </div>
         </div>
 
@@ -424,16 +430,18 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
               )}
             />
 
-            {shouldDisplayTagAuthorSetting && (
-              <FormField
-                control={form.control}
-                name='tagAuthor'
-                render={({ field }) => (
+            <FormField
+              control={form.control}
+              name='tagAuthor'
+              render={({ field }) => (
+                <UnlockWrapper isUnlocked={shouldDisplayTagAuthorSetting}>
                   <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
                     <div className='space-y-0.5'>
-                      <FormLabel className='text-base'>
-                        Tag Post Author
-                      </FormLabel>
+                      <div className='flex items-center gap-2'>
+                        <FormLabel className='text-base'>
+                          Tag Post Author
+                        </FormLabel>
+                      </div>
                       <FormDescription>
                         Mention the author in your comments
                       </FormDescription>
@@ -451,9 +459,9 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                       </div>
                     )}
                   </FormItem>
-                )}
-              />
-            )}
+                </UnlockWrapper>
+              )}
+            />
           </div>
         </div>
 

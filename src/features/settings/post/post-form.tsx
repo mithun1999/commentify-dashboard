@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import dayjs from 'dayjs'
-import timezone from 'dayjs/plugin/timezone'
-import utc from 'dayjs/plugin/utc'
+import { planSetting } from '@/config/plan-setting.config'
 import {
   Info,
   PlusCircle,
@@ -19,6 +17,15 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { useProfileStore } from '@/stores/profile.store'
+import {
+  toPaddedHourAndPeriod,
+  toQuarterMinute,
+  wallTimeInZoneToLocal,
+  toUTCFromLocalSelection,
+  type Hour12,
+  type MinuteQuarter,
+  type Period,
+} from '@/lib/date.utils'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -55,15 +62,12 @@ import {
 } from '@/components/ui/tooltip'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import type { ISetting } from '@/features/settings/interface/setting.interface'
-// import { showSubmittedData } from '@/utils/show-submitted-data'
 import {
   useCreateScrapeSettingQuery,
   useUpdateScrapeSettingQuery,
 } from '@/features/settings/query/setting.query'
 import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
-
-dayjs.extend(utc)
-dayjs.extend(timezone)
+import { UnlockWrapper } from '../components/UnlockWrapper'
 
 const notificationsFormSchema = z.object({
   keywords: z.array(z.string()).max(6),
@@ -89,9 +93,9 @@ const notificationsFormSchema = z.object({
     '10',
     '11',
     '12',
-  ]),
-  startMinute: z.enum(['00', '15', '30', '45']),
-  startPeriod: z.enum(['AM', 'PM']),
+  ]) as z.ZodType<Hour12>,
+  startMinute: z.enum(['00', '15', '30', '45']) as z.ZodType<MinuteQuarter>,
+  startPeriod: z.enum(['AM', 'PM']) as z.ZodType<Period>,
 })
 
 type NotificationsFormValues = z.infer<typeof notificationsFormSchema>
@@ -112,11 +116,11 @@ const predefinedKeywords = [
 export function PostForm() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const { data: user } = useGetUserQuery()
-  const userPlan = user?.subscribedProduct?.name?.toLowerCase() as
-    | 'starter'
-    | 'pro'
-    | 'premium'
-    | undefined
+  const userPlan =
+    (user?.subscribedProduct?.name?.toLowerCase() as
+      | 'starter'
+      | 'pro'
+      | 'premium') ?? 'starter'
   const { createScrapeSetting, isCreatingScrapeSetting } =
     useCreateScrapeSettingQuery()
   const { updateScrapeSetting, isUpdatingScrapeSetting } =
@@ -124,11 +128,20 @@ export function PostForm() {
   const [showCustomKeywordInput, setShowCustomKeywordInput] = useState(false)
   const [customKeyword, setCustomKeyword] = useState('')
   const [customKeywords, setCustomKeywords] = useState<string[]>([])
-  // const [isAuthorTitlesExpanded, setIsAuthorTitlesExpanded] = useState(true)
   const [showCustomTitleInput, setShowCustomTitleInput] = useState(false)
   const [customTitle, setCustomTitle] = useState('')
   const [customTitles, setCustomTitles] = useState<string[]>([])
-  // Geography section is always expanded
+
+  const shouldDisplayEngagementThresholdSetting = Boolean(
+    planSetting['engagementThreshold']?.[userPlan]
+  )
+
+  const shouldDisplayGeographySetting = Boolean(
+    planSetting['geography']?.[userPlan]
+  )
+  const shouldDisplayAuthorTitlesSetting = Boolean(
+    planSetting['authorTitles']?.[userPlan]
+  )
 
   const form = useForm<NotificationsFormValues>({
     resolver: zodResolver(notificationsFormSchema),
@@ -158,55 +171,6 @@ export function PostForm() {
   // Build LinkedIn search URL for selected keywords
   const liSearchUrl = buildSearchUrl(selectedKeywords)
 
-  const toPaddedHourAndPeriod = (
-    hours24?: number
-  ): { hour: string; period: 'AM' | 'PM' } => {
-    if (hours24 === undefined || hours24 === null || Number.isNaN(hours24)) {
-      return { hour: '09', period: 'AM' }
-    }
-    const period: 'AM' | 'PM' = hours24 >= 12 ? 'PM' : 'AM'
-    let hour12 = hours24 % 12
-    if (hour12 === 0) hour12 = 12
-    return { hour: String(hour12).padStart(2, '0'), period }
-  }
-
-  const toQuarterMinute = (minutes?: number): '00' | '15' | '30' | '45' => {
-    if (minutes === undefined || minutes === null || Number.isNaN(minutes))
-      return '00'
-    const quarters = [0, 15, 30, 45]
-    let closest = 0
-    let minDiff = Infinity
-    for (const q of quarters) {
-      const diff = Math.abs(minutes - q)
-      if (diff < minDiff) {
-        minDiff = diff
-        closest = q
-      }
-    }
-    return String(closest).padStart(2, '0') as '00' | '15' | '30' | '45'
-  }
-
-  // Convert wall-clock time in provided TZ to local time using dayjs.tz
-  const wallTimeInZoneToLocal = (
-    zoneHours: number,
-    zoneMinutes: number,
-    timeZone?: string
-  ): { hours24: number; minutes: number } => {
-    const tz =
-      timeZone && typeof timeZone === 'string' && timeZone.length
-        ? timeZone
-        : 'UTC'
-    const todayInTz = dayjs().tz(tz)
-    const hourStr = String(zoneHours ?? 0).padStart(2, '0')
-    const minuteStr = String(zoneMinutes ?? 0).padStart(2, '0')
-    const wallInTz = dayjs.tz(
-      `${todayInTz.format('YYYY-MM-DD')} ${hourStr}:${minuteStr}:00`,
-      tz
-    )
-    const local = wallInTz.local()
-    return { hours24: local.hour(), minutes: local.minute() }
-  }
-
   const populateFromSetting = (setting?: ISetting) => {
     if (!setting) return
     const scrape = setting.scrapeSetting
@@ -227,12 +191,9 @@ export function PostForm() {
     )
     if (extraTitles.length) setCustomTitles(extraTitles)
 
-    let paddedHour: NotificationsFormValues['startHour'] =
-      form.getValues('startHour')
-    let period: NotificationsFormValues['startPeriod'] =
-      form.getValues('startPeriod')
-    let minute: NotificationsFormValues['startMinute'] =
-      form.getValues('startMinute')
+    let paddedHour: Hour12 = form.getValues('startHour')
+    let period: Period = form.getValues('startPeriod')
+    let minute: MinuteQuarter = form.getValues('startMinute')
 
     if (
       typeof scrape?.jobTiming?.hours === 'number' &&
@@ -244,11 +205,9 @@ export function PostForm() {
         scrape.jobTiming.tz
       )
       const hp = toPaddedHourAndPeriod(hours24)
-      paddedHour = hp.hour as NotificationsFormValues['startHour']
-      period = hp.period as NotificationsFormValues['startPeriod']
-      minute = toQuarterMinute(
-        minutes
-      ) as NotificationsFormValues['startMinute']
+      paddedHour = hp.hour as Hour12
+      period = hp.period as Period
+      minute = toQuarterMinute(minutes) as MinuteQuarter
     }
 
     form.reset({
@@ -289,24 +248,6 @@ export function PostForm() {
     populateFromSetting(activeProfile?.setting)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfile?.setting])
-
-  const toUTCFromLocalSelection = (
-    hourStr: NotificationsFormValues['startHour'],
-    minuteStr: NotificationsFormValues['startMinute'],
-    period: NotificationsFormValues['startPeriod']
-  ): { hours: number; minutes: number } => {
-    const hour12 = parseInt(hourStr, 10)
-    let localHours24 = hour12 % 12
-    if (period === 'PM') localHours24 += 12
-    const tzLocal = dayjs.tz.guess()
-    const todayLocal = dayjs().tz(tzLocal).format('YYYY-MM-DD')
-    const localDateTime = dayjs.tz(
-      `${todayLocal} ${String(localHours24).padStart(2, '0')}:${minuteStr}:00`,
-      tzLocal
-    )
-    const utcDateTime = localDateTime.utc()
-    return { hours: utcDateTime.hour(), minutes: utcDateTime.minute() }
-  }
 
   const handleSubmitForm = (values: NotificationsFormValues) => {
     if (!activeProfile?._id) return
@@ -718,239 +659,247 @@ export function PostForm() {
         />
 
         {/* Engagement Threshold */}
-        <div className='mb-8'>
-          <Label className='text-foreground font-semibold'>
-            Comment Monitoring Based on Engagement
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                    <Info className='text-muted-foreground h-3 w-3' />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side='right' className='max-w-xs'>
-                  <p>
-                    Only posts with a minimum level of engagement (e.g., at
-                    least 5 likes or comments) will be considered for
-                    commenting.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Label>
-          <div className='mt-3 flex flex-wrap gap-3'>
-            {[
-              { value: 'strict', label: 'Strict Engagement Check' },
-              { value: 'moderate', label: 'Moderate Engagement Check' },
-              { value: 'disabled', label: 'Comment Immediately' },
-            ].map((option) => (
-              <button
-                type='button'
-                key={option.value}
-                onClick={() =>
-                  form.setValue('engagementThreshold', option.value as any)
-                }
-                className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
-                  form.watch('engagementThreshold') === option.value
-                    ? 'bg-primary/10 border-primary text-primary'
-                    : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
-                }`}
-              >
-                <span className='text-sm font-normal'>{option.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Author Titles Section */}
-        <div className='mb-8 space-y-2'>
-          <div className='flex items-center justify-between'>
-            <div className='flex w-full items-center gap-x-6'>
-              <div className='flex items-center gap-2'>
-                <Filter className='text-muted-foreground h-4 w-4' />
-                <Label className='text-foreground cursor-pointer font-medium'>
-                  Author Titles
-                </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                        <Info className='text-muted-foreground h-3 w-3' />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side='right' className='max-w-xs'>
-                      <p>
-                        Select titles of authors whose posts
-                        <br />
-                        you want to engage with
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <p className='text-muted-foreground text-sm'>
-                {authorTitles.length}/3 titles selected
-              </p>
-            </div>
-          </div>
-
-          <div className='mt-4 space-y-3'>
-            <div className='flex flex-wrap gap-3'>
-              {allTitles.map((title) => {
-                const isSelected = authorTitles.includes(title)
-                const isDisabled = !isSelected && authorTitles.length >= 3
-                return (
-                  <button
-                    type='button'
-                    key={title}
-                    onClick={() => toggleTitle(title)}
-                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-primary/10 border-primary text-primary'
-                        : isDisabled
-                          ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
-                          : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
-                    }`}
-                  >
-                    <span className='text-sm font-normal'>{title}</span>
-                    {customTitles.includes(title) && (
-                      <button
-                        type='button'
-                        aria-label={`Remove ${title}`}
-                        className='text-muted-foreground/80 hover:text-foreground transition'
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          // Remove from custom titles list
-                          setCustomTitles((prev) =>
-                            prev.filter((t) => t !== title)
-                          )
-                          // If selected, also remove from selected author titles
-                          if (form.getValues('authorTitles').includes(title)) {
-                            form.setValue(
-                              'authorTitles',
-                              form
-                                .getValues('authorTitles')
-                                .filter((t) => t !== title)
-                            )
-                          }
-                        }}
-                      >
-                        <X className='h-3.5 w-3.5' />
-                      </button>
-                    )}
-                  </button>
-                )
-              })}
-
-              {!showCustomTitleInput ? (
+        <UnlockWrapper isUnlocked={shouldDisplayEngagementThresholdSetting}>
+          <div className='mb-8'>
+            <Label className='text-foreground font-semibold'>
+              Comment Monitoring Based on Engagement
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                      <Info className='text-muted-foreground h-3 w-3' />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side='right' className='max-w-xs'>
+                    <p>
+                      Only posts with a minimum level of engagement (e.g., at
+                      least 5 likes or comments) will be considered for
+                      commenting.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <div className='mt-3 flex flex-wrap gap-3'>
+              {[
+                { value: 'strict', label: 'Strict Engagement Check' },
+                { value: 'moderate', label: 'Moderate Engagement Check' },
+                { value: 'disabled', label: 'Comment Immediately' },
+              ].map((option) => (
                 <button
                   type='button'
-                  onClick={handleTitleOtherClick}
-                  className='border-border bg-card text-card-foreground hover:border-primary/30 flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 hover:shadow-sm'
+                  key={option.value}
+                  onClick={() =>
+                    form.setValue('engagementThreshold', option.value as any)
+                  }
+                  className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                    form.watch('engagementThreshold') === option.value
+                      ? 'bg-primary/10 border-primary text-primary'
+                      : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                  }`}
                 >
-                  <span className='flex items-center gap-1 text-sm font-normal'>
-                    <PlusCircle className='h-4 w-4' />
-                    Other
-                  </span>
+                  <span className='text-sm font-normal'>{option.label}</span>
                 </button>
-              ) : (
-                <Input
-                  placeholder='Enter title...'
-                  value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
-                  onKeyPress={handleCustomTitleSubmit}
-                  onBlur={() => setShowCustomTitleInput(false)}
-                  autoFocus
-                  className='h-10 w-32'
-                />
+              ))}
+            </div>
+          </div>
+        </UnlockWrapper>
+
+        {/* Author Titles Section */}
+        <UnlockWrapper isUnlocked={shouldDisplayAuthorTitlesSetting}>
+          <div className='mb-8 space-y-2'>
+            <div className='flex items-center justify-between'>
+              <div className='flex w-full items-center gap-x-6'>
+                <div className='flex items-center gap-2'>
+                  <Filter className='text-muted-foreground h-4 w-4' />
+                  <Label className='text-foreground cursor-pointer font-medium'>
+                    Author Titles
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                          <Info className='text-muted-foreground h-3 w-3' />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side='right' className='max-w-xs'>
+                        <p>
+                          Select titles of authors whose posts
+                          <br />
+                          you want to engage with
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <p className='text-muted-foreground text-sm'>
+                  {authorTitles.length}/3 titles selected
+                </p>
+              </div>
+            </div>
+
+            <div className='mt-4 space-y-3'>
+              <div className='flex flex-wrap gap-3'>
+                {allTitles.map((title) => {
+                  const isSelected = authorTitles.includes(title)
+                  const isDisabled = !isSelected && authorTitles.length >= 3
+                  return (
+                    <button
+                      type='button'
+                      key={title}
+                      onClick={() => toggleTitle(title)}
+                      className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                        isSelected
+                          ? 'bg-primary/10 border-primary text-primary'
+                          : isDisabled
+                            ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                            : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                      }`}
+                    >
+                      <span className='text-sm font-normal'>{title}</span>
+                      {customTitles.includes(title) && (
+                        <button
+                          type='button'
+                          aria-label={`Remove ${title}`}
+                          className='text-muted-foreground/80 hover:text-foreground transition'
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Remove from custom titles list
+                            setCustomTitles((prev) =>
+                              prev.filter((t) => t !== title)
+                            )
+                            // If selected, also remove from selected author titles
+                            if (
+                              form.getValues('authorTitles').includes(title)
+                            ) {
+                              form.setValue(
+                                'authorTitles',
+                                form
+                                  .getValues('authorTitles')
+                                  .filter((t) => t !== title)
+                              )
+                            }
+                          }}
+                        >
+                          <X className='h-3.5 w-3.5' />
+                        </button>
+                      )}
+                    </button>
+                  )
+                })}
+
+                {!showCustomTitleInput ? (
+                  <button
+                    type='button'
+                    onClick={handleTitleOtherClick}
+                    className='border-border bg-card text-card-foreground hover:border-primary/30 flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 hover:shadow-sm'
+                  >
+                    <span className='flex items-center gap-1 text-sm font-normal'>
+                      <PlusCircle className='h-4 w-4' />
+                      Other
+                    </span>
+                  </button>
+                ) : (
+                  <Input
+                    placeholder='Enter title...'
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    onKeyPress={handleCustomTitleSubmit}
+                    onBlur={() => setShowCustomTitleInput(false)}
+                    autoFocus
+                    className='h-10 w-32'
+                  />
+                )}
+              </div>
+              {form.formState.errors.authorTitles?.message && (
+                <p className='text-destructive flex items-center gap-1 text-sm'>
+                  <AlertCircle className='h-3.5 w-3.5' />
+                  {form.formState.errors.authorTitles.message as string}
+                </p>
               )}
             </div>
-            {form.formState.errors.authorTitles?.message && (
-              <p className='text-destructive flex items-center gap-1 text-sm'>
-                <AlertCircle className='h-3.5 w-3.5' />
-                {form.formState.errors.authorTitles.message as string}
-              </p>
-            )}
           </div>
-        </div>
+        </UnlockWrapper>
 
         {/* Geography Section (multi-select) moved below Author Titles */}
-        <div>
-          <div className='flex items-center gap-2'>
-            <Globe className='text-muted-foreground h-4 w-4' />
-            <Label className='text-foreground cursor-pointer font-medium'>
-              Geography
-            </Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                    <Info className='text-muted-foreground h-3 w-3' />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side='right' className='max-w-xs'>
-                  <p>Select up to 6 geographic regions.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+        <UnlockWrapper isUnlocked={shouldDisplayGeographySetting}>
+          <div>
+            <div className='flex items-center gap-2'>
+              <Globe className='text-muted-foreground h-4 w-4' />
+              <Label className='text-foreground cursor-pointer font-medium'>
+                Geography
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                      <Info className='text-muted-foreground h-3 w-3' />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side='right' className='max-w-xs'>
+                    <p>Select up to 6 geographic regions.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
 
-          <div className='mt-4'>
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild className='has-[>svg]:px-5'>
-                <Button variant='outline' size='sm' className='group h-9'>
-                  Select regions
-                  {selectedGeographies.length > 0 && (
-                    <span className='text-muted-foreground ml-2 max-w-[320px] truncate text-xs'>
-                      {selectedGeographies.join(', ')}
-                    </span>
-                  )}
-                  <ChevronDown className='ml-2 size-4 group-data-[state=open]:hidden' />
-                  <ChevronUp className='ml-2 hidden size-4 group-data-[state=open]:block' />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='start' className='w-56'>
-                <DropdownMenuLabel>Regions</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {['Global', 'Europe', 'Asia', 'US', 'India', 'MENA'].map(
-                  (region) => (
-                    <DropdownMenuCheckboxItem
-                      key={region}
-                      checked={selectedGeographies.includes(region)}
-                      onCheckedChange={(checked) => {
-                        const isChecked = !!checked
-                        let updated: string[]
+            <div className='mt-4'>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild className='has-[>svg]:px-5'>
+                  <Button variant='outline' size='sm' className='group h-9'>
+                    Select regions
+                    {selectedGeographies.length > 0 && (
+                      <span className='text-muted-foreground ml-2 max-w-[320px] truncate text-xs'>
+                        {selectedGeographies.join(', ')}
+                      </span>
+                    )}
+                    <ChevronDown className='ml-2 size-4 group-data-[state=open]:hidden' />
+                    <ChevronUp className='ml-2 hidden size-4 group-data-[state=open]:block' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='start' className='w-56'>
+                  <DropdownMenuLabel>Regions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {['Global', 'Europe', 'Asia', 'US', 'India', 'MENA'].map(
+                    (region) => (
+                      <DropdownMenuCheckboxItem
+                        key={region}
+                        checked={selectedGeographies.includes(region)}
+                        onCheckedChange={(checked) => {
+                          const isChecked = !!checked
+                          let updated: string[]
 
-                        if (isChecked) {
-                          if (region === 'Global') {
-                            updated = ['Global']
+                          if (isChecked) {
+                            if (region === 'Global') {
+                              updated = ['Global']
+                            } else {
+                              // Remove Global if present and add the selected region
+                              const withoutGlobal = selectedGeographies.filter(
+                                (g) => g !== 'Global'
+                              )
+                              updated = withoutGlobal.includes(region)
+                                ? withoutGlobal
+                                : [...withoutGlobal, region]
+                            }
                           } else {
-                            // Remove Global if present and add the selected region
-                            const withoutGlobal = selectedGeographies.filter(
-                              (g) => g !== 'Global'
+                            // Unchecking removes the region
+                            updated = selectedGeographies.filter(
+                              (g) => g !== region
                             )
-                            updated = withoutGlobal.includes(region)
-                              ? withoutGlobal
-                              : [...withoutGlobal, region]
                           }
-                        } else {
-                          // Unchecking removes the region
-                          updated = selectedGeographies.filter(
-                            (g) => g !== region
-                          )
-                        }
 
-                        form.setValue('geography', updated)
-                      }}
-                    >
-                      {region}
-                    </DropdownMenuCheckboxItem>
-                  )
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                          form.setValue('geography', updated)
+                        }}
+                      >
+                        {region}
+                      </DropdownMenuCheckboxItem>
+                    )
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
+        </UnlockWrapper>
 
         {/* Skip Options */}
         <div className='mb-8 space-y-4'>

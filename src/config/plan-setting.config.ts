@@ -20,7 +20,7 @@ export const planSetting: Record<
   },
   engagementThreshold: {
     starter: false,
-    pro: false,
+    pro: true,
     premium: true,
   },
   scrapeRules: {
@@ -31,6 +31,16 @@ export const planSetting: Record<
   commentRules: {
     starter: false,
     pro: true,
+    premium: true,
+  },
+  geography: {
+    starter: false,
+    pro: false,
+    premium: true,
+  },
+  authorTitles: {
+    starter: false,
+    pro: false,
     premium: true,
   },
 }
