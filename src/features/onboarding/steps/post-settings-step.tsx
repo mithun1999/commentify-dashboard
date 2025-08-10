@@ -103,7 +103,9 @@ export function PostSettingsStep() {
 
   // Author Title functions
   const toggleTitle = (title: string) => {
-    const updated = authorTitles.includes(title)
+    const isSelected = authorTitles.includes(title)
+    if (!isSelected && authorTitles.length >= 3) return
+    const updated = isSelected
       ? authorTitles.filter((t) => t !== title)
       : [...authorTitles, title]
     setAuthorTitles(updated)
@@ -294,9 +296,7 @@ export function PostSettingsStep() {
                 />
               )}
             </div>
-            <p className='text-muted-foreground text-sm'>
-              {authorTitles.length} titles selected
-            </p>
+            
           </div>
         )}
       </div>

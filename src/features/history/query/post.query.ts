@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 // Stop using a separate QueryClient instance; use the provider's client via useQueryClient
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { useProfileStore } from '@/stores/profile.store'
 import { useHistoryStore } from '@/features/history/store/history.store'
 import {
@@ -80,19 +80,14 @@ export const useUpdatePostComment = (cb: (data: string) => void) => {
           refetchType: 'active',
         })
       }
-      toast('Comment updated successfully', {
-        type: 'success',
-      })
+      toast.success('Comment updated successfully')
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast(
+      toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          'Something went wrong while editing comment',
-        {
-          type: 'error',
-        }
+          'Something went wrong while editing comment'
       )
     },
   })
@@ -124,20 +119,15 @@ export const useApprovePosts = (successCb: () => void) => {
           })
         }
         successCb()
-        toast(data?.message, {
-          type: 'success',
-        })
+        toast.success(data?.message)
       }
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast(
+      toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          'Something went wrong while editing comment',
-        {
-          type: 'error',
-        }
+          'Something went wrong while editing comment'
       )
     },
   })
@@ -168,15 +158,14 @@ export const useDeletePostComments = (successCb?: () => void) => {
         })
       }
       successCb?.()
-      toast('Deleted successfully', { type: 'success' })
+      toast.success('Deleted successfully')
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast(
+      toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          'Something went wrong while deleting',
-        { type: 'error' }
+          'Something went wrong while deleting'
       )
     },
   })

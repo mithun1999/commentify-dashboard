@@ -1,93 +1,141 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone'
+import utc from 'dayjs/plugin/utc'
 import {
-  Hash,
   Info,
   PlusCircle,
   Filter,
   Globe,
+  ExternalLink,
   ChevronDown,
   ChevronUp,
+  X,
+  AlertCircle,
 } from 'lucide-react'
-import { showSubmittedData } from '@/utils/show-submitted-data'
+import { useProfileStore } from '@/stores/profile.store'
 import { Button } from '@/components/ui/button'
-import { Form } from '@/components/ui/form'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Form,
+  FormControl,
+  FormLabel,
+  FormField,
+  FormItem,
+  FormDescription,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
+import type { ISetting } from '@/features/settings/interface/setting.interface'
+// import { showSubmittedData } from '@/utils/show-submitted-data'
+import {
+  useCreateScrapeSettingQuery,
+  useUpdateScrapeSettingQuery,
+} from '@/features/settings/query/setting.query'
 import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const notificationsFormSchema = z.object({
   keywords: z.array(z.string()).max(6),
-  authorTitles: z.array(z.string()),
-  geography: z.enum(['global', 'north-america', 'europe', 'asia']),
-  numberOfPostsToScrapePerDay: z.number().min(1).max(50),
+  authorTitles: z.array(z.string()).max(3),
+  geography: z.array(z.string()),
+  numberOfPostsToScrapePerDay: z.number().min(1).max(100),
   engagementThreshold: z.enum(['strict', 'moderate', 'disabled']),
   skipHiringPosts: z.boolean(),
   skipJobUpdatePosts: z.boolean(),
   skipArticlePosts: z.boolean(),
   autoSchedule: z.boolean(),
   rules: z.string().optional(),
+  startHour: z.enum([
+    '01',
+    '02',
+    '03',
+    '04',
+    '05',
+    '06',
+    '07',
+    '08',
+    '09',
+    '10',
+    '11',
+    '12',
+  ]),
+  startMinute: z.enum(['00', '15', '30', '45']),
+  startPeriod: z.enum(['AM', 'PM']),
 })
 
 type NotificationsFormValues = z.infer<typeof notificationsFormSchema>
 
-const authorTitlesList = [
-  'Founder',
-  'Co-founder',
-  'CEO',
-  'CTO',
-  'CFO',
-  'CMO',
-  'COO',
-  'VP',
-  'Director',
-  'Manager',
-]
+const authorTitlesList = ['Founder', 'CEO', 'CTO', 'CMO', 'VP', 'Director']
 const predefinedKeywords = [
   'AI',
   'SaaS',
-  'Tech',
   'Startup',
   'Marketing',
   'Sales',
   'Leadership',
-  'Product',
-  'Design',
-  'Engineering',
   'Finance',
   'Operations',
-  'HR',
-  'Consulting',
-  'Analytics',
   'Growth',
 ]
 
 export function PostForm() {
+  const activeProfile = useProfileStore((s) => s.activeProfile)
+  const { data: user } = useGetUserQuery()
+  const userPlan = user?.subscribedProduct?.name?.toLowerCase() as
+    | 'starter'
+    | 'pro'
+    | 'premium'
+    | undefined
+  const { createScrapeSetting, isCreatingScrapeSetting } =
+    useCreateScrapeSettingQuery()
+  const { updateScrapeSetting, isUpdatingScrapeSetting } =
+    useUpdateScrapeSettingQuery()
   const [showCustomKeywordInput, setShowCustomKeywordInput] = useState(false)
   const [customKeyword, setCustomKeyword] = useState('')
   const [customKeywords, setCustomKeywords] = useState<string[]>([])
-  const [isAuthorTitlesExpanded, setIsAuthorTitlesExpanded] = useState(true)
+  // const [isAuthorTitlesExpanded, setIsAuthorTitlesExpanded] = useState(true)
   const [showCustomTitleInput, setShowCustomTitleInput] = useState(false)
   const [customTitle, setCustomTitle] = useState('')
   const [customTitles, setCustomTitles] = useState<string[]>([])
-  const [isGeographyExpanded, setIsGeographyExpanded] = useState(true)
+  // Geography section is always expanded
 
   const form = useForm<NotificationsFormValues>({
     resolver: zodResolver(notificationsFormSchema),
     defaultValues: {
       keywords: ['AI', 'SaaS'],
       authorTitles: [],
-      geography: 'global',
+      geography: ['Global'],
       numberOfPostsToScrapePerDay: 20,
       engagementThreshold: 'moderate',
       skipHiringPosts: true,
@@ -95,6 +143,9 @@ export function PostForm() {
       skipArticlePosts: true,
       autoSchedule: true,
       rules: '',
+      startHour: '09',
+      startMinute: '00',
+      startPeriod: 'AM',
     },
   })
 
@@ -102,10 +153,197 @@ export function PostForm() {
   const allTitles = [...authorTitlesList, ...customTitles]
   const selectedKeywords = form.watch('keywords') || []
   const authorTitles = form.watch('authorTitles') || []
-  const geography = form.watch('geography')
+  const selectedGeographies = form.watch('geography') || []
 
   // Build LinkedIn search URL for selected keywords
   const liSearchUrl = buildSearchUrl(selectedKeywords)
+
+  const toPaddedHourAndPeriod = (
+    hours24?: number
+  ): { hour: string; period: 'AM' | 'PM' } => {
+    if (hours24 === undefined || hours24 === null || Number.isNaN(hours24)) {
+      return { hour: '09', period: 'AM' }
+    }
+    const period: 'AM' | 'PM' = hours24 >= 12 ? 'PM' : 'AM'
+    let hour12 = hours24 % 12
+    if (hour12 === 0) hour12 = 12
+    return { hour: String(hour12).padStart(2, '0'), period }
+  }
+
+  const toQuarterMinute = (minutes?: number): '00' | '15' | '30' | '45' => {
+    if (minutes === undefined || minutes === null || Number.isNaN(minutes))
+      return '00'
+    const quarters = [0, 15, 30, 45]
+    let closest = 0
+    let minDiff = Infinity
+    for (const q of quarters) {
+      const diff = Math.abs(minutes - q)
+      if (diff < minDiff) {
+        minDiff = diff
+        closest = q
+      }
+    }
+    return String(closest).padStart(2, '0') as '00' | '15' | '30' | '45'
+  }
+
+  // Convert wall-clock time in provided TZ to local time using dayjs.tz
+  const wallTimeInZoneToLocal = (
+    zoneHours: number,
+    zoneMinutes: number,
+    timeZone?: string
+  ): { hours24: number; minutes: number } => {
+    const tz =
+      timeZone && typeof timeZone === 'string' && timeZone.length
+        ? timeZone
+        : 'UTC'
+    const todayInTz = dayjs().tz(tz)
+    const hourStr = String(zoneHours ?? 0).padStart(2, '0')
+    const minuteStr = String(zoneMinutes ?? 0).padStart(2, '0')
+    const wallInTz = dayjs.tz(
+      `${todayInTz.format('YYYY-MM-DD')} ${hourStr}:${minuteStr}:00`,
+      tz
+    )
+    const local = wallInTz.local()
+    return { hours24: local.hour(), minutes: local.minute() }
+  }
+
+  const populateFromSetting = (setting?: ISetting) => {
+    if (!setting) return
+    const scrape = setting.scrapeSetting
+    const existingKeywords = Array.isArray(scrape?.keywordsToTarget)
+      ? scrape.keywordsToTarget
+      : []
+    const existingTitles = Array.isArray(scrape?.authorTitlesToTarget)
+      ? scrape.authorTitlesToTarget
+      : []
+
+    // Ensure UI can render custom entries
+    const extraKeywords = existingKeywords.filter(
+      (k) => !predefinedKeywords.includes(k)
+    )
+    if (extraKeywords.length) setCustomKeywords(extraKeywords)
+    const extraTitles = existingTitles.filter(
+      (t) => !authorTitlesList.includes(t)
+    )
+    if (extraTitles.length) setCustomTitles(extraTitles)
+
+    let paddedHour: NotificationsFormValues['startHour'] =
+      form.getValues('startHour')
+    let period: NotificationsFormValues['startPeriod'] =
+      form.getValues('startPeriod')
+    let minute: NotificationsFormValues['startMinute'] =
+      form.getValues('startMinute')
+
+    if (
+      typeof scrape?.jobTiming?.hours === 'number' &&
+      typeof scrape?.jobTiming?.minutes === 'number'
+    ) {
+      const { hours24, minutes } = wallTimeInZoneToLocal(
+        scrape.jobTiming.hours,
+        scrape.jobTiming.minutes,
+        scrape.jobTiming.tz
+      )
+      const hp = toPaddedHourAndPeriod(hours24)
+      paddedHour = hp.hour as NotificationsFormValues['startHour']
+      period = hp.period as NotificationsFormValues['startPeriod']
+      minute = toQuarterMinute(
+        minutes
+      ) as NotificationsFormValues['startMinute']
+    }
+
+    form.reset({
+      keywords: existingKeywords.length
+        ? existingKeywords
+        : form.getValues('keywords'),
+      authorTitles: existingTitles.length
+        ? existingTitles
+        : form.getValues('authorTitles'),
+      geography: scrape?.regionsToTarget ?? form.getValues('geography'),
+      numberOfPostsToScrapePerDay:
+        typeof scrape?.numberOfPostsToScrapePerDay === 'number'
+          ? scrape.numberOfPostsToScrapePerDay
+          : form.getValues('numberOfPostsToScrapePerDay'),
+      engagementThreshold:
+        scrape?.engagementThreshold ?? form.getValues('engagementThreshold'),
+      skipHiringPosts:
+        typeof scrape?.skipHiringPosts === 'boolean'
+          ? scrape.skipHiringPosts
+          : form.getValues('skipHiringPosts'),
+      skipJobUpdatePosts:
+        typeof scrape?.skipJobUpdatePosts === 'boolean'
+          ? scrape.skipJobUpdatePosts
+          : form.getValues('skipJobUpdatePosts'),
+      skipArticlePosts:
+        typeof scrape?.skipArticlePosts === 'boolean'
+          ? scrape.skipArticlePosts
+          : form.getValues('skipArticlePosts'),
+      autoSchedule: scrape?.autoSchedule ?? form.getValues('autoSchedule'),
+      rules: scrape?.rules ?? form.getValues('rules'),
+      startHour: paddedHour,
+      startMinute: minute,
+      startPeriod: period,
+    })
+  }
+
+  useEffect(() => {
+    populateFromSetting(activeProfile?.setting)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProfile?.setting])
+
+  const toUTCFromLocalSelection = (
+    hourStr: NotificationsFormValues['startHour'],
+    minuteStr: NotificationsFormValues['startMinute'],
+    period: NotificationsFormValues['startPeriod']
+  ): { hours: number; minutes: number } => {
+    const hour12 = parseInt(hourStr, 10)
+    let localHours24 = hour12 % 12
+    if (period === 'PM') localHours24 += 12
+    const tzLocal = dayjs.tz.guess()
+    const todayLocal = dayjs().tz(tzLocal).format('YYYY-MM-DD')
+    const localDateTime = dayjs.tz(
+      `${todayLocal} ${String(localHours24).padStart(2, '0')}:${minuteStr}:00`,
+      tzLocal
+    )
+    const utcDateTime = localDateTime.utc()
+    return { hours: utcDateTime.hour(), minutes: utcDateTime.minute() }
+  }
+
+  const handleSubmitForm = (values: NotificationsFormValues) => {
+    if (!activeProfile?._id) return
+    const plan = (userPlan ?? 'starter') as 'starter' | 'pro' | 'premium'
+    const { hours, minutes } = toUTCFromLocalSelection(
+      values.startHour,
+      values.startMinute,
+      values.startPeriod
+    )
+
+    const payload = {
+      profileId: activeProfile._id,
+      userPlan: plan,
+      keywordsToTarget: values.keywords,
+      skipHiringPosts: values.skipHiringPosts,
+      skipJobUpdatePosts: values.skipJobUpdatePosts,
+      skipArticlePosts: values.skipArticlePosts,
+      autoSchedule: values.autoSchedule,
+      numberOfPostsToScrapePerDay: values.numberOfPostsToScrapePerDay,
+      jobTiming: {
+        hours,
+        minutes,
+        tz: 'UTC',
+      },
+      engagementThreshold: values.engagementThreshold,
+      regionsToTarget: values.geography,
+      authorTitlesToTarget: values.authorTitles,
+      rules: values.rules,
+    }
+
+    const hasExisting = Boolean(activeProfile?.setting?.scrapeSetting?._id)
+    if (hasExisting) {
+      updateScrapeSetting(payload)
+    } else {
+      createScrapeSetting(payload)
+    }
+  }
 
   const handleKeywordSelect = (keyword: string) => {
     if (selectedKeywords.includes(keyword)) {
@@ -139,20 +377,27 @@ export function PostForm() {
   }
 
   const toggleTitle = (title: string) => {
-    const updated = authorTitles.includes(title)
+    const isSelected = authorTitles.includes(title)
+    if (!isSelected && authorTitles.length >= 3) return
+    const updated = isSelected
       ? authorTitles.filter((t) => t !== title)
       : [...authorTitles, title]
     form.setValue('authorTitles', updated)
   }
 
   const handleTitleOtherClick = () => {
+    if (authorTitles.length >= 3) return
     setShowCustomTitleInput(true)
   }
 
   const handleCustomTitleSubmit = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       const trimmedTitle = customTitle.trim()
-      if (trimmedTitle && !allTitles.includes(trimmedTitle)) {
+      if (
+        trimmedTitle &&
+        !allTitles.includes(trimmedTitle) &&
+        authorTitles.length < 3
+      ) {
         setCustomTitles([...customTitles, trimmedTitle])
         form.setValue('authorTitles', [...authorTitles, trimmedTitle])
       }
@@ -164,34 +409,36 @@ export function PostForm() {
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((data) => showSubmittedData(data))}
+        onSubmit={form.handleSubmit(handleSubmitForm)}
         className='space-y-8'
       >
         {/* Keywords Section */}
         <div className='mb-8'>
-          <div className='mb-4 flex items-center gap-2'>
-            <Hash className='text-muted-foreground h-4 w-4' />
-            <span className='text-foreground font-semibold'>
-              Target Keywords (Choose up to 6)
-            </span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                    <Info className='text-muted-foreground h-3 w-3' />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side='right' className='max-w-xs'>
-                  <p>
-                    Select keywords related to your industry
-                    <br />
-                    or interests to find relevant posts
-                    <br />
-                    for automated commenting
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className='mb-4 flex items-center gap-x-6'>
+            <div className='flex items-center gap-2'>
+              <span className='text-foreground font-semibold'>
+                Target Keywords (Choose up to 6)
+              </span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                      <Info className='text-muted-foreground h-3 w-3' />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side='right' className='max-w-xs'>
+                    <p>
+                      Select keywords related to your industry or interests to
+                      find relevant posts for automated commenting
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            <p className='text-muted-foreground text-sm'>
+              {selectedKeywords.length}/6 keywords selected
+            </p>
           </div>
 
           <div className='space-y-3'>
@@ -215,6 +462,31 @@ export function PostForm() {
                     }`}
                   >
                     <span className='text-sm font-normal'>{keyword}</span>
+                    {customKeywords.includes(keyword) && (
+                      <button
+                        type='button'
+                        aria-label={`Remove ${keyword}`}
+                        className='text-muted-foreground/80 hover:text-foreground transition'
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // Remove from custom list
+                          setCustomKeywords((prev) =>
+                            prev.filter((k) => k !== keyword)
+                          )
+                          // If selected, also remove from selected keywords
+                          if (form.getValues('keywords').includes(keyword)) {
+                            form.setValue(
+                              'keywords',
+                              form
+                                .getValues('keywords')
+                                .filter((k) => k !== keyword)
+                            )
+                          }
+                        }}
+                      >
+                        <X className='h-3.5 w-3.5' />
+                      </button>
+                    )}
                   </button>
                 )
               })}
@@ -247,48 +519,224 @@ export function PostForm() {
                 />
               )}
             </div>
+            {form.formState.errors.keywords?.message && (
+              <p className='text-destructive flex items-center gap-1 text-sm'>
+                <AlertCircle className='h-3.5 w-3.5' />
+                {form.formState.errors.keywords.message as string}
+              </p>
+            )}
           </div>
 
           <div className='mt-4 flex items-center justify-between'>
-            <p className='text-muted-foreground text-sm'>
-              {selectedKeywords.length}/6 keywords selected
-            </p>
-            {selectedKeywords.length > 0 && (
-              <a
-                href={liSearchUrl}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='mr-20 text-sm text-gray-500 hover:underline'
-              >
-                Preview LinkedIn posts for these keywords
-              </a>
-            )}
+            <div className='mt-1 flex items-center gap-2'>
+              <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                <ExternalLink className='text-muted-foreground h-3 w-3' />
+              </div>
+              {selectedKeywords.length > 0 && (
+                <a
+                  href={liSearchUrl}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='mr-20 text-sm text-gray-500 hover:underline'
+                >
+                  Preview LinkedIn posts for these keywords
+                </a>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Posts Per Day */}
-        <div className='mb-8'>
-          <Label className='text-foreground font-semibold'>
-            Number of posts to comment per day
-          </Label>
-          <Input
-            type='number'
-            min={1}
-            max={50}
-            className='mt-2 w-32'
-            {...form.register('numberOfPostsToScrapePerDay', {
-              valueAsNumber: true,
-            })}
-          />
-          <p className='text-muted-foreground mt-2 text-sm'>
-            Max. 100 posts per day
-          </p>
+        <div className='mb-8 flex flex-wrap gap-x-15 gap-y-8'>
+          <div>
+            <FormField
+              control={form.control}
+              name='numberOfPostsToScrapePerDay'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className='text-foreground font-semibold'>
+                    No. of posts to comment per day
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type='number'
+                      min={1}
+                      max={100}
+                      className='mt-2 w-32'
+                      {...field}
+                      onChange={(e) => {
+                        const val = Math.min(
+                          100,
+                          Math.max(1, Number(e.target.value))
+                        )
+                        field.onChange(val)
+                      }}
+                    />
+                  </FormControl>
+                  <p className='text-muted-foreground mt-2 flex items-center gap-2 text-sm'>
+                    <span className='border-border flex h-4 w-4 items-center justify-center rounded-full border'>
+                      <Info className='text-muted-foreground h-3 w-3' />
+                    </span>
+                    Max. 100 posts per day
+                  </p>
+                  {form.formState.errors.numberOfPostsToScrapePerDay && (
+                    <p className='text-destructive mt-1 flex items-center gap-1 text-sm'>
+                      <AlertCircle className='h-3.5 w-3.5' />
+                      {
+                        form.formState.errors.numberOfPostsToScrapePerDay
+                          .message as string
+                      }
+                    </p>
+                  )}
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Start Time Section */}
+          <div className='space-y-2'>
+            <Label className='text-foreground font-semibold'>
+              Select Time to Start Commenting
+            </Label>
+            <div className='flex items-center'>
+              {/* Hour */}
+              <FormField
+                control={form.control}
+                name='startHour'
+                render={({ field }) => (
+                  <FormItem className='w-20'>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder='Hr' />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) =>
+                          String(i + 1).padStart(2, '0')
+                        ).map((h) => (
+                          <SelectItem key={h} value={h}>
+                            {h}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.startHour && (
+                      <p className='text-destructive mt-1 flex items-center gap-1 text-xs'>
+                        <AlertCircle className='h-3.5 w-3.5' />
+                        {form.formState.errors.startHour.message as string}
+                      </p>
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              {/* Minute */}
+              <FormField
+                control={form.control}
+                name='startMinute'
+                render={({ field }) => (
+                  <FormItem className='w-24'>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder='Min' />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {['00', '15', '30', '45'].map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.startMinute && (
+                      <p className='text-destructive mt-1 flex items-center gap-1 text-xs'>
+                        <AlertCircle className='h-3.5 w-3.5' />
+                        {form.formState.errors.startMinute.message as string}
+                      </p>
+                    )}
+                  </FormItem>
+                )}
+              />
+
+              {/* Period */}
+              <FormField
+                control={form.control}
+                name='startPeriod'
+                render={({ field }) => (
+                  <FormItem className='w-24'>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder='AM/PM' />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {['AM', 'PM'].map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.startPeriod && (
+                      <p className='text-destructive mt-1 flex items-center gap-1 text-xs'>
+                        <AlertCircle className='h-3.5 w-3.5' />
+                        {form.formState.errors.startPeriod.message as string}
+                      </p>
+                    )}
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
         </div>
+
+        <FormField
+          control={form.control}
+          name='autoSchedule'
+          render={({ field }) => (
+            <FormItem className='flex max-w-xl flex-row items-center justify-between rounded-lg border p-4'>
+              <div className='space-y-0.5'>
+                <FormLabel className='text-sm font-semibold'>
+                  Post comments automatically
+                </FormLabel>
+                <FormDescription>
+                  Enable to automatically schedule comments once posts are found
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
         {/* Engagement Threshold */}
         <div className='mb-8'>
           <Label className='text-foreground font-semibold'>
             Comment Monitoring Based on Engagement
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                    <Info className='text-muted-foreground h-3 w-3' />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side='right' className='max-w-xs'>
+                  <p>
+                    Only posts with a minimum level of engagement (e.g., at
+                    least 5 likes or comments) will be considered for
+                    commenting.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </Label>
           <div className='mt-3 flex flex-wrap gap-3'>
             {[
@@ -312,233 +760,306 @@ export function PostForm() {
               </button>
             ))}
           </div>
-          <p className='text-muted-foreground mt-2 text-sm'>
-            Choose when to post comments based on the engagement level
-          </p>
         </div>
 
         {/* Author Titles Section */}
         <div className='mb-8 space-y-2'>
-          <div
-            className='group flex cursor-pointer items-center justify-between'
-            onClick={() => setIsAuthorTitlesExpanded(!isAuthorTitlesExpanded)}
-          >
-            <div className='flex items-center gap-2'>
-              <Filter className='text-muted-foreground h-4 w-4' />
-              <Label className='text-foreground cursor-pointer font-medium'>
-                Author Titles
-              </Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                      <Info className='text-muted-foreground h-3 w-3' />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side='right' className='max-w-xs'>
-                    <p>
-                      Select titles of authors whose posts
-                      <br />
-                      you want to engage with
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div className='text-muted-foreground group-hover:text-foreground flex items-center transition-colors'>
-              {isAuthorTitlesExpanded ? (
-                <ChevronUp className='h-4 w-4' />
-              ) : (
-                <ChevronDown className='h-4 w-4' />
-              )}
-            </div>
-          </div>
-
-          {isAuthorTitlesExpanded && (
-            <div className='mt-4 space-y-3'>
-              <div className='flex flex-wrap gap-3'>
-                {allTitles.map((title) => {
-                  const isSelected = authorTitles.includes(title)
-                  return (
-                    <button
-                      type='button'
-                      key={title}
-                      onClick={() => toggleTitle(title)}
-                      className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-primary/10 border-primary text-primary'
-                          : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
-                      }`}
-                    >
-                      <span className='text-sm font-normal'>{title}</span>
-                    </button>
-                  )
-                })}
-
-                {!showCustomTitleInput ? (
-                  <button
-                    type='button'
-                    onClick={handleTitleOtherClick}
-                    className='border-border bg-card text-card-foreground hover:border-primary/30 flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 hover:shadow-sm'
-                  >
-                    <span className='flex items-center gap-1 text-sm font-normal'>
-                      <PlusCircle className='h-4 w-4' />
-                      Other
-                    </span>
-                  </button>
-                ) : (
-                  <Input
-                    placeholder='Enter title...'
-                    value={customTitle}
-                    onChange={(e) => setCustomTitle(e.target.value)}
-                    onKeyPress={handleCustomTitleSubmit}
-                    onBlur={() => setShowCustomTitleInput(false)}
-                    autoFocus
-                    className='h-10 w-32'
-                  />
-                )}
+          <div className='flex items-center justify-between'>
+            <div className='flex w-full items-center gap-x-6'>
+              <div className='flex items-center gap-2'>
+                <Filter className='text-muted-foreground h-4 w-4' />
+                <Label className='text-foreground cursor-pointer font-medium'>
+                  Author Titles
+                </Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                        <Info className='text-muted-foreground h-3 w-3' />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side='right' className='max-w-xs'>
+                      <p>
+                        Select titles of authors whose posts
+                        <br />
+                        you want to engage with
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <p className='text-muted-foreground text-sm'>
-                {authorTitles.length} titles selected
+                {authorTitles.length}/3 titles selected
               </p>
-            </div>
-          )}
-        </div>
-
-        {/* Geography Section */}
-        <div className='mb-8 space-y-2'>
-          <div
-            className='group flex cursor-pointer items-center justify-between'
-            onClick={() => setIsGeographyExpanded(!isGeographyExpanded)}
-          >
-            <div className='flex items-center gap-2'>
-              <Globe className='text-muted-foreground h-4 w-4' />
-              <Label className='text-foreground cursor-pointer font-medium'>
-                Geography
-              </Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                      <Info className='text-muted-foreground h-3 w-3' />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side='right' className='max-w-xs'>
-                    <p>
-                      Select geographic regions where
-                      <br />
-                      you want to focus your engagement
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div className='text-muted-foreground group-hover:text-foreground flex items-center transition-colors'>
-              {isGeographyExpanded ? (
-                <ChevronUp className='h-4 w-4' />
-              ) : (
-                <ChevronDown className='h-4 w-4' />
-              )}
             </div>
           </div>
 
-          {isGeographyExpanded && (
-            <div className='mt-4 space-y-3'>
-              <div className='flex flex-wrap gap-3'>
-                {['Global', 'Europe', 'Asia', 'US', 'India'].map((region) => {
-                  const isSelected = geography === region
-                  const displayName = {
-                    Global: 'Global',
-                    Europe: 'Europe',
-                    Asia: 'Asia (excluding India)',
-                    US: 'US',
-                    India: 'India',
-                  }[region]
-
-                  return (
-                    <button
-                      type='button'
-                      key={region}
-                      onClick={() => form.setValue('geography', region as any)}
-                      className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-primary/10 border-primary text-primary'
+          <div className='mt-4 space-y-3'>
+            <div className='flex flex-wrap gap-3'>
+              {allTitles.map((title) => {
+                const isSelected = authorTitles.includes(title)
+                const isDisabled = !isSelected && authorTitles.length >= 3
+                return (
+                  <button
+                    type='button'
+                    key={title}
+                    onClick={() => toggleTitle(title)}
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                      isSelected
+                        ? 'bg-primary/10 border-primary text-primary'
+                        : isDisabled
+                          ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
                           : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
-                      }`}
-                    >
-                      <span className='text-sm font-normal'>{displayName}</span>
-                    </button>
-                  )
-                })}
-              </div>
+                    }`}
+                  >
+                    <span className='text-sm font-normal'>{title}</span>
+                    {customTitles.includes(title) && (
+                      <button
+                        type='button'
+                        aria-label={`Remove ${title}`}
+                        className='text-muted-foreground/80 hover:text-foreground transition'
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // Remove from custom titles list
+                          setCustomTitles((prev) =>
+                            prev.filter((t) => t !== title)
+                          )
+                          // If selected, also remove from selected author titles
+                          if (form.getValues('authorTitles').includes(title)) {
+                            form.setValue(
+                              'authorTitles',
+                              form
+                                .getValues('authorTitles')
+                                .filter((t) => t !== title)
+                            )
+                          }
+                        }}
+                      >
+                        <X className='h-3.5 w-3.5' />
+                      </button>
+                    )}
+                  </button>
+                )
+              })}
+
+              {!showCustomTitleInput ? (
+                <button
+                  type='button'
+                  onClick={handleTitleOtherClick}
+                  className='border-border bg-card text-card-foreground hover:border-primary/30 flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 hover:shadow-sm'
+                >
+                  <span className='flex items-center gap-1 text-sm font-normal'>
+                    <PlusCircle className='h-4 w-4' />
+                    Other
+                  </span>
+                </button>
+              ) : (
+                <Input
+                  placeholder='Enter title...'
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  onKeyPress={handleCustomTitleSubmit}
+                  onBlur={() => setShowCustomTitleInput(false)}
+                  autoFocus
+                  className='h-10 w-32'
+                />
+              )}
             </div>
-          )}
+            {form.formState.errors.authorTitles?.message && (
+              <p className='text-destructive flex items-center gap-1 text-sm'>
+                <AlertCircle className='h-3.5 w-3.5' />
+                {form.formState.errors.authorTitles.message as string}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Geography Section (multi-select) moved below Author Titles */}
+        <div>
+          <div className='flex items-center gap-2'>
+            <Globe className='text-muted-foreground h-4 w-4' />
+            <Label className='text-foreground cursor-pointer font-medium'>
+              Geography
+            </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                    <Info className='text-muted-foreground h-3 w-3' />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side='right' className='max-w-xs'>
+                  <p>Select up to 6 geographic regions.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          <div className='mt-4'>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild className='has-[>svg]:px-5'>
+                <Button variant='outline' size='sm' className='group h-9'>
+                  Select regions
+                  {selectedGeographies.length > 0 && (
+                    <span className='text-muted-foreground ml-2 max-w-[320px] truncate text-xs'>
+                      {selectedGeographies.join(', ')}
+                    </span>
+                  )}
+                  <ChevronDown className='ml-2 size-4 group-data-[state=open]:hidden' />
+                  <ChevronUp className='ml-2 hidden size-4 group-data-[state=open]:block' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='start' className='w-56'>
+                <DropdownMenuLabel>Regions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {['Global', 'Europe', 'Asia', 'US', 'India', 'MENA'].map(
+                  (region) => (
+                    <DropdownMenuCheckboxItem
+                      key={region}
+                      checked={selectedGeographies.includes(region)}
+                      onCheckedChange={(checked) => {
+                        const isChecked = !!checked
+                        let updated: string[]
+
+                        if (isChecked) {
+                          if (region === 'Global') {
+                            updated = ['Global']
+                          } else {
+                            // Remove Global if present and add the selected region
+                            const withoutGlobal = selectedGeographies.filter(
+                              (g) => g !== 'Global'
+                            )
+                            updated = withoutGlobal.includes(region)
+                              ? withoutGlobal
+                              : [...withoutGlobal, region]
+                          }
+                        } else {
+                          // Unchecking removes the region
+                          updated = selectedGeographies.filter(
+                            (g) => g !== region
+                          )
+                        }
+
+                        form.setValue('geography', updated)
+                      }}
+                    >
+                      {region}
+                    </DropdownMenuCheckboxItem>
+                  )
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Skip Options */}
         <div className='mb-8 space-y-4'>
-          <Label className='text-foreground font-semibold'>
-            Skip commenting on
-          </Label>
-          <div className='flex flex-wrap gap-4'>
-            <div className='flex items-center space-x-2'>
-              <input
-                type='checkbox'
-                id='skipHiringPosts'
-                className='text-primary focus:ring-primary h-4 w-4 rounded border-gray-300'
-                {...form.register('skipHiringPosts')}
-              />
-              <Label htmlFor='skipHiringPosts'>Hiring Posts</Label>
-            </div>
-            <div className='flex items-center space-x-2'>
-              <input
-                type='checkbox'
-                id='skipJobUpdatePosts'
-                className='text-primary focus:ring-primary h-4 w-4 rounded border-gray-300'
-                {...form.register('skipJobUpdatePosts')}
-              />
-              <Label htmlFor='skipJobUpdatePosts'>Job Update Posts</Label>
-            </div>
-            <div className='flex items-center space-x-2'>
-              <input
-                type='checkbox'
-                id='skipArticlePosts'
-                className='text-primary focus:ring-primary h-4 w-4 rounded border-gray-300'
-                {...form.register('skipArticlePosts')}
-              />
-              <Label htmlFor='skipArticlePosts'>Article Posts</Label>
-            </div>
-          </div>
-        </div>
-
-        {/* Auto Schedule */}
-        <div className='mb-8 flex items-center space-x-2'>
-          <input
-            type='checkbox'
-            id='autoSchedule'
-            className='text-primary focus:ring-primary h-4 w-4 rounded border-gray-300'
-            {...form.register('autoSchedule')}
+          <FormField
+            control={form.control}
+            name='skipHiringPosts'
+            render={({ field }) => (
+              <FormItem className='flex max-w-xl flex-row items-center justify-between rounded-lg border p-4'>
+                <div className='space-y-0.5'>
+                  <FormLabel className='text-sm font-semibold'>
+                    Skip Hiring Posts
+                  </FormLabel>
+                  <FormDescription>
+                    Exclude from commenting list
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
           />
-          <Label htmlFor='autoSchedule'>Post comments automatically</Label>
+
+          <FormField
+            control={form.control}
+            name='skipJobUpdatePosts'
+            render={({ field }) => (
+              <FormItem className='flex max-w-xl flex-row items-center justify-between rounded-lg border p-4'>
+                <div className='space-y-0.5'>
+                  <FormLabel className='text-sm font-semibold'>
+                    Skip Job Update Posts
+                  </FormLabel>
+                  <FormDescription>
+                    Exclude from commenting list
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name='skipArticlePosts'
+            render={({ field }) => (
+              <FormItem className='flex max-w-xl flex-row items-center justify-between rounded-lg border p-4'>
+                <div className='space-y-0.5'>
+                  <FormLabel className='text-sm font-semibold'>
+                    Skip Article Posts
+                  </FormLabel>
+                  <FormDescription>
+                    Exclude from commenting list
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* Additional Rules */}
-        <div className='mb-8'>
-          <Label className='text-foreground font-semibold'>
-            Additional Post Evaluation Rules
-          </Label>
-          <textarea
-            className='border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring mt-2 flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+        <div className='mb-8 max-w-xl'>
+          <div className='mb-2 flex items-center gap-2'>
+            <Label className='text-foreground font-semibold'>
+              Additional Post Evaluation Rules
+            </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                    <Info className='text-muted-foreground h-3 w-3' />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side='right' className='max-w-xs'>
+                  <p>
+                    Specify rules to decide if a post is worth commenting on.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Textarea
             placeholder='Set a rule, e.g., Skip posts with hashtags like #ad or #sponsored.'
-            rows={3}
+            rows={2}
             {...form.register('rules')}
           />
-          <p className='text-muted-foreground mt-2 text-sm'>
-            Specify rules to decide if a post is worth commenting on.
-          </p>
         </div>
 
-        <Button type='submit'>Update settings</Button>
+        <Button
+          type='submit'
+          disabled={isCreatingScrapeSetting || isUpdatingScrapeSetting}
+        >
+          {isCreatingScrapeSetting || isUpdatingScrapeSetting
+            ? 'Saving...'
+            : 'Save settings'}
+        </Button>
       </form>
     </Form>
   )

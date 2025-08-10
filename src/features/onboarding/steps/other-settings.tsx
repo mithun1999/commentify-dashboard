@@ -57,7 +57,9 @@ export function OtherSettingStep() {
   }, [commentsPerDay, authorTitles, geography, useEmojis, useExclamations])
 
   const toggleTitle = (title: string) => {
-    const updated = authorTitles.includes(title)
+    const isSelected = authorTitles.includes(title)
+    if (!isSelected && authorTitles.length >= 3) return
+    const updated = isSelected
       ? authorTitles.filter((t) => t !== title)
       : [...authorTitles, title]
     updateData({ authorTitles: updated })

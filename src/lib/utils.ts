@@ -5,7 +5,7 @@ import {
 } from '@/constant/browserEvents.constant'
 import { QueryService } from '@/services/query.service'
 import { type ClassValue, clsx } from 'clsx'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { twMerge } from 'tailwind-merge'
 import { IProfileResponseFromExtension } from '@/features/auth/interface/user.interface'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
@@ -66,23 +66,21 @@ export const handleResponseFromExtension = async () => {
   try {
     const response = await linkLinkedInProfileFromExtension()
     if (response?.profileUrn) {
-      toast('Connected', { type: 'success' })
+      toast.success('Connected')
       queryClient.invalidateQueries({
           queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
         })
     } else if (response?.errorCode && response?.message) {
-      toast(response.message, { type: 'error' })
+      toast.error(response.message)
     } else if (response?.message) {
-      toast(response.message, { type: 'info' })
+      toast.message(response.message)
     } else {
       window.open('https://www.linkedin.com', '_blank')
     }
   } 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   catch (error: any) {
-    toast(error ?? error?.message ?? 'Something went wrong while connected', {
-      type: 'error',
-    })
+    toast.error(error?.message ?? 'Something went wrong while connected')
     window.open('https://www.linkedin.com', '_blank')
   }
 }

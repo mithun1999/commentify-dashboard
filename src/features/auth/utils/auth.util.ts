@@ -1,7 +1,7 @@
 import Cookies from 'js-cookie'
 import { SupabaseInstance } from '@/services/supabase.service'
 import { Session } from '@supabase/supabase-js'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { AuthEnum } from '../enum/auth.enum'
 
 export async function signInWithPassword(data: {
@@ -36,7 +36,7 @@ export async function signInWithGoogle() {
     },
   })
   if (error) {
-    toast('Tech tango glitch, Retry, please!', { type: 'error' })
+    toast.error('Tech tango glitch, Retry, please!')
   }
 }
 

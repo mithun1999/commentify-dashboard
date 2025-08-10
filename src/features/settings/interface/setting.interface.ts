@@ -22,6 +22,9 @@ export interface ISetting {
       minutes: number
       tz: string
     }
+    engagementThreshold?: EngagementThresholdEnum
+    autoSchedule: boolean
+    regionsToTarget?: string[]
   }
   commentSetting: {
     turnOnEmoji: boolean
@@ -76,4 +79,36 @@ export interface ISettingPayload {
   profileId: string
   ja3Text?: string
   about?: string
+}
+
+export interface IPostSettingForm {}
+export interface ICommentSettingForm {}
+
+export interface IScrapeSettingPayload {
+  keywordsToTarget: string[]
+  skipHiringPosts?: boolean
+  skipJobUpdatePosts?: boolean
+  skipArticlePosts?: boolean
+  skipCompanyPosts?: boolean
+  autoSchedule?: boolean
+  blackListedAccounts?: string[]
+  languageToTarget?: string
+  numberOfPostsToScrapePerDay: number
+  jobTiming: {
+    hours: number
+    minutes: number
+    tz: string
+  }
+}
+
+export interface ICommentSettingPayload {
+  turnOnEmoji?: boolean
+  turnOnExclamations?: boolean
+  turnOnHashtags?: boolean
+  writeInLowercase?: boolean
+  tagAuthor?: boolean
+  length?: CommentLengthEnum
+  rules?: string
+  examples?: string
+  ownPrompt?: string
 }

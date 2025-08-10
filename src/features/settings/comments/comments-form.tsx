@@ -47,10 +47,10 @@ const commentSettingsSchema = z.object({
   }),
   length: z.enum(['short', 'medium', 'long']),
   commentsPerDay: z.number().min(0).max(100),
-  turnOnEmoji: z.boolean().default(true),
-  turnOnExclamations: z.boolean().default(true),
-  turnOnHashtags: z.boolean().default(false),
-  tagAuthor: z.boolean().default(false),
+  turnOnEmoji: z.boolean(),
+  turnOnExclamations: z.boolean(),
+  turnOnHashtags: z.boolean(),
+  tagAuthor: z.boolean(),
   rules: z.string().optional(),
 })
 
@@ -83,13 +83,10 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
     defaultValues,
   })
 
-  const onSubmit = (data: CommentSettingsValues) => {
-    // Prepare payload for API
-    const payload = {
-      ...data,
-      // Add any additional transformations here
-    }
-    showSubmittedData(payload)
+  const onSubmit = (_data: CommentSettingsValues) => {
+    // Prepare payload for API (extend when integrating backend)
+    // const payload = { ...data }
+    showSubmittedData('Settings updated')
 
     // If you need to call an API:
     // if (activeProfile?._id) {
@@ -143,9 +140,6 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                   {...field}
                 />
               </FormControl>
-              <FormDescription>
-                This helps our AI understand your voice and expertise
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -183,7 +177,6 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                 <FormControl>
                   <Textarea
                     placeholder="Write additional rules, e.g., Avoid phrases like 'Great post' or 'Nice work."
-                    className='min-h-[100px]'
                     {...field}
                   />
                 </FormControl>

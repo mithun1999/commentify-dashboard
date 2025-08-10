@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { QueryService } from '@/services/query.service'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { useProfileStore } from '@/stores/profile.store'
 import {
   deleteProfile,
@@ -44,13 +44,10 @@ export const useDeleteProfile = () => {
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast(
+      toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          'Something went wrong while deleting profile',
-        {
-          type: 'error',
-        }
+          'Something went wrong while deleting profile'
       )
     },
   })
@@ -71,9 +68,7 @@ export const useLinkProfile = () => {
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast(error?.message || 'Something went wrong while linking profile', {
-        type: 'error',
-      })
+      toast.error(error?.message || 'Something went wrong while linking profile')
     },
   })
 

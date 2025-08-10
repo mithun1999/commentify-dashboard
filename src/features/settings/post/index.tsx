@@ -4,9 +4,8 @@ import { PostForm } from './post-form'
 export default function SettingsAccount() {
   return (
     <ContentSection
-      title='Account'
-      desc='Update your account settings. Set your preferred language and
-          timezone.'
+      title='Post Preferences'
+      desc='Choose your keywords, set how and where you comment, and manage targeting.'
     >
       <PostForm />
     </ContentSection>

@@ -1,6 +1,6 @@
 import { envConfig } from '@/config/env.config'
 import { QueryService } from '@/services/query.service'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import {
   GET_PROFILE_DETAILS,
   LINK_LI_ACCOUNT,
@@ -60,14 +60,14 @@ export const handleResponseFromExtension = async () => {
   try {
     const response = await linkLinkedInProfileFromExtension()
     if (response?.profileUrn) {
-      toast('Connected', { type: 'success' })
+      toast.success('Connected')
       queryClient.invalidateQueries({
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
       })
     } else if (response?.errorCode && response?.message) {
-      toast(response.message, { type: 'error' })
+      toast.error(response.message)
     } else if (response?.message) {
-      toast(response.message, { type: 'info' })
+      toast.message(response.message)
     } else {
       window.open('https://www.linkedin.com', '_blank')
     }
@@ -77,9 +77,7 @@ export const handleResponseFromExtension = async () => {
         ? error.message
         : 'Something went wrong while connecting'
 
-    toast(errorMessage, {
-      type: 'error',
-    })
+    toast.error(errorMessage)
 
     window.open('https://www.linkedin.com', '_blank')
   }

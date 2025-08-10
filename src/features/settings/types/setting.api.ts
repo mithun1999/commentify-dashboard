@@ -1,47 +1,61 @@
 import { axiosInstance } from '@/utils/axios.util'
+import {
+  ICommentSettingPayload,
+  IScrapeSettingPayload,
+} from '../interface/setting.interface'
 
-export async function createSetting(
-  payload: ISettingPayload & { userPlan?: 'starter' | 'pro' | 'premium' }
+export async function createScrapeSetting(
+  payload: IScrapeSettingPayload & {
+    userPlan?: 'starter' | 'pro' | 'premium'
+    profileId: string
+  }
 ) {
-  const url = payload?.userPlan ? `/setting/${payload?.userPlan}` : `/setting`
   const { data } = await axiosInstance({
     method: 'POST',
-    url,
+    url: `/setting/scrape/${payload?.userPlan}/${payload?.profileId}`,
     data: payload,
   })
   return data
 }
 
-export async function updateSetting(
-  payload: ISettingPayload & { userPlan?: 'starter' | 'pro' | 'premium' }
+export async function updateScrapeSetting(
+  payload: IScrapeSettingPayload & {
+    userPlan?: 'starter' | 'pro' | 'premium'
+    profileId: string
+  }
 ) {
-  const url = payload?.userPlan
-    ? `/setting/${payload?.userPlan}/${payload?.profileId}`
-    : `/setting/${payload?.profileId}`
-
   const { data } = await axiosInstance({
     method: 'PATCH',
-    url,
+    url: `/setting/scrape/${payload?.userPlan}/${payload?.profileId}`,
     data: payload,
   })
   return data
 }
 
-// interface/setting.interface.ts
-
-export interface ISettingPayload {
-  profileId: string
-  name: string
-  value: string
-  // Add any additional fields used in the payload
+export async function updateCommentSetting(
+  payload: ICommentSettingPayload & {
+    userPlan?: 'starter' | 'pro' | 'premium'
+    profileId: string
+  }
+) {
+  const { data } = await axiosInstance({
+    method: 'PATCH',
+    url: `/setting/comment/${payload?.userPlan}/${payload?.profileId}`,
+    data: payload,
+  })
+  return data
 }
 
-export type UserPlan = 'starter' | 'pro' | 'premium'
-
-export type CreateSettingPayload = Omit<ISettingPayload, 'profileId'> & {
-  userPlan?: UserPlan
-}
-
-export type UpdateSettingPayload = ISettingPayload & {
-  userPlan?: UserPlan
+export async function createCommentSetting(
+  payload: ICommentSettingPayload & {
+    userPlan?: 'starter' | 'pro' | 'premium'
+    profileId: string
+  }
+) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/setting/comment/${payload?.userPlan}/${payload?.profileId}`,
+    data: payload,
+  })
+  return data
 }
