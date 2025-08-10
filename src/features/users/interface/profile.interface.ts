@@ -34,6 +34,10 @@ export interface ILinkedInStats {
   followersStats: {
     followersGrowth: number
     followersGrowthPercent: number
+    followersGrowthSinceStartedUsingThisApp: number
+    followersGrowthSinceStartedUsingThisAppPercent: number
+    followersGrowthSinceThreeMonths: number
+    followersGrowthSinceThreeMonthsPercent: number
     weeklyFollowersGrowth: number
     weeklyFollowersGrowthPercent: number
     fromDate: string
@@ -52,9 +56,16 @@ export interface ILinkedInStats {
     weeklyProfileViewersGrowthPercent: number
     profileViewersGrowthSinceStartedUsingThisApp: number
     profileViewersGrowthSinceStartedUsingThisAppPercent: number
+    profileViewersGrowthSinceThreeMonths: number
+    profileViewersGrowthSinceThreeMonthsPercent: number
     fromDate: string
     toDate: string
     growth: []
     isPremium: boolean
+  }
+  postCommentStats: {
+    scheduled: number
+    pending: number
+    completed: number
   }
 }

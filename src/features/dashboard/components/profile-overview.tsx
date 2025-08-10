@@ -11,12 +11,19 @@ import {
 } from 'recharts'
 import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 
-export function Overview() {
+type ProfileViewerGrowthEntry = {
+  period: string
+  profileViewersGrowth?: number
+  profileViewersCount?: number
+  profileViewersGrowthPercent?: number
+}
+
+export function ProfileOverview() {
   const { data: linkedInStats } = useGetLinkedInStats()
 
-  const growth = linkedInStats?.followersStats?.growth ?? []
+  const growth = (linkedInStats?.profileViewerStats?.growth ??
+    []) as ProfileViewerGrowthEntry[]
 
-  // ✅ Handle API error or empty data gracefully
   const hasValidData = Array.isArray(growth) && growth.length > 0
   if (!hasValidData) {
     return (
@@ -27,7 +34,6 @@ export function Overview() {
     )
   }
 
-  // ✅ Proceed to build chart data
   const getIntervalData = () => {
     if (growth.length <= 9) return growth
     const interval = Math.ceil(growth.length / 12)
@@ -41,11 +47,16 @@ export function Overview() {
       month: 'short',
       day: 'numeric',
     }),
-    total: entry.followersGrowth,
+    total:
+      (typeof entry.profileViewersGrowth === 'number'
+        ? entry.profileViewersGrowth
+        : typeof entry.profileViewersCount === 'number'
+          ? entry.profileViewersCount
+          : 0) ?? 0,
   }))
 
   const maxValue = Math.max(...chartData.map((item) => item.total), 0)
-  const yDomain = [0, maxValue * 1.2]
+  const yDomain: [number, number] = [0, maxValue * 1.2]
 
   return (
     <ResponsiveContainer width='100%' height={350}>
@@ -58,7 +69,7 @@ export function Overview() {
           axisLine={false}
           interval={0}
           tick={({ x, y, payload }) => {
-            const [month, day] = payload.value.split(' ')
+            const [month, day] = String(payload.value).split(' ')
             return (
               <g transform={`translate(${x},${y})`}>
                 <text
@@ -106,7 +117,7 @@ export function Overview() {
           itemStyle={{ color: '#111111' }}
           formatter={(value: number) => [
             new Intl.NumberFormat().format(value ?? 0),
-            'Followers',
+            'Profile Viewers',
           ]}
           labelFormatter={(label: string) => label}
         />
