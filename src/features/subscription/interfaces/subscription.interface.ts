@@ -26,6 +26,7 @@ export interface ISubscription {
   updatedAt: string
   product?: IProduct
   variant?: IProductVariant
+  quantity?: number
 }
 
 export interface ILsSubscription {

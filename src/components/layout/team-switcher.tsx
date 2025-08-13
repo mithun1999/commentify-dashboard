@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { LinkedInLogoIcon } from '@radix-ui/react-icons'
 import { ChevronsUpDown, Plus } from 'lucide-react'
+// import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
 // import { useAuthStore } from '@/stores/auth.store'
 import { getProfileDetailsFromExtension } from '@/utils/utils'
@@ -19,6 +20,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import {
   // useDeleteProfile,
@@ -29,17 +36,18 @@ import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 export function TeamSwitcher() {
   const { isMobile } = useSidebar()
   const { data: profiles, isLoading } = useGetAllProfileQuery()
+  const { data: user } = useGetUserQuery()
   const [isLinking, setIsLinking] = useState(false)
   const { isLinkingProfile, linkProfile } = useLinkProfile()
-
-  // Keep in sync if needed in future; currently unused
-  // const session = useAuthStore((state) => state.session)
-  // Default active profile is handled globally in the query hook
 
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const setActiveProfile = useProfileStore((s) => s.setActiveProfile)
 
+  const canConnectMultipleProfiles =
+    user?.subscription?.quantity && user?.subscription?.quantity > 1
+
   const handleLinking = async () => {
+    if (!canConnectMultipleProfiles) return
     setIsLinking(true)
     const profileDetails = await getProfileDetailsFromExtension()
     await linkProfile(profileDetails)
@@ -157,18 +165,34 @@ export function TeamSwitcher() {
             ))}
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              className='gap-2 p-2'
-              disabled={isLinking}
-              onClick={handleLinking}
-            >
-              <div className='bg-background flex size-6 items-center justify-center rounded-md border'>
-                <Plus className='size-4' />
-              </div>
-              <div className='text-muted-foreground font-medium'>
-                {isLinking ? 'Connecting...' : 'Connect new profile'}
-              </div>
-            </DropdownMenuItem>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuItem
+                  className='gap-2 p-2'
+                  disabled={isLinking}
+                  onClick={(e) => {
+                    if (!canConnectMultipleProfiles) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      return
+                    }
+                    void handleLinking()
+                  }}
+                >
+                  <div className='bg-background flex size-6 items-center justify-center rounded-md border'>
+                    <Plus className='size-4' />
+                  </div>
+                  <div className='text-muted-foreground font-medium'>
+                    {isLinking ? 'Connecting...' : 'Connect new profile'}
+                  </div>
+                </DropdownMenuItem>
+              </TooltipTrigger>
+              {!canConnectMultipleProfiles && (
+                <TooltipContent side='right' sideOffset={8} className='z-[60]'>
+                  Purchase the Agency plan to connect multiple profiles
+                </TooltipContent>
+              )}
+            </Tooltip>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

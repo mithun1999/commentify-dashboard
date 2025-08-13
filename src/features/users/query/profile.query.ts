@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { QueryService } from '@/services/query.service'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useProfileStore } from '@/stores/profile.store'
 import {
@@ -34,7 +33,7 @@ export const useGetAllProfileQuery = () => {
 }
 
 export const useDeleteProfile = () => {
-  const queryClient = QueryService.getQueryClient()
+  const queryClient = useQueryClient()
   const { mutate, isPending } = useMutation({
     mutationFn: deleteProfile,
     onSuccess: () => {
@@ -56,7 +55,7 @@ export const useDeleteProfile = () => {
 }
 
 export const useLinkProfile = () => {
-  const queryClient = QueryService.getQueryClient()
+  const queryClient = useQueryClient()
   const { mutate, isPending } = useMutation({
     mutationFn: linkProfile,
     onSuccess: (response) => {
@@ -68,7 +67,9 @@ export const useLinkProfile = () => {
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast.error(error?.message || 'Something went wrong while linking profile')
+      toast.error(
+        error?.message || 'Something went wrong while linking profile'
+      )
     },
   })
 

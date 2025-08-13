@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { useProfileStore } from '@/stores/profile.store'
+import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import {
   toPaddedHourAndPeriod,
   toQuarterMinute,
@@ -131,6 +132,8 @@ export function PostForm() {
   const [showCustomTitleInput, setShowCustomTitleInput] = useState(false)
   const [customTitle, setCustomTitle] = useState('')
   const [customTitles, setCustomTitles] = useState<string[]>([])
+
+  const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
 
   const shouldDisplayEngagementThresholdSetting = Boolean(
     planSetting['engagementThreshold']?.[userPlan]
@@ -1003,7 +1006,9 @@ export function PostForm() {
 
         <Button
           type='submit'
-          disabled={isCreatingScrapeSetting || isUpdatingScrapeSetting}
+          disabled={
+            isCreatingScrapeSetting || isUpdatingScrapeSetting || !isProfileActive
+          }
         >
           {isCreatingScrapeSetting || isUpdatingScrapeSetting
             ? 'Saving...'

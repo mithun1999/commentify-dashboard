@@ -47,6 +47,7 @@ import {
   useCreateCommentSettingQuery,
   useUpdateCommentSettingQuery,
 } from '@/features/settings/query/setting.query'
+import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 
 const commentSettingsSchema = z.object({
@@ -75,6 +76,7 @@ const defaultValues: Partial<CommentSettingsValues> = {
 
 export function CommentsForm({ prev }: { prev?: () => void }) {
   const activeProfile = useProfileStore((s) => s.activeProfile)
+  const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
   const { data: user } = useGetUserQuery()
   const userPlan =
     (user?.subscribedProduct?.name?.toLowerCase() as
@@ -475,7 +477,11 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
           )}
           <Button
             type='submit'
-            disabled={isCreatingCommentSetting || isUpdatingCommentSetting}
+            disabled={
+              isCreatingCommentSetting ||
+              isUpdatingCommentSetting ||
+              !isProfileActive
+            }
           >
             {isCreatingCommentSetting || isUpdatingCommentSetting
               ? 'Saving...'

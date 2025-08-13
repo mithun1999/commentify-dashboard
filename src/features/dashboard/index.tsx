@@ -1,4 +1,5 @@
 import { IconFidgetSpinner } from '@tabler/icons-react'
+import { useProfileStore } from '@/stores/profile.store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
@@ -8,10 +9,12 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 import { Overview } from './components/overview'
 import { ProfileOverview } from './components/profile-overview'
+import ProfileConnectionGuard from '@/components/profile-connection-guard'
 
 export default function Dashboard() {
   const { data: linkedInStats, isLoading: isLoadingLinkedInStats } =
     useGetLinkedInStats()
+  const activeProfile = useProfileStore((s) => s.activeProfile)
 
   // Formatting helpers
   const formatNumber = new Intl.NumberFormat('en-US')
@@ -72,6 +75,22 @@ export default function Dashboard() {
   const weeklyProfileViewsValue = ps?.weeklyProfileViewersGrowth
   const weeklyProfileViewsPercent = ps?.weeklyProfileViewersGrowthPercent
 
+  // Zero-activity guidance checks
+  const pendingCount = linkedInStats?.postCommentStats?.pending ?? 0
+  const completedCount = linkedInStats?.postCommentStats?.completed ?? 0
+  const scheduledCount = linkedInStats?.postCommentStats?.scheduled ?? 0
+  const arePostStatsZero =
+    Number(pendingCount) === 0 &&
+    Number(completedCount) === 0 &&
+    Number(scheduledCount) === 0
+  const createdAtDate = activeProfile?.createdAt
+    ? new Date(activeProfile.createdAt as unknown as string)
+    : null
+  const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000
+  const isOlderThan2Days = createdAtDate
+    ? Date.now() - createdAtDate.getTime() >= TWO_DAYS_MS
+    : false
+
   return (
     <>
       {/* ===== Top Heading ===== */}
@@ -115,6 +134,41 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
+                {/* Guidance when no activity yet */}
+                {arePostStatsZero && activeProfile && (
+                  <Card className='w-full'>
+                    <CardContent>
+                      <div className='py-3 text-center text-sm'>
+                        {isOlderThan2Days ? (
+                          <>
+                            <p className='text-md font-bold'>
+                              😕 Something’s not adding up…
+                            </p>
+                            <p className='text-muted-foreground mt-3 text-sm'>
+                              Either your LinkedIn profile’s been quiet lately,
+                              or a setting needs a little tweak.
+                              <br />
+                              If all looks good on your end, ping us - we’ll
+                              take a peek under the hood.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className='text-md font-bold'>
+                              ⏳ Just warming things up…
+                            </p>
+                            <p className='text-muted-foreground mt-3 text-sm'>
+                              It usually takes up to 48 hours for stats to roll
+                              in.
+                              <br />
+                              Hang tight - good stuff’s on the way!
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
                 {/* Fallback: nothing available at all */}
                 {!linkedInStats?.followersStats &&
                 !linkedInStats?.profileViewerStats &&
@@ -325,6 +379,7 @@ export default function Dashboard() {
             )}
           </TabsContent>
         </Tabs>
+        <ProfileConnectionGuard />
       </Main>
     </>
   )
