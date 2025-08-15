@@ -9,7 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import { useOnboarding } from '@/context/onboarding-context'
+import { useOnboarding } from '@/stores/onboarding.store'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {

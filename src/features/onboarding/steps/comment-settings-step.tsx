@@ -156,11 +156,9 @@ export function CommentSettingsStep() {
                     <SelectValue placeholder='Select comment style' />
                   </SelectTrigger>
                   <SelectContent className='bg-popover border-border'>
-                    <SelectItem value='balanced'>Short (10 words)</SelectItem>
-                    <SelectItem value='casual'>Medium (15 words)</SelectItem>
-                    <SelectItem value='enthusiastic'>
-                      Large (25 words)
-                    </SelectItem>
+                    <SelectItem value='short'>Short (10 words)</SelectItem>
+                    <SelectItem value='medium'>Medium (15 words)</SelectItem>
+                    <SelectItem value='long'>Long (25 words)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

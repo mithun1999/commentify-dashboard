@@ -16,7 +16,7 @@ import {
   Globe,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useOnboarding } from '@/context/onboarding-context'
+import { useOnboarding } from '@/stores/onboarding.store'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {

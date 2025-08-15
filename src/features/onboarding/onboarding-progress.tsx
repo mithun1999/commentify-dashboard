@@ -2,8 +2,8 @@
 
 import { useNavigate, useLocation } from '@tanstack/react-router'
 import { CheckIcon } from 'lucide-react'
+import { useOnboarding } from '@/stores/onboarding.store'
 import { cn } from '@/lib/utils'
-import { useOnboarding } from '@/context/onboarding-context'
 import {
   Tooltip,
   TooltipContent,
@@ -12,10 +12,10 @@ import {
 } from '@/components/ui/tooltip'
 
 const STEPS = [
-  { path: '/onboarding/extension', label: 'Extension' },
-  { path: '/onboarding/linkedin', label: 'LinkedIn' },
-  { path: '/onboarding/post-settings', label: 'Post Settings' },
-  { path: '/onboarding/comment-settings', label: 'Comment Settings' },
+  { path: '/onboarding/extension', label: 'Install Chrome Extension' },
+  { path: '/onboarding/linkedin', label: 'Connect your LinkedIn profile' },
+  { path: '/onboarding/post-settings', label: 'Post preferences' },
+  { path: '/onboarding/comment-settings', label: 'Comment preferences' },
   // { path: "/onboarding/other-settings", label: "Other Settings" },
 ]
 
@@ -60,10 +60,6 @@ export function OnboardingProgress() {
           </h2>
           <p className='text-muted-foreground text-sm'>{currentMessage}</p>
         </div>
-
-        {/* <span className="text-sm font-medium bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20">
-          {Math.round(progress)}% Complete
-        </span> */}
       </div>
 
       <div className='relative mt-8 px-5'>
@@ -86,7 +82,7 @@ export function OnboardingProgress() {
             const isActive = index === currentStepIndex
             const isCompleted =
               index < currentStepIndex || completedSteps.includes(stepName)
-            const isClickable = isCompleted || index <= currentStepIndex + 1
+            const isClickable = isCompleted || index < currentStepIndex + 1
 
             return (
               <TooltipProvider key={step.path}>
@@ -134,11 +130,7 @@ export function OnboardingProgress() {
                       </span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {isClickable
-                      ? `Go to ${step.label}`
-                      : 'Complete previous steps first'}
-                  </TooltipContent>
+                  <TooltipContent>{`${step.label}`}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )

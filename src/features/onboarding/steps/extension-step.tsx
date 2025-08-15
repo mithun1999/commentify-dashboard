@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { envConfig } from '@/config/env.config'
 import { Download, CheckCircle2, Info } from 'lucide-react'
+import extensionImage from '@/assets/images/install-extension.png'
+import { useOnboarding } from '@/stores/onboarding.store'
 import { checkIsExtensionInstalled } from '@/lib/utils'
-import { useOnboarding } from '@/context/onboarding-context'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -20,7 +21,7 @@ export function ExtensionStep() {
   const { data, updateData, markStepCompleted } = useOnboarding()
   const isInstalled = data.isExtensionInstalled
 
-  const checkExtensionInstallation = async () => {
+  const checkExtensionInstallation = useCallback(async () => {
     try {
       setIsChecking(true)
       const installed = await checkIsExtensionInstalled(
@@ -37,109 +38,108 @@ export function ExtensionStep() {
     } finally {
       setIsChecking(false)
     }
-  }
+  }, [updateData, markStepCompleted])
 
   useEffect(() => {
     // Initial check
     checkExtensionInstallation()
 
-    // Set up periodic checks every 2 seconds
-    const intervalId = setInterval(checkExtensionInstallation, 2000)
+    if (isInstalled) return
 
-    return () => clearInterval(intervalId)
-  }, [])
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkExtensionInstallation()
+      }
+    }
+
+    const handlePageShow = () => {
+      // Trigger when navigating back or when tab is restored from bfcache
+      checkExtensionInstallation()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pageshow', handlePageShow)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pageshow', handlePageShow)
+    }
+  }, [checkExtensionInstallation, isInstalled])
 
   return (
     <div className='space-y-8'>
       <OnboardingCard
         title={
           <div className='flex items-center gap-2'>
-            Install the Chrome Extension
+            Add the Chrome extension
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                    <Info className='text-muted-foreground h-3 w-3' />
-                  </div>
+                  <button
+                    aria-label='Why the extension is needed'
+                    className='border-border flex h-5 w-5 items-center justify-center rounded-full border'
+                  >
+                    <Info className='text-muted-foreground h-3.5 w-3.5' />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side='right' className='max-w-xs'>
                   <p>
-                    The extension runs in the background to automate
-                    <br />
-                    comments on LinkedIn posts you interact with
+                    It securely connects LinkedIn and only posts on items you
+                    approve.
                   </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         }
-        description='To automate LinkedIn comments, you need to install our Chrome extension.'
+        description='Install the extension to continue setup.'
       >
         <div className='flex flex-col items-center space-y-6 py-4'>
-          <div className='relative flex h-64 w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800'>
-            <div className='absolute inset-0 flex items-center justify-center'>
-              {isChecking ? (
-                <div className='text-muted-foreground animate-pulse'>
-                  Checking for extension...
-                </div>
-              ) : (
-                <div className='p-4 text-center'>
-                  <div className='mb-2 text-lg font-medium'>
-                    {isInstalled ? 'Extension Active' : 'Extension Required'}
-                  </div>
-                  <p className='text-muted-foreground text-sm'>
-                    {isInstalled
-                      ? 'Our extension is ready to automate your LinkedIn comments'
-                      : 'Install to enable automated commenting on LinkedIn'}
-                  </p>
-                </div>
-              )}
-            </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className='border-border bg-background absolute right-2 bottom-2 flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                    <Info className='text-muted-foreground h-3 w-3' />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side='top' className='max-w-xs'>
-                  <p>
-                    After installation, the extension icon will appear
-                    <br />
-                    in your Chrome toolbar for easy access
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div
+            role='status'
+            aria-live='polite'
+            className='bg-muted relative flex w-full max-w-md items-center justify-center overflow-hidden rounded-xl'
+          >
+            <img
+              src={extensionImage}
+              alt='Extension'
+              className='h-full w-full'
+            />
           </div>
 
-          {isChecking ? (
-            <div className='text-muted-foreground flex items-center gap-2'>
-              <div className='border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent' />
-              <span>Checking installation status...</span>
-            </div>
-          ) : isInstalled ? (
-            <div className='flex items-center gap-2 text-green-500 dark:text-green-400'>
-              <CheckCircle2 className='h-5 w-5' />
-              <span className='font-medium'>
-                Extension installed successfully!
-              </span>
-            </div>
-          ) : (
-            <div className='w-full max-w-xs space-y-4'>
+          {!isInstalled ? (
+            <div className='w-full max-w-xs space-y-3 text-center'>
               <Button
-                className='relative w-full overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
-                onClick={() =>
+                className='w-full transition-all hover:shadow-md active:scale-95'
+                disabled={isChecking}
+                onClick={() => {
                   window.open(
                     envConfig.extensionUrl ||
                       'https://chromewebstore.google.com',
-                    '_blank'
+                    '_blank',
+                    'noopener,noreferrer'
                   )
-                }
+                  // optional: start polling immediately
+                  checkExtensionInstallation()
+                }}
               >
                 <Download className='mr-2 h-4 w-4' />
-                Install Extension
+                Install from Chrome Web Store
               </Button>
+              <button
+                className='text-muted-foreground text-sm underline'
+                onClick={checkExtensionInstallation}
+              >
+                Already installed? Check again
+              </button>
+              <div className='text-muted-foreground text-xs'>
+                Works on Chrome, Brave, and Edge. You can turn it off anytime.
+              </div>
+            </div>
+          ) : (
+            <div className='flex items-center gap-2 text-green-600'>
+              <CheckCircle2 className='h-5 w-5' />
+              <span className='font-medium'>Extension installed</span>
             </div>
           )}
         </div>

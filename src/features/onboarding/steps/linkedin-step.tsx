@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { envConfig } from '@/config/env.config'
-import { Linkedin, CheckCircle2, Info, Loader2 } from 'lucide-react'
+import { Linkedin, CheckCircle2, Info, Loader2, Download } from 'lucide-react'
+import { useOnboarding } from '@/stores/onboarding.store'
 import {
   checkIsExtensionInstalled,
   getProfileDetailsFromExtension,
 } from '@/lib/utils'
-import { useOnboarding } from '@/context/onboarding-context'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -17,23 +17,20 @@ import {
 } from '@/components/ui/tooltip'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
-import { IProfile } from '@/features/users/interface/profile.interface'
+import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
 import {
   useGetAllProfileQuery,
   useLinkProfile,
 } from '@/features/users/query/profile.query'
 
 export function LinkedInStep() {
-  const {
-    data: onboardingData,
-    updateData,
-    markStepCompleted,
-  } = useOnboarding()
-  const { data: profiles, isLoading } = useGetAllProfileQuery()
+  const { updateData, markStepCompleted } = useOnboarding()
+  const { isLoading } = useGetAllProfileQuery()
   const { linkProfile, isLinkingProfile } = useLinkProfile()
   const [isExtensionInstalled, setIsExtensionInstalled] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
-  const [extensionProfileData, setExtensionProfileData] = useState(null)
+  const [extensionProfileData, setExtensionProfileData] =
+    useState<IProfileResponseFromExtension | null>(null)
   const [isCollectingProfile, setIsCollectingProfile] = useState(false)
 
   const checkIfExtensionIsInstalled = async () => {
@@ -45,7 +42,8 @@ export function LinkedInStep() {
     return isInstalled
   }
 
-  const collectUserInformation = async () => {
+  const collectUserInformation = useCallback(async () => {
+    if (isCollectingProfile) return
     setIsCollectingProfile(true)
     try {
       // Check if extension is installed first
@@ -64,6 +62,14 @@ export function LinkedInStep() {
         profileDetails.lastName
       ) {
         setExtensionProfileData(profileDetails)
+        markStepCompleted('linkedin')
+        updateData({
+          isLinkedInConnected: true,
+          userProfile: {
+            name: `${profileDetails.firstName} ${profileDetails.lastName}`,
+            title: `${profileDetails.publicIdentifier}`,
+          },
+        })
 
         // Automatically link the profile
         await linkProfile(profileDetails)
@@ -74,7 +80,7 @@ export function LinkedInStep() {
     } finally {
       setIsCollectingProfile(false)
     }
-  }
+  }, [isCollectingProfile, updateData, markStepCompleted, linkProfile])
 
   const handleLinking = async () => {
     // If no profile data found, redirect to LinkedIn
@@ -97,22 +103,27 @@ export function LinkedInStep() {
   useEffect(() => {
     // Auto-collect user information when component mounts
     collectUserInformation()
-  }, [])
 
-  // Mark step as completed if we have profiles
-  useEffect(() => {
-    if (profiles?.length) {
-      markStepCompleted('linkedin')
-      updateData({
-        isLinkedInConnected: true,
-        userProfile: {
-          name: `${profiles[0].firstName} ${profiles[0].lastName}`,
-          title: profiles[0].about || 'LinkedIn Member',
-          avatar: '/placeholder.svg',
-        },
-      })
+    if (extensionProfileData) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        collectUserInformation()
+      }
     }
-  }, [profiles, markStepCompleted, updateData])
+
+    const handlePageShow = () => {
+      collectUserInformation()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pageshow', handlePageShow)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pageshow', handlePageShow)
+    }
+  }, [collectUserInformation, extensionProfileData])
 
   if (isLoading) {
     return (
@@ -159,109 +170,72 @@ export function LinkedInStep() {
         description='We need access to your LinkedIn account to automate comments on your behalf.'
       >
         <div className='flex flex-col items-center space-y-6 py-4'>
-          {profiles?.length ? (
-            <div className='flex w-full max-w-md flex-col items-center space-y-4'>
-              <div className='flex items-center gap-2 text-green-500 dark:text-green-400'>
-                <CheckCircle2 className='h-5 w-5' />
-                <span className='font-medium'>
-                  LinkedIn connected successfully!
-                </span>
-              </div>
+          <div className='w-full max-w-md space-y-6'>
+            {/* Show extension profile data if available */}
+            {extensionProfileData && (
+              <div className='flex w-full flex-col items-center space-y-4'>
+                <div className='flex items-center gap-2 text-green-500 dark:text-green-400'>
+                  <CheckCircle2 className='h-5 w-5' />
+                  <span className='font-medium'>Profile data fetched!</span>
+                </div>
 
-              <div className='flex w-full flex-col gap-4 rounded-lg border p-4'>
-                {profiles.map((profile: IProfile) => (
-                  <div
-                    key={profile._id}
-                    className='flex items-center gap-4 rounded border p-3'
-                  >
+                <div className='flex w-full flex-col gap-4 rounded-lg p-4'>
+                  <div className='flex items-center gap-4 rounded border p-3'>
                     <div className='relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800'>
                       <span className='text-muted-foreground'>
-                        {profile.firstName.charAt(0)}
-                        {profile.lastName.charAt(0)}
+                        {extensionProfileData.firstName?.charAt(0)}
+                        {extensionProfileData.lastName?.charAt(0)}
                       </span>
                     </div>
                     <div>
                       <h3 className='font-medium'>
-                        {profile.firstName} {profile.lastName}
+                        {extensionProfileData.firstName}{' '}
+                        {extensionProfileData.lastName}
                       </h3>
-                      <p className='text-muted-foreground text-sm'>
-                        {profile.about || 'LinkedIn Member'}
+                      <p className='text-muted-foreground text-sm font-medium'>
+                        @{extensionProfileData.publicIdentifier}
                       </p>
-                      <p className='text-muted-foreground text-xs'>
-                        @{profile.publicIdentifier}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className='w-full max-w-md space-y-6'>
-              {/* Show extension profile data if available */}
-              {extensionProfileData && (
-                <div className='flex w-full flex-col items-center space-y-4'>
-                  <div className='flex items-center gap-2 text-green-500 dark:text-green-400'>
-                    <CheckCircle2 className='h-5 w-5' />
-                    <span className='font-medium'>Profile data fetched!</span>
-                  </div>
-
-                  <div className='flex w-full flex-col gap-4 rounded-lg p-4'>
-                    <div className='flex items-center gap-4 rounded border p-3'>
-                      <div className='relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800'>
-                        <span className='text-muted-foreground'>
-                          {extensionProfileData.firstName?.charAt(0)}
-                          {extensionProfileData.lastName?.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className='font-medium'>
-                          {extensionProfileData.firstName}{' '}
-                          {extensionProfileData.lastName}
-                        </h3>
-                        <p className='text-muted-foreground text-sm font-medium'>
-                          {extensionProfileData.publicIdentifier}
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {!extensionProfileData && !isCollectingProfile && (
-                <>
-                  {isExtensionInstalled ? (
-                    <Button
-                      className='relative w-full overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
-                      onClick={handleLinking}
-                      disabled={isLinking || isLinkingProfile}
-                    >
-                      <Linkedin className='mr-2 h-4 w-4' />
-                      {isLinking || isLinkingProfile
-                        ? 'Connecting...'
-                        : 'Go to LinkedIn'}
-                    </Button>
-                  ) : (
-                    <div className='text-muted-foreground text-center text-sm'>
-                      <p>
-                        Please install our{' '}
-                        <a
-                          href={envConfig.extensionUrl}
-                          className='text-primary underline'
-                          target='_blank'
-                        >
-                          Chrome extension
-                        </a>{' '}
-                        first
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+            {!extensionProfileData && !isCollectingProfile && (
+              <>
+                {isExtensionInstalled ? (
+                  <Button
+                    className='relative w-full overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
+                    onClick={handleLinking}
+                    disabled={isLinking || isLinkingProfile}
+                  >
+                    <Linkedin className='mr-2 h-4 w-4' />
+                    {isLinking || isLinkingProfile
+                      ? 'Connecting...'
+                      : 'Connect LinkedIn'}
+                  </Button>
+                ) : (
+                  <Button
+                    className='w-full transition-all hover:shadow-md active:scale-95'
+                    onClick={() => {
+                      window.open(
+                        envConfig.extensionUrl ||
+                          'https://chromewebstore.google.com',
+                        '_blank',
+                        'noopener,noreferrer'
+                      )
+                    }}
+                  >
+                    <Download className='mr-2 h-4 w-4' />
+                    Install from Chrome Web Store
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
-        {(profiles?.length || extensionProfileData) && (
+        {extensionProfileData && (
           <OnboardingNavigation nextStep='/onboarding/post-settings' />
         )}
       </OnboardingCard>
