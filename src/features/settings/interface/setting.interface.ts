@@ -56,7 +56,6 @@ export interface IScrapeSettingForm {
   rules?: string
   hours: number
   minutes: number
-  period: 'AM' | 'PM'
 }
 
 export interface ICommentSettingForm {

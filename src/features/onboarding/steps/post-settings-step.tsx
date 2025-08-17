@@ -6,12 +6,22 @@ import {
   Info,
   PlusCircle,
   Filter,
-  Globe,
   ChevronDown,
   ChevronUp,
+  ScanEye,
+  X,
+  CircleSlash,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import {
   Tooltip,
   TooltipContent,
@@ -21,18 +31,7 @@ import {
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 
-const authorTitlesList = [
-  'Founder',
-  'Co-founder',
-  'CEO',
-  'CTO',
-  'CFO',
-  'CMO',
-  'COO',
-  'VP',
-  'Director',
-  'Manager',
-]
+const authorTitlesList = ['Founder', 'CEO', 'CTO', 'CMO', 'VP', 'Director']
 
 export function PostSettingsStep() {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([
@@ -42,35 +41,31 @@ export function PostSettingsStep() {
   const [showCustomKeywordInput, setShowCustomKeywordInput] = useState(false)
   const [customKeyword, setCustomKeyword] = useState('')
   const [customKeywords, setCustomKeywords] = useState<string[]>([])
-  const [isAuthorTitlesExpanded, setIsAuthorTitlesExpanded] = useState(false)
   const [showCustomTitleInput, setShowCustomTitleInput] = useState(false)
   const [customTitle, setCustomTitle] = useState('')
   const [customTitles, setCustomTitles] = useState<string[]>([])
-  const [isGeographyExpanded, setIsGeographyExpanded] = useState(false)
-  const [geography, setGeography] = useState('global')
+  const [isEngagementExpanded, setIsEngagementExpanded] = useState(false)
+  const [skipHiringPosts, setSkipHiringPosts] = useState(true)
+  const [skipJobUpdatePosts, setSkipJobUpdatePosts] = useState(true)
   const [authorTitles, setAuthorTitles] = useState<string[]>([])
 
   const predefinedKeywords = [
     'AI',
     'SaaS',
-    'Tech',
     'Startup',
     'Marketing',
     'Sales',
     'Leadership',
-    'Product',
-    'Design',
-    'Engineering',
     'Finance',
     'Operations',
-    'HR',
-    'Consulting',
-    'Analytics',
     'Growth',
   ]
 
   const allKeywords = [...predefinedKeywords, ...customKeywords]
   const allTitles = [...authorTitlesList, ...customTitles]
+
+  // Check if "All" is selected (when no specific titles are selected)
+  const isAllSelected = authorTitles.length === 0
 
   // Keyword functions (unchanged)
   const handleKeywordSelect = (keyword: string) => {
@@ -111,7 +106,16 @@ export function PostSettingsStep() {
     setAuthorTitles(updated)
   }
 
+  const toggleAll = () => {
+    // If "All" is currently selected (no titles), do nothing
+    // If specific titles are selected, deselect all of them (which selects "All")
+    if (authorTitles.length > 0) {
+      setAuthorTitles([])
+    }
+  }
+
   const handleTitleOtherClick = () => {
+    if (authorTitles.length >= 3) return
     setShowCustomTitleInput(true)
   }
 
@@ -127,36 +131,40 @@ export function PostSettingsStep() {
     }
   }
 
+  // no geography in onboarding step; replaced with engagement + skip options
+
   return (
     <OnboardingCard
-      title='Post Settings'
-      description='Configure your preferences for posts and authors'
+      title='Choose posts that matter'
+      description='We’ll only comment on posts that match your interests.'
     >
-      {/* Keywords Section (unchanged) */}
+      {/* Keywords Section */}
       <div className='mb-6'>
-        <div className='mb-4 flex items-center gap-2'>
-          <Hash className='text-muted-foreground h-4 w-4' />
-          <span className='text-foreground font-semibold'>
-            Select keywords (Choose up to 6)
-          </span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                  <Info className='text-muted-foreground h-3 w-3' />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side='right' className='max-w-xs'>
-                <p>
-                  Select keywords related to your industry
-                  <br />
-                  or interests to find relevant posts
-                  <br />
-                  for automated commenting
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className='mb-4 flex items-center gap-x-6'>
+          <div className='flex items-center gap-2'>
+            <Hash className='text-muted-foreground h-4 w-4' />
+            <span className='text-foreground font-semibold'>
+              Target Keywords (Choose up to 6)
+            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                    <Info className='text-muted-foreground h-3 w-3' />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side='right' className='max-w-xs'>
+                  <p>
+                    Select keywords related to your industry or interests to
+                    find relevant posts for automated commenting
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <p className='text-muted-foreground text-sm'>
+            {selectedKeywords.length}/6 keywords selected
+          </p>
         </div>
 
         <div className='space-y-3'>
@@ -179,6 +187,28 @@ export function PostSettingsStep() {
                   }`}
                 >
                   <span className='text-sm font-medium'>{keyword}</span>
+                  {customKeywords.includes(keyword) && (
+                    <button
+                      type='button'
+                      aria-label={`Remove ${keyword}`}
+                      className='text-muted-foreground/80 hover:text-foreground transition'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // Remove from custom list
+                        setCustomKeywords((prev) =>
+                          prev.filter((k) => k !== keyword)
+                        )
+                        // If selected, also remove from selected keywords
+                        if (selectedKeywords.includes(keyword)) {
+                          setSelectedKeywords(
+                            selectedKeywords.filter((k) => k !== keyword)
+                          )
+                        }
+                      }}
+                    >
+                      <X className='h-3.5 w-3.5' />
+                    </button>
+                  )}
                 </button>
               )
             })}
@@ -211,106 +241,133 @@ export function PostSettingsStep() {
             )}
           </div>
         </div>
-
-        <p className='text-muted-foreground mt-4 text-sm'>
-          {selectedKeywords.length}/6 keywords selected
-        </p>
       </div>
 
       {/* Author Titles Section */}
       <div className='mb-6 space-y-2'>
-        <div
-          className='group flex cursor-pointer items-center justify-between'
-          onClick={() => setIsAuthorTitlesExpanded(!isAuthorTitlesExpanded)}
-        >
-          <div className='flex items-center gap-2'>
-            <Filter className='text-muted-foreground h-4 w-4' />
-            <Label className='text-foreground cursor-pointer font-medium'>
-              Author Titles
-            </Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                    <Info className='text-muted-foreground h-3 w-3' />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side='right' className='max-w-xs'>
-                  <p>
-                    Select titles of authors whose posts
-                    <br />
-                    you want to engage with
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <div className='text-muted-foreground group-hover:text-foreground flex items-center transition-colors'>
-            {isAuthorTitlesExpanded ? (
-              <ChevronUp className='h-4 w-4' />
-            ) : (
-              <ChevronDown className='h-4 w-4' />
-            )}
+        <div className='flex items-center justify-between'>
+          <div className='flex w-full items-center gap-x-6'>
+            <div className='flex items-center gap-2'>
+              <Filter className='text-muted-foreground h-4 w-4' />
+              <Label className='text-foreground font-medium'>
+                Post Author Titles
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                      <Info className='text-muted-foreground h-3 w-3' />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side='right' className='max-w-xs'>
+                    <p>
+                      Select titles of authors whose posts
+                      <br />
+                      you want to engage with
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p className='text-muted-foreground text-sm'>
+              {!isAllSelected && `${authorTitles.length}/3 titles selected`}
+            </p>
           </div>
         </div>
 
-        {isAuthorTitlesExpanded && (
-          <div className='mt-4 space-y-3'>
-            <div className='flex flex-wrap gap-3'>
-              {allTitles.map((title) => {
-                const isSelected = authorTitles.includes(title)
-                return (
-                  <button
-                    key={title}
-                    onClick={() => toggleTitle(title)}
-                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-primary/10 border-primary text-primary'
-                        : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
-                    }`}
-                  >
-                    <span className='text-sm font-medium'>{title}</span>
-                  </button>
-                )
-              })}
+        <div className='mt-4 space-y-3'>
+          <div className='flex flex-wrap gap-3'>
+            {/* All option */}
+            <button
+              onClick={toggleAll}
+              className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                isAllSelected
+                  ? 'bg-primary/10 border-primary text-primary'
+                  : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+              }`}
+            >
+              <span className='text-sm font-medium'>All</span>
+            </button>
 
-              {!showCustomTitleInput ? (
+            {allTitles.map((title) => {
+              const isSelected = authorTitles.includes(title)
+              return (
                 <button
-                  onClick={handleTitleOtherClick}
-                  className='border-border bg-card text-card-foreground hover:border-primary/30 flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 hover:shadow-sm'
+                  key={title}
+                  onClick={() => toggleTitle(title)}
+                  className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                    isSelected
+                      ? 'bg-primary/10 border-primary text-primary'
+                      : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                  }`}
                 >
-                  <span className='flex items-center gap-1 text-sm font-medium'>
-                    <PlusCircle className='h-4 w-4' />
-                    Other
-                  </span>
+                  <span className='text-sm font-medium'>{title}</span>
+                  {customTitles.includes(title) && (
+                    <button
+                      type='button'
+                      aria-label={`Remove ${title}`}
+                      className='text-muted-foreground/80 hover:text-foreground transition'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // Remove from custom titles list
+                        setCustomTitles((prev) =>
+                          prev.filter((t) => t !== title)
+                        )
+                        // If selected, also remove from selected author titles
+                        if (authorTitles.includes(title)) {
+                          setAuthorTitles(
+                            authorTitles.filter((t) => t !== title)
+                          )
+                        }
+                      }}
+                    >
+                      <X className='h-3.5 w-3.5' />
+                    </button>
+                  )}
                 </button>
-              ) : (
-                <Input
-                  placeholder='Enter title...'
-                  value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
-                  onKeyPress={handleCustomTitleSubmit}
-                  onBlur={() => setShowCustomTitleInput(false)}
-                  autoFocus
-                  className='h-10 w-32'
-                />
-              )}
-            </div>
-            
+              )
+            })}
+
+            {!showCustomTitleInput ? (
+              <button
+                onClick={handleTitleOtherClick}
+                disabled={isAllSelected}
+                className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                  isAllSelected
+                    ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                    : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                }`}
+              >
+                <span className='flex items-center gap-1 text-sm font-medium'>
+                  <PlusCircle className='h-4 w-4' />
+                  Other
+                </span>
+              </button>
+            ) : (
+              <Input
+                placeholder='Enter title...'
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                onKeyPress={handleCustomTitleSubmit}
+                onBlur={() => setShowCustomTitleInput(false)}
+                autoFocus
+                className='h-10 w-32'
+              />
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Geography Section */}
+      {/* Miscellaneous Section */}
       <div className='mb-6 space-y-2'>
         <div
           className='group flex cursor-pointer items-center justify-between'
-          onClick={() => setIsGeographyExpanded(!isGeographyExpanded)}
+          onClick={() => setIsEngagementExpanded(!isEngagementExpanded)}
         >
           <div className='flex items-center gap-2'>
-            <Globe className='text-muted-foreground h-4 w-4' />
+            <CircleSlash className='text-muted-foreground h-4 w-4' />
             <Label className='text-foreground cursor-pointer font-medium'>
-              Geography
+              Exclusions
             </Label>
             <TooltipProvider>
               <Tooltip>
@@ -321,16 +378,15 @@ export function PostSettingsStep() {
                 </TooltipTrigger>
                 <TooltipContent side='right' className='max-w-xs'>
                   <p>
-                    Select geographic regions where
-                    <br />
-                    you want to focus your engagement
+                    Additional settings for post filtering and commenting
+                    preferences.
                   </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
           <div className='text-muted-foreground group-hover:text-foreground flex items-center transition-colors'>
-            {isGeographyExpanded ? (
+            {isEngagementExpanded ? (
               <ChevronUp className='h-4 w-4' />
             ) : (
               <ChevronDown className='h-4 w-4' />
@@ -338,32 +394,39 @@ export function PostSettingsStep() {
           </div>
         </div>
 
-        {isGeographyExpanded && (
-          <div className='mt-4 space-y-3'>
-            <div className='flex flex-wrap gap-3'>
-              {['Global', 'Europe', 'Asia', 'US', 'India'].map((region) => {
-                const isSelected = geography === region
-                const displayName = {
-                  Global: 'Global',
-                  Europe: 'Europe',
-                  Asia: 'Asia (excluding India)',
-                  US: 'US',
-                  India: 'India',
-                }[region]
-                return (
-                  <button
-                    key={region}
-                    onClick={() => setGeography(region)}
-                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-primary/10 border-primary text-primary'
-                        : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
-                    }`}
-                  >
-                    <span className='text-sm font-medium'>{displayName}</span>
-                  </button>
-                )
-              })}
+        {isEngagementExpanded && (
+          <div className='mt-4 space-y-4'>
+            {/* Skip Options */}
+            <div className='space-y-4'>
+              <div className='flex max-w-xl flex-row items-center justify-between rounded-lg border p-4'>
+                <div className='space-y-0.5'>
+                  <span className='text-sm font-semibold'>
+                    Don’t comment on job openings
+                  </span>
+                  <p className='text-muted-foreground text-sm'>
+                    Exclude from commenting list
+                  </p>
+                </div>
+                <Switch
+                  checked={skipHiringPosts}
+                  onCheckedChange={setSkipHiringPosts}
+                />
+              </div>
+
+              <div className='flex max-w-xl flex-row items-center justify-between rounded-lg border p-4'>
+                <div className='space-y-0.5'>
+                  <span className='text-sm font-semibold'>
+                    Don’t comment on “started a new job” updates
+                  </span>
+                  <p className='text-muted-foreground text-sm'>
+                    Exclude from commenting list
+                  </p>
+                </div>
+                <Switch
+                  checked={skipJobUpdatePosts}
+                  onCheckedChange={setSkipJobUpdatePosts}
+                />
+              </div>
             </div>
           </div>
         )}

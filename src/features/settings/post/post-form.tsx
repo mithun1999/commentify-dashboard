@@ -6,26 +6,25 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { planSetting } from '@/config/plan-setting.config'
 import {
-  Info,
-  PlusCircle,
-  Filter,
-  Globe,
-  ExternalLink,
+  AlertCircle,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
+  Filter,
+  Globe,
+  Info,
+  PlusCircle,
   X,
-  AlertCircle,
 } from 'lucide-react'
 import { useProfileStore } from '@/stores/profile.store'
-import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import {
+  Hour12,
+  MinuteQuarter,
+  Period,
   toPaddedHourAndPeriod,
   toQuarterMinute,
-  wallTimeInZoneToLocal,
   toUTCFromLocalSelection,
-  type Hour12,
-  type MinuteQuarter,
-  type Period,
+  wallTimeInZoneToLocal,
 } from '@/lib/date.utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -39,20 +38,13 @@ import {
 import {
   Form,
   FormControl,
-  FormLabel,
+  FormDescription,
   FormField,
   FormItem,
-  FormDescription,
+  FormLabel,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -61,13 +53,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { SelectDropdown } from '@/components/select-dropdown'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
-import type { ISetting } from '@/features/settings/interface/setting.interface'
 import {
   useCreateScrapeSettingQuery,
   useUpdateScrapeSettingQuery,
 } from '@/features/settings/query/setting.query'
 import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
+import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 
 const notificationsFormSchema = z.object({
@@ -163,6 +156,8 @@ export function PostForm() {
       startMinute: '00',
       startPeriod: 'AM',
     },
+    shouldUnregister: false,
+    mode: 'onSubmit',
   })
 
   const allKeywords = [...predefinedKeywords, ...customKeywords]
@@ -174,9 +169,9 @@ export function PostForm() {
   // Build LinkedIn search URL for selected keywords
   const liSearchUrl = buildSearchUrl(selectedKeywords)
 
-  const populateFromSetting = (setting?: ISetting) => {
-    if (!setting) return
-    const scrape = setting.scrapeSetting
+  const populateFromSetting = () => {
+    if (!activeProfile?.setting) return
+    const scrape = activeProfile.setting.scrapeSetting
     const existingKeywords = Array.isArray(scrape?.keywordsToTarget)
       ? scrape.keywordsToTarget
       : []
@@ -194,24 +189,20 @@ export function PostForm() {
     )
     if (extraTitles.length) setCustomTitles(extraTitles)
 
-    let paddedHour: Hour12 = form.getValues('startHour')
-    let period: Period = form.getValues('startPeriod')
-    let minute: MinuteQuarter = form.getValues('startMinute')
+    const { hours24, minutes } = wallTimeInZoneToLocal(
+      scrape.jobTiming.hours,
+      scrape.jobTiming.minutes,
+      scrape.jobTiming.tz
+    )
 
-    if (
-      typeof scrape?.jobTiming?.hours === 'number' &&
-      typeof scrape?.jobTiming?.minutes === 'number'
-    ) {
-      const { hours24, minutes } = wallTimeInZoneToLocal(
-        scrape.jobTiming.hours,
-        scrape.jobTiming.minutes,
-        scrape.jobTiming.tz
-      )
-      const hp = toPaddedHourAndPeriod(hours24)
-      paddedHour = hp.hour as Hour12
-      period = hp.period as Period
-      minute = toQuarterMinute(minutes) as MinuteQuarter
-    }
+    const hp = toPaddedHourAndPeriod(hours24)
+
+    const paddedHour = (hp.hour || '09').padStart(2, '0') as Hour12
+
+    const q = toQuarterMinute(minutes)
+    const minute = ['00', '15', '30', '45'].includes(q) ? q : '00'
+
+    const period = hp.period === 'AM' || hp.period === 'PM' ? hp.period : 'AM'
 
     form.reset({
       keywords: existingKeywords.length
@@ -241,24 +232,24 @@ export function PostForm() {
           : form.getValues('skipArticlePosts'),
       autoSchedule: scrape?.autoSchedule ?? form.getValues('autoSchedule'),
       rules: scrape?.rules ?? form.getValues('rules'),
-      startHour: paddedHour,
-      startMinute: minute,
-      startPeriod: period,
+      startHour: paddedHour ?? '09',
+      startMinute: minute ?? '00',
+      startPeriod: period ?? 'AM',
     })
   }
 
   useEffect(() => {
-    populateFromSetting(activeProfile?.setting)
+    populateFromSetting()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProfile?.setting])
+  }, [activeProfile?.setting?.scrapeSetting?._id])
 
   const handleSubmitForm = (values: NotificationsFormValues) => {
     if (!activeProfile?._id) return
     const plan = (userPlan ?? 'starter') as 'starter' | 'pro' | 'premium'
     const { hours, minutes } = toUTCFromLocalSelection(
-      values.startHour,
-      values.startMinute,
-      values.startPeriod
+      values.startHour as any,
+      values.startMinute as any,
+      values.startPeriod as any
     )
 
     const payload = {
@@ -547,32 +538,31 @@ export function PostForm() {
               <FormField
                 control={form.control}
                 name='startHour'
-                render={({ field }) => (
-                  <FormItem className='w-20'>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder='Hr' />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Array.from({ length: 12 }, (_, i) =>
-                          String(i + 1).padStart(2, '0')
-                        ).map((h) => (
-                          <SelectItem key={h} value={h}>
-                            {h}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.startHour && (
-                      <p className='text-destructive mt-1 flex items-center gap-1 text-xs'>
-                        <AlertCircle className='h-3.5 w-3.5' />
-                        {form.formState.errors.startHour.message as string}
-                      </p>
-                    )}
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  return (
+                    <FormItem className='w-20'>
+                      <SelectDropdown
+                        onValueChange={(v) => {
+                          if (v === '') return
+                          field.onChange(v)
+                        }}
+                        defaultValue={field.value}
+                        placeholder='Hr'
+                        items={Array.from({ length: 12 }, (_, i) => ({
+                          label: String(i + 1).padStart(2, '0'),
+                          value: String(i + 1).padStart(2, '0'),
+                        }))}
+                        isControlled={true}
+                      />
+                      {form.formState.errors.startHour && (
+                        <p className='text-destructive mt-1 flex items-center gap-1 text-xs'>
+                          <AlertCircle className='h-3.5 w-3.5' />
+                          {form.formState.errors.startHour.message as string}
+                        </p>
+                      )}
+                    </FormItem>
+                  )
+                }}
               />
 
               {/* Minute */}
@@ -581,20 +571,19 @@ export function PostForm() {
                 name='startMinute'
                 render={({ field }) => (
                   <FormItem className='w-24'>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder='Min' />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {['00', '15', '30', '45'].map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SelectDropdown
+                      onValueChange={(v) => {
+                        if (v === '') return
+                        field.onChange(v)
+                      }}
+                      defaultValue={field.value}
+                      placeholder='Min'
+                      items={['00', '15', '30', '45'].map((m) => ({
+                        label: m,
+                        value: m,
+                      }))}
+                      isControlled={true}
+                    />
                     {form.formState.errors.startMinute && (
                       <p className='text-destructive mt-1 flex items-center gap-1 text-xs'>
                         <AlertCircle className='h-3.5 w-3.5' />
@@ -611,20 +600,19 @@ export function PostForm() {
                 name='startPeriod'
                 render={({ field }) => (
                   <FormItem className='w-24'>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder='AM/PM' />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {['AM', 'PM'].map((p) => (
-                          <SelectItem key={p} value={p}>
-                            {p}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SelectDropdown
+                      onValueChange={(v) => {
+                        if (v === '') return
+                        field.onChange(v)
+                      }}
+                      defaultValue={field.value}
+                      placeholder='AM/PM'
+                      items={['AM', 'PM'].map((p) => ({
+                        label: p,
+                        value: p,
+                      }))}
+                      isControlled={true}
+                    />
                     {form.formState.errors.startPeriod && (
                       <p className='text-destructive mt-1 flex items-center gap-1 text-xs'>
                         <AlertCircle className='h-3.5 w-3.5' />
@@ -1007,7 +995,9 @@ export function PostForm() {
         <Button
           type='submit'
           disabled={
-            isCreatingScrapeSetting || isUpdatingScrapeSetting || !isProfileActive
+            isCreatingScrapeSetting ||
+            isUpdatingScrapeSetting ||
+            !isProfileActive
           }
         >
           {isCreatingScrapeSetting || isUpdatingScrapeSetting
