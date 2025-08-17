@@ -13,12 +13,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  useGetUserQuery,
+  useUpdateOnboardingStatus,
+} from '@/features/auth/query/user.query'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 
 export function ExtensionStep() {
   const [isChecking, setIsChecking] = useState(true)
+  const { data: user } = useGetUserQuery()
   const { data, updateData, markStepCompleted } = useOnboarding()
+  const { updateOnboardingStatus, isUpdatingOnboardingStatus } =
+    useUpdateOnboardingStatus()
   const isInstalled = data.isExtensionInstalled
 
   const checkExtensionInstallation = useCallback(async () => {
@@ -32,13 +39,22 @@ export function ExtensionStep() {
       if (installed) {
         updateData({ isExtensionInstalled: true })
         markStepCompleted('extension')
+        if (
+          user?.metadata?.onboarding?.status === 'not-started' ||
+          !user?.metadata?.onboarding
+        ) {
+          updateOnboardingStatus({
+            status: 'in-progress',
+            step: 1,
+          })
+        }
       }
     } catch (error) {
       console.error('Error checking extension:', error)
     } finally {
       setIsChecking(false)
     }
-  }, [updateData, markStepCompleted])
+  }, [updateData, markStepCompleted, user])
 
   useEffect(() => {
     // Initial check
@@ -64,7 +80,7 @@ export function ExtensionStep() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('pageshow', handlePageShow)
     }
-  }, [checkExtensionInstallation, isInstalled])
+  }, [checkExtensionInstallation, isInstalled, user])
 
   return (
     <div className='space-y-8'>
@@ -145,7 +161,10 @@ export function ExtensionStep() {
         </div>
 
         {isInstalled && (
-          <OnboardingNavigation nextStep='/onboarding/linkedin' />
+          <OnboardingNavigation
+            nextStep='/onboarding/linkedin'
+            loading={isUpdatingOnboardingStatus}
+          />
         )}
       </OnboardingCard>
     </div>

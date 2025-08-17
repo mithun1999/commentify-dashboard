@@ -10,7 +10,8 @@ export async function getUser() {
 }
 
 export async function updateOnboardingStatus(data: {
-  onboarding_status: 'completed' | 'in_progress' | 'not_started'
+  status: 'not-started' | 'in-progress' | 'completed'
+  step: number
 }) {
   const { data: response } = await axiosInstance({
     method: 'PATCH',

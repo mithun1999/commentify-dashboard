@@ -26,7 +26,7 @@ import {
 export function LinkedInStep() {
   const { updateData, markStepCompleted } = useOnboarding()
   const { isLoading } = useGetAllProfileQuery()
-  const { linkProfile, isLinkingProfile } = useLinkProfile()
+  const { linkProfile, isLinkingProfile } = useLinkProfile(true)
   const [isExtensionInstalled, setIsExtensionInstalled] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [extensionProfileData, setExtensionProfileData] =

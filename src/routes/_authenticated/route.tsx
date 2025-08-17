@@ -10,6 +10,7 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
 import SkipToMain from '@/components/skip-to-main'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedirect'
 import GeneralError from '@/features/errors/general-error'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 
@@ -27,6 +28,9 @@ function RouteComponent() {
   // Preload user profiles and set default activeProfile globally
   const { isLoading: isLoadingProfiles } = useGetAllProfileQuery()
   const activeProfile = useProfileStore((s) => s.activeProfile)
+
+  // Handle onboarding redirection
+  useOnboardingRedirect()
 
   useEffect(() => {
     if (isSessionLoaded && !isSignedIn) {
@@ -55,7 +59,7 @@ function RouteComponent() {
             'peer-data-[state=expanded]:w-[calc(100%-var(--sidebar-width))]',
             'sm:transition-[width] sm:duration-200 sm:ease-linear',
             'flex h-svh flex-col',
-            'group-data-[scroll-locked=1]/body:h-full',
+            'group-data-[scroll-locked=1]/body:h-svh',
             'has-[main.fixed-main]:group-data-[scroll-locked=1]/body:h-svh'
           )}
         >

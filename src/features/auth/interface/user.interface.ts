@@ -27,6 +27,12 @@ export interface IUser {
   subscribedProductVariant?: IProductVariant
   status: UserSubscriptionStatus
   subscription?: ISubscription | null
+  metadata: {
+    onboarding: {
+      status: 'not-started' | 'in-progress' | 'completed'
+      step: number
+    }
+  }
 }
 
 export interface IMedia {

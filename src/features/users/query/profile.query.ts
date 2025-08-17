@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useProfileStore } from '@/stores/profile.store'
+import { updateOnboardingStatus } from '@/features/auth/api/user.api'
 import {
   deleteProfile,
   getAllProfile,
@@ -54,15 +55,26 @@ export const useDeleteProfile = () => {
   return { deleteProfile: mutate, isDeletingProfile: isPending }
 }
 
-export const useLinkProfile = () => {
+export const useLinkProfile = (isOnboardingStep: boolean = false) => {
   const queryClient = useQueryClient()
+  const { setActiveProfile } = useProfileStore()
+
   const { mutate, isPending } = useMutation({
     mutationFn: linkProfile,
     onSuccess: (response) => {
       if (response?.profile) {
-        queryClient.invalidateQueries({
-          queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
-        })
+        setActiveProfile(response.profile)
+        if (isOnboardingStep) {
+          updateOnboardingStatus({
+            status: 'in-progress',
+            step: 2,
+          })
+        }
+        if (!isOnboardingStep) {
+          queryClient.invalidateQueries({
+            queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+          })
+        }
       }
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
