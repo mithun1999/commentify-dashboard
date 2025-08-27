@@ -30,7 +30,7 @@ function RouteComponent() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
 
   // Handle onboarding redirection
-  // useOnboardingRedirect()
+  useOnboardingRedirect()
 
   useEffect(() => {
     if (isSessionLoaded && !isSignedIn) {
