@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import ProfileConnectionGuard from '@/components/profile-connection-guard'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 import { Overview } from './components/overview'
 import { ProfileOverview } from './components/profile-overview'
-import ProfileConnectionGuard from '@/components/profile-connection-guard'
 
 export default function Dashboard() {
   const { data: linkedInStats, isLoading: isLoadingLinkedInStats } =
@@ -90,6 +90,8 @@ export default function Dashboard() {
   const isOlderThan2Days = createdAtDate
     ? Date.now() - createdAtDate.getTime() >= TWO_DAYS_MS
     : false
+
+  const hasProfileViewStats = Boolean(linkedInStats?.profileViewerStats)
 
   return (
     <>
@@ -197,7 +199,9 @@ export default function Dashboard() {
                     {/* LinkedIn summary cards (render only when available) */}
                     {(linkedInStats?.followersStats ||
                       linkedInStats?.profileViewerStats) && (
-                      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+                      <div
+                        className={`grid gap-4 sm:grid-cols-2 ${hasProfileViewStats ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}
+                      >
                         {linkedInStats?.followersStats && (
                           <>
                             <Card>

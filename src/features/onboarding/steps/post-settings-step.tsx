@@ -69,7 +69,7 @@ export function PostSettingsStep() {
   const [isEngagementExpanded, setIsEngagementExpanded] = useState(false)
 
   const activeProfile = useProfileStore((s) => s.activeProfile)
-  const { createOnboardingPost, isCreatingOnboardingPost } =
+  const { createOnboardingPostSettingAsync, isCreatingOnboardingPost } =
     useCreateOnboardingPostQuery()
 
   const form = useForm<PostSettingsValues>({
@@ -174,7 +174,7 @@ export function PostSettingsStep() {
     }
   }
 
-  const onSubmit = (data: PostSettingsValues) => {
+  const onSubmit = async (data: PostSettingsValues) => {
     if (!activeProfile?._id) return
 
     const payload: ICreateOnboardingPostDto = {
@@ -184,10 +184,15 @@ export function PostSettingsStep() {
       skipJobUpdatePosts: data.skipJobUpdatePosts,
     }
 
-    createOnboardingPost({
-      profileId: activeProfile._id,
-      data: payload,
-    })
+    try {
+      await createOnboardingPostSettingAsync({
+        profileId: activeProfile._id,
+        data: payload,
+      })
+      return true
+    } catch {
+      return false
+    }
   }
 
   return (
@@ -528,6 +533,14 @@ export function PostSettingsStep() {
           <OnboardingNavigation
             nextStep='/onboarding/comment-settings'
             loading={isCreatingOnboardingPost}
+            onNext={async () => {
+              const isValid = await form.trigger()
+              if (!isValid) return false
+
+              const values = form.getValues()
+              const result = await onSubmit(values)
+              return Boolean(result)
+            }}
           />
         </OnboardingCard>
       </form>

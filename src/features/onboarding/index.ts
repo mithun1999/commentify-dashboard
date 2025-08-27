@@ -11,7 +11,7 @@ export { PostSettingsStep } from './steps/post-settings-step'
 export { CommentSettingsStep } from './steps/comment-settings-step'
 
 // API
-export { createOnboardingPost, createOnboardingComment } from './api/onboarding.api'
+export { createOnboardingPostSetting, createOnboardingCommentSetting } from './api/onboarding.api'
 
 // Queries
 export { 

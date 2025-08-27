@@ -5,8 +5,8 @@ import { showSubmittedData } from '@/utils/show-submitted-data'
 import { updateOnboardingStatus } from '@/features/auth/api/user.api'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 import {
-  createOnboardingComment,
-  createOnboardingPost,
+  createOnboardingCommentSetting,
+  createOnboardingPostSetting,
 } from '../api/onboarding.api'
 import {
   IOnboardingCommentPayload,
@@ -15,12 +15,12 @@ import {
 
 export const useCreateOnboardingPostQuery = () => {
   const queryClient = useQueryClient()
-  const { mutate, isPending } = useMutation<
+  const { mutate, mutateAsync, isPending } = useMutation<
     unknown,
     AxiosError<{ message?: string }>,
     IOnboardingPostPayload
   >({
-    mutationFn: createOnboardingPost,
+    mutationFn: createOnboardingPostSetting,
     onSuccess: () => {
       showSubmittedData('Post settings saved successfully')
       queryClient.invalidateQueries({
@@ -42,19 +42,21 @@ export const useCreateOnboardingPostQuery = () => {
   })
 
   return {
-    createOnboardingPost: mutate,
+    createOnboardingPostSetting: mutate,
+    // expose async version so callers can await success/failure
+    createOnboardingPostSettingAsync: mutateAsync,
     isCreatingOnboardingPost: isPending,
   }
 }
 
 export const useCreateOnboardingCommentQuery = () => {
   const queryClient = useQueryClient()
-  const { mutate, isPending } = useMutation<
+  const { mutate, mutateAsync, isPending } = useMutation<
     unknown,
     AxiosError<{ message?: string }>,
     IOnboardingCommentPayload
   >({
-    mutationFn: createOnboardingComment,
+    mutationFn: createOnboardingCommentSetting,
     onSuccess: () => {
       showSubmittedData('Comment settings saved successfully')
       queryClient.invalidateQueries({
@@ -76,7 +78,8 @@ export const useCreateOnboardingCommentQuery = () => {
   })
 
   return {
-    createOnboardingComment: mutate,
+    createOnboardingCommentSetting: mutate,
+    createOnboardingCommentSettingAsync: mutateAsync,
     isCreatingOnboardingComment: isPending,
   }
 }

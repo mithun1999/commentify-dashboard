@@ -9,8 +9,8 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
 import SkipToMain from '@/components/skip-to-main'
-import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedirect'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import GeneralError from '@/features/errors/general-error'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 
@@ -30,7 +30,7 @@ function RouteComponent() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
 
   // Handle onboarding redirection
-  useOnboardingRedirect()
+  // useOnboardingRedirect()
 
   useEffect(() => {
     if (isSessionLoaded && !isSignedIn) {

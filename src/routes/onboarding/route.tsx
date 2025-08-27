@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
-import MainLoader from '@/components/main-loader'
-import GeneralError from '@/features/errors/general-error'
 import { useAuthStore } from '@/stores/auth.store'
-import { useGetUserQuery } from '@/features/auth/query/user.query'
-import { OnboardingLayout } from '@/features/onboarding/onboarding-layout'
+import MainLoader from '@/components/main-loader'
 import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedirect'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
+import GeneralError from '@/features/errors/general-error'
+import { OnboardingLayout } from '@/features/onboarding/onboarding-layout'
 
 export const Route = createFileRoute('/onboarding')({
   component: RouteComponent,
@@ -36,5 +36,3 @@ function RouteComponent() {
     </OnboardingLayout>
   )
 }
-
-

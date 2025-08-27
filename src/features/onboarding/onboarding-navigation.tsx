@@ -36,6 +36,7 @@ export function OnboardingNavigation({
     <div className='mt-8 flex justify-between'>
       {prevStep ? (
         <Button
+          type='button'
           variant='outline'
           onClick={() => navigate({ to: prevStep })}
           disabled={loading}
@@ -50,6 +51,7 @@ export function OnboardingNavigation({
 
       {nextStep && (
         <Button
+          type='button'
           onClick={handleNext}
           disabled={loading}
           className='group bg-primary text-primary-foreground hover:bg-primary/90 relative overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'

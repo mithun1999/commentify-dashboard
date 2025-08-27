@@ -76,7 +76,7 @@ export function CommentSettingsStep() {
     useState(false)
 
   const activeProfile = useProfileStore((s) => s.activeProfile)
-  const { createOnboardingComment, isCreatingOnboardingComment } =
+  const { createOnboardingCommentSettingAsync, isCreatingOnboardingComment } =
     useCreateOnboardingCommentQuery()
 
   const form = useForm<CommentSettingsValues>({
@@ -86,7 +86,7 @@ export function CommentSettingsStep() {
 
   // Form values are now handled by FormField components
 
-  const onSubmit = (data: CommentSettingsValues) => {
+  const onSubmit = async (data: CommentSettingsValues) => {
     if (!activeProfile?._id) return
 
     const payload: ICreateOnboardingCommentDto = {
@@ -97,10 +97,15 @@ export function CommentSettingsStep() {
       turnOnExclamations: data.useExclamations,
     }
 
-    createOnboardingComment({
-      profileId: activeProfile._id,
-      data: payload,
-    })
+    try {
+      await createOnboardingCommentSettingAsync({
+        profileId: activeProfile._id,
+        data: payload,
+      })
+      return true
+    } catch {
+      return false
+    }
   }
 
   return (
@@ -403,8 +408,16 @@ export function CommentSettingsStep() {
           </div>
 
           <OnboardingNavigation
-            nextStep='/onboarding/demo'
+            nextStep='/'
             loading={isCreatingOnboardingComment}
+            onNext={async () => {
+              const isValid = await form.trigger()
+              if (!isValid) return false
+
+              const values = form.getValues()
+              const result = await onSubmit(values)
+              return Boolean(result)
+            }}
           />
         </OnboardingCard>
       </form>

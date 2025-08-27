@@ -30,12 +30,22 @@ export const linkLinkedInProfileFromExtension = async ():
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 Promise<any> => {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chromeRef: any = typeof window !== 'undefined' ? (window as any).chrome : undefined
+    const runtime = chromeRef?.runtime
+    const sendMessage = runtime?.sendMessage
+
+    if (typeof sendMessage !== 'function') {
+      reject(new Error('Chrome extension runtime is not available'))
+      return
+    }
+
+    sendMessage(
       envConfig.chromeExtensionId,
       { type: LINK_LI_ACCOUNT },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError.message)
+      (response: unknown) => {
+        if (runtime?.lastError) {
+          reject(runtime.lastError.message)
         } else {
           resolve(response)
         }
@@ -47,12 +57,22 @@ Promise<any> => {
 export const getProfileDetailsFromExtension =
   async (): Promise<IProfileResponseFromExtension> => {
     return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chromeRef: any = typeof window !== 'undefined' ? (window as any).chrome : undefined
+      const runtime = chromeRef?.runtime
+      const sendMessage = runtime?.sendMessage
+
+      if (typeof sendMessage !== 'function') {
+        reject(new Error('Chrome extension runtime is not available'))
+        return
+      }
+
+      sendMessage(
         envConfig.chromeExtensionId,
         { type: GET_PROFILE_DETAILS },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(chrome.runtime.lastError.message)
+        (response: IProfileResponseFromExtension) => {
+          if (runtime?.lastError) {
+            reject(runtime.lastError.message)
           } else {
             resolve(response)
           }

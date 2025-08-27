@@ -26,7 +26,7 @@ export const useGetAllProfileQuery = () => {
 
   useEffect(() => {
     if (!activeProfile && Array.isArray(data) && data.length > 0) {
-      setActiveProfile(data[0])
+      setActiveProfile(data[data.length - 1])
     }
   }, [activeProfile, data, setActiveProfile])
 

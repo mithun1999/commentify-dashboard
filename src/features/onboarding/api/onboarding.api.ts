@@ -4,23 +4,23 @@ import {
   IOnboardingPostPayload,
 } from '../interface/onboarding.interface'
 
-export async function createOnboardingPost(
+export async function createOnboardingPostSetting(
   payload: IOnboardingPostPayload
 ) {
   const { data } = await axiosInstance({
     method: 'POST',
-    url: `/onboarding/post/${payload.profileId}`,
+    url: `/setting/onboarding/post/${payload.profileId}`,
     data: payload.data,
   })
   return data
 }
 
-export async function createOnboardingComment(
+export async function createOnboardingCommentSetting(
   payload: IOnboardingCommentPayload
 ) {
   const { data } = await axiosInstance({
     method: 'POST',
-    url: `/onboarding/comment/${payload.profileId}`,
+    url: `/setting/onboarding/comment/${payload.profileId}`,
     data: payload.data,
   })
   return data

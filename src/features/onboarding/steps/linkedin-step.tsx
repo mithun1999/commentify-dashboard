@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { envConfig } from '@/config/env.config'
-import { Linkedin, CheckCircle2, Info, Loader2, Download } from 'lucide-react'
+import { Linkedin, CheckCircle2, Info, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useOnboarding } from '@/stores/onboarding.store'
 import {
   checkIsExtensionInstalled,
@@ -15,6 +17,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
 import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
@@ -24,14 +28,19 @@ import {
 } from '@/features/users/query/profile.query'
 
 export function LinkedInStep() {
+  const navigate = useNavigate()
   const { updateData, markStepCompleted } = useOnboarding()
+  const { updateOnboardingStatus } = useUpdateOnboardingStatus()
+  const { data: user } = useGetUserQuery()
   const { isLoading } = useGetAllProfileQuery()
   const { linkProfile, isLinkingProfile } = useLinkProfile(true)
   const [isExtensionInstalled, setIsExtensionInstalled] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [extensionProfileData, setExtensionProfileData] =
     useState<IProfileResponseFromExtension | null>(null)
-  const [isCollectingProfile, setIsCollectingProfile] = useState(false)
+  const hasLinkedRef = useRef(false)
+
+  console.log('extensionProfileData', extensionProfileData)
 
   const checkIfExtensionIsInstalled = async () => {
     const isInstalled = await checkIsExtensionInstalled(
@@ -42,45 +51,59 @@ export function LinkedInStep() {
     return isInstalled
   }
 
+  const onboardingData = user?.metadata?.onboarding
+  const isLinkedInStepCompleted =
+    onboardingData &&
+    (onboardingData.status === 'completed' || onboardingData.step >= 2)
+
   const collectUserInformation = useCallback(async () => {
-    if (isCollectingProfile) return
-    setIsCollectingProfile(true)
+    if (isLinkedInStepCompleted) return
+
     try {
-      // Check if extension is installed first
       const isInstalled = await checkIfExtensionIsInstalled()
-      if (!isInstalled) {
-        setIsCollectingProfile(false)
-        return
-      }
+      if (!isInstalled) return
 
-      // Try to get profile details from extension
       const profileDetails = await getProfileDetailsFromExtension()
+      console.log('profileDetails', profileDetails)
 
-      if (
-        profileDetails &&
-        profileDetails.firstName &&
-        profileDetails.lastName
-      ) {
-        setExtensionProfileData(profileDetails)
-        markStepCompleted('linkedin')
-        updateData({
-          isLinkedInConnected: true,
-          userProfile: {
-            name: `${profileDetails.firstName} ${profileDetails.lastName}`,
-            title: `${profileDetails.publicIdentifier}`,
-          },
-        })
+      const hasName = Boolean(
+        profileDetails?.firstName && profileDetails?.lastName
+      )
+      if (!profileDetails || !hasName) return
 
-        // Automatically link the profile
-        await linkProfile(profileDetails)
+      setExtensionProfileData(profileDetails)
+      markStepCompleted('linkedin')
+      updateData({
+        isLinkedInConnected: true,
+        userProfile: {
+          name: `${profileDetails.firstName} ${profileDetails.lastName}`,
+          title: `${profileDetails.publicIdentifier}`,
+        },
+      })
+
+      // Automatically link the profile (ensure only once)
+      if (!hasLinkedRef.current) {
+        hasLinkedRef.current = true
+        linkProfile(profileDetails)
       }
     } catch (error) {
-      console.log('Could not auto-collect profile data:', error)
-      // Silently fail - user can manually connect
-    } finally {
-      setIsCollectingProfile(false)
+      console.error('Could not auto-collect profile data:', error)
+      const msg = error instanceof Error ? error.message : ''
+      if (msg.includes('Chrome extension runtime is not available')) {
+        toast.error(
+          "We're having trouble with your browser. Please use Chrome with the Commentify extension installed and enabled.",
+          { id: 'runtime-missing' }
+        )
+      } else {
+        toast.error(
+          'Could not collect your LinkedIn profile data. Please try again.',
+          {
+            id: 'collect-failed',
+          }
+        )
+      }
     }
-  }, [isCollectingProfile, updateData, markStepCompleted, linkProfile])
+  }, [user?.metadata?.onboarding, updateData, markStepCompleted, linkProfile])
 
   const handleLinking = async () => {
     // If no profile data found, redirect to LinkedIn
@@ -92,7 +115,10 @@ export function LinkedInStep() {
     setIsLinking(true)
     try {
       // Link the profile (data already collected)
-      await linkProfile(extensionProfileData)
+      if (!hasLinkedRef.current) {
+        hasLinkedRef.current = true
+        await linkProfile(extensionProfileData)
+      }
     } catch (error) {
       console.error('Error linking profile:', error)
     } finally {
@@ -100,11 +126,30 @@ export function LinkedInStep() {
     }
   }
 
+  // Ensure extension is installed; otherwise redirect to step 1 (extension)
+  useEffect(() => {
+    const ensureExtensionInstalled = async () => {
+      const installed = await checkIfExtensionIsInstalled()
+      if (!installed) {
+        // Update onboarding to step 1 and mark in-progress
+        updateOnboardingStatus({ status: 'in-progress', step: 1 })
+        navigate({ to: '/onboarding/extension', replace: true })
+      }
+    }
+    ensureExtensionInstalled()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     // Auto-collect user information when component mounts
     collectUserInformation()
 
-    if (extensionProfileData) return
+    // If profile data is already collected or linkedin step is completed, don't set up listeners
+    const onboardingData = user?.metadata?.onboarding
+    const isLinkedInStepCompleted =
+      onboardingData &&
+      (onboardingData.status === 'completed' || onboardingData.step >= 2)
+    if (extensionProfileData || isLinkedInStepCompleted) return
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -123,7 +168,7 @@ export function LinkedInStep() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('pageshow', handlePageShow)
     }
-  }, [collectUserInformation, extensionProfileData])
+  }, [collectUserInformation, extensionProfileData, user?.metadata?.onboarding])
 
   if (isLoading) {
     return (
@@ -201,36 +246,17 @@ export function LinkedInStep() {
               </div>
             )}
 
-            {!extensionProfileData && !isCollectingProfile && (
-              <>
-                {isExtensionInstalled ? (
-                  <Button
-                    className='relative w-full overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
-                    onClick={handleLinking}
-                    disabled={isLinking || isLinkingProfile}
-                  >
-                    <Linkedin className='mr-2 h-4 w-4' />
-                    {isLinking || isLinkingProfile
-                      ? 'Connecting...'
-                      : 'Connect LinkedIn'}
-                  </Button>
-                ) : (
-                  <Button
-                    className='w-full transition-all hover:shadow-md active:scale-95'
-                    onClick={() => {
-                      window.open(
-                        envConfig.extensionUrl ||
-                          'https://chromewebstore.google.com',
-                        '_blank',
-                        'noopener,noreferrer'
-                      )
-                    }}
-                  >
-                    <Download className='mr-2 h-4 w-4' />
-                    Install from Chrome Web Store
-                  </Button>
-                )}
-              </>
+            {!extensionProfileData && isExtensionInstalled && (
+              <Button
+                className='relative w-full overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
+                onClick={handleLinking}
+                disabled={isLinking || isLinkingProfile}
+              >
+                <Linkedin className='mr-2 h-4 w-4' />
+                {isLinking || isLinkingProfile
+                  ? 'Connecting...'
+                  : 'Connect LinkedIn'}
+              </Button>
             )}
           </div>
         </div>
