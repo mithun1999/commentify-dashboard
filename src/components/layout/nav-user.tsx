@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import { ChevronsUpDown, LogOut, Sparkles, Settings, CreditCard } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -21,6 +22,7 @@ import {
 import { signOut } from '@/features/auth/utils/auth.util'
 
 export function NavUser() {
+  const posthog = usePostHog()
   const { isMobile } = useSidebar()
   const router = useRouter()
   const session = useAuthStore((state) => state.session)
@@ -124,7 +126,11 @@ export function NavUser() {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem asChild>
-              <Link to='/pricing' className='w-full'>
+              <Link
+                to='/pricing'
+                className='w-full'
+                onClick={() => posthog?.capture('upgrade_plan_navbar_clicked')}
+              >
                 <Sparkles className='mr-2 h-4 w-4' />
                 Upgrade to Pro
               </Link>

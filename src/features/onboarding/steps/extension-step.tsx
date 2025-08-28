@@ -7,6 +7,7 @@ import extensionImage from '@/assets/images/install-extension.png'
 import { useOnboarding } from '@/stores/onboarding.store'
 import { checkIsExtensionInstalled } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { usePostHog } from 'posthog-js/react'
 import {
   Tooltip,
   TooltipContent,
@@ -21,6 +22,7 @@ import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 
 export function ExtensionStep() {
+  const posthog = usePostHog()
   const [isChecking, setIsChecking] = useState(true)
   const { data: user } = useGetUserQuery()
   const { data, updateData, markStepCompleted } = useOnboarding()
@@ -129,6 +131,7 @@ export function ExtensionStep() {
                 className='w-full transition-all hover:shadow-md active:scale-95'
                 disabled={isChecking}
                 onClick={() => {
+                  posthog?.capture('onboarding_extension_install_clicked')
                   window.open(
                     envConfig.extensionUrl ||
                       'https://chromewebstore.google.com',
@@ -144,7 +147,10 @@ export function ExtensionStep() {
               </Button>
               <button
                 className='text-muted-foreground text-sm underline'
-                onClick={checkExtensionInstallation}
+                onClick={() => {
+                  posthog?.capture('onboarding_extension_check_again_clicked')
+                  checkExtensionInstallation()
+                }}
               >
                 Already installed? Check again
               </button>

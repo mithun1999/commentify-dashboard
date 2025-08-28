@@ -35,6 +35,7 @@ import { ICreateOnboardingPostDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useCreateOnboardingPostQuery } from '../query/onboarding.query'
+import { usePostHog } from 'posthog-js/react'
 
 const authorTitlesList = ['Founder', 'CEO', 'CTO', 'CMO', 'VP', 'Director']
 
@@ -62,6 +63,7 @@ const defaultValues: PostSettingsValues = {
 }
 
 export function PostSettingsStep() {
+  const posthog = usePostHog()
   const [showCustomKeywordInput, setShowCustomKeywordInput] = useState(false)
   const [customKeyword, setCustomKeyword] = useState('')
   const [showCustomTitleInput, setShowCustomTitleInput] = useState(false)
@@ -188,6 +190,12 @@ export function PostSettingsStep() {
       await createOnboardingPostSettingAsync({
         profileId: activeProfile._id,
         data: payload,
+      })
+      posthog?.capture('onboarding_post_setting_form_submitted', {
+        selectedKeywordsCount: data.selectedKeywords.length,
+        authorTitlesCount: data.authorTitles.length,
+        skipHiringPosts: data.skipHiringPosts,
+        skipJobUpdatePosts: data.skipJobUpdatePosts,
       })
       return true
     } catch {

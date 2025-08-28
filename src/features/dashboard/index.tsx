@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { usePostHog } from 'posthog-js/react'
 import { IconFidgetSpinner } from '@tabler/icons-react'
 import { useProfileStore } from '@/stores/profile.store'
 import { Alert } from '@/components/ui/alert'
@@ -17,6 +18,7 @@ import { Overview } from './components/overview'
 import { ProfileOverview } from './components/profile-overview'
 
 export default function Dashboard() {
+  const posthog = usePostHog()
   const { data: linkedInStats, isLoading: isLoadingLinkedInStats } =
     useGetLinkedInStats()
   const activeProfile = useProfileStore((s) => s.activeProfile)
@@ -121,7 +123,12 @@ export default function Dashboard() {
               leads.
             </p>
             <Button variant='destructive' size='sm' asChild>
-              <Link to='/pricing'>Upgrade</Link>
+              <Link
+                to='/pricing'
+                onClick={() => posthog?.capture('upgrade_plan_dashboard_clicked')}
+              >
+                Upgrade
+              </Link>
             </Button>
           </Alert>
         )}

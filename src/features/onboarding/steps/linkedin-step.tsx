@@ -26,8 +26,10 @@ import {
   useGetAllProfileQuery,
   useLinkProfile,
 } from '@/features/users/query/profile.query'
+import { usePostHog } from 'posthog-js/react'
 
 export function LinkedInStep() {
+  const posthog = usePostHog()
   const navigate = useNavigate()
   const { updateData, markStepCompleted } = useOnboarding()
   const { updateOnboardingStatus } = useUpdateOnboardingStatus()
@@ -81,6 +83,10 @@ export function LinkedInStep() {
         },
       })
 
+      posthog?.capture('onboarding_linkedin_profile_fetched', {
+        publicIdentifier: profileDetails.publicIdentifier,
+      })
+
       // Automatically link the profile (ensure only once)
       if (!hasLinkedRef.current) {
         hasLinkedRef.current = true
@@ -108,16 +114,23 @@ export function LinkedInStep() {
   const handleLinking = async () => {
     // If no profile data found, redirect to LinkedIn
     if (!extensionProfileData) {
+      posthog?.capture('onboarding_linkedin_connect_clicked', {
+        hasExtensionProfileData: false,
+      })
       window.open('https://linkedin.com/', '_blank')
       return
     }
 
     setIsLinking(true)
     try {
+      posthog?.capture('onboarding_linkedin_connect_clicked', {
+        hasExtensionProfileData: true,
+      })
       // Link the profile (data already collected)
       if (!hasLinkedRef.current) {
         hasLinkedRef.current = true
         await linkProfile(extensionProfileData)
+        posthog?.capture('onboarding_linkedin_link_success')
       }
     } catch (error) {
       console.error('Error linking profile:', error)

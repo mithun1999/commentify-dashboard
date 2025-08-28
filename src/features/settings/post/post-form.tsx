@@ -16,6 +16,7 @@ import {
   PlusCircle,
   X,
 } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
 import {
   Hour12,
@@ -109,6 +110,7 @@ const predefinedKeywords = [
 
 export function PostForm() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
+  const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
   const userPlan =
     (user?.subscribedProduct?.name?.toLowerCase() as
@@ -278,6 +280,11 @@ export function PostForm() {
     } else {
       createScrapeSetting(payload)
     }
+
+    posthog?.capture('post_settings_submitted', {
+      hasExisting,
+      ...values,
+    })
   }
 
   const handleKeywordSelect = (keyword: string) => {

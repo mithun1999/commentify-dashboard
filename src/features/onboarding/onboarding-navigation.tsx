@@ -1,6 +1,7 @@
 'use client'
 
 import { useNavigate } from '@tanstack/react-router'
+import { usePostHog } from 'posthog-js/react'
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -20,6 +21,7 @@ export function OnboardingNavigation({
   loading = false,
 }: OnboardingNavigationProps) {
   const navigate = useNavigate()
+  const posthog = usePostHog()
 
   const handleNext = async () => {
     if (onNext) {
@@ -28,6 +30,7 @@ export function OnboardingNavigation({
     }
 
     if (nextStep) {
+      posthog?.capture('onboarding_next_clicked', { nextStep })
       navigate({ to: nextStep })
     }
   }
@@ -38,7 +41,10 @@ export function OnboardingNavigation({
         <Button
           type='button'
           variant='outline'
-          onClick={() => navigate({ to: prevStep })}
+          onClick={() => {
+            posthog?.capture('onboarding_back_clicked', { prevStep })
+            navigate({ to: prevStep })
+          }}
           disabled={loading}
           className='group bg-card text-card-foreground border-border hover:bg-accent hover:text-accent-foreground relative overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
         >

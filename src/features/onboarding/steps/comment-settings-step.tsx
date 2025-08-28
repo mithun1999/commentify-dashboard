@@ -44,6 +44,7 @@ import { ICreateOnboardingCommentDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useCreateOnboardingCommentQuery } from '../query/onboarding.query'
+import { usePostHog } from 'posthog-js/react'
 
 const commentSettingsSchema = z.object({
   aboutProfile: z
@@ -70,6 +71,7 @@ const defaultValues: CommentSettingsValues = {
 }
 
 export function CommentSettingsStep() {
+  const posthog = usePostHog()
   const [isStylePreferencesExpanded, setIsStylePreferencesExpanded] =
     useState(false)
   const [isCommentSettingsExpanded, setIsCommentSettingsExpanded] =
@@ -101,6 +103,12 @@ export function CommentSettingsStep() {
       await createOnboardingCommentSettingAsync({
         profileId: activeProfile._id,
         data: payload,
+      })
+      posthog?.capture('onboarding_comment_setting_form_submitted', {
+        commentStyle: data.commentStyle,
+        commentsPerDay: data.commentsPerDay,
+        useEmojis: data.useEmojis,
+        useExclamations: data.useExclamations,
       })
       return true
     } catch {

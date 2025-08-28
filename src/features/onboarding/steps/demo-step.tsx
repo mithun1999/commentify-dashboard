@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import RotatingNotification from '../rotating-notification'
+import { usePostHog } from 'posthog-js/react'
 
 const DEMO_POSTS = [
   {
@@ -79,19 +80,25 @@ export function DemoStep() {
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [activePost, setActivePost] = useState<number | null>(null)
+  const posthog = usePostHog()
 
   // Use stored value from context
   const autoApprove = data.scrapeSetting.autoApprove
 
   const handleLikeDemo = () => {
+    posthog?.capture('onboarding_demo_looks_perfect_clicked')
     setApprovalDialogOpen(true)
   }
 
   const handleDislikeDemo = () => {
+    posthog?.capture('onboarding_demo_adjust_settings_clicked')
     navigate({ to: '/onboarding/post-settings' })
   }
 
   const finishOnboarding = () => {
+    posthog?.capture('onboarding_demo_finish_setup_clicked', {
+      autoApprove,
+    })
     setLoading(true)
     updateData({ scrapeSetting: { ...data.scrapeSetting, autoApprove } })
     markStepCompleted('demo')

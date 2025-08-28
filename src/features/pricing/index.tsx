@@ -18,8 +18,10 @@ import PricingCell from './components/PricingCell'
 import SubscriptionToggle from './components/SubscriptionToggle'
 import type { IDisplayProduct } from './interfaces/price.interface'
 import { useGetPlans } from './query/pricing.query'
+import { usePostHog } from 'posthog-js/react'
 
 export default function Pricing() {
+  const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
   const { data: plans, isLoading: isFetchingPlans } = useGetPlans()
   const { updateSubscriptionPlan, isUpdatingSubscriptionPlan } =
@@ -71,6 +73,10 @@ export default function Pricing() {
   }, [plans, subscriptionType])
 
   const handleUpdatingSubscription = () => {
+    posthog?.capture('subscription_toggle_clicked', {
+      to: subscriptionType === 'monthly' ? 'yearly' : 'monthly',
+      from: subscriptionType,
+    })
     setSubscriptionType((prev) => {
       if (prev === 'monthly') return 'yearly'
       return 'monthly'
@@ -91,6 +97,12 @@ export default function Pricing() {
     variantId: string
     productId: string
   }) => {
+    posthog?.capture('select_plan_clicked', {
+      productId,
+      variantId,
+      subscriptionType,
+      hasActiveSubscription: Boolean(user?.subscription),
+    })
     if (user?.subscription) {
       updateSubscriptionPlan({ productId, variantId })
     } else {

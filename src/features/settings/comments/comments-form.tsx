@@ -5,7 +5,16 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { planSetting } from '@/config/plan-setting.config'
-import { MessageSquare, Settings, Smile, Info, Hash, ArrowLeft, AlertCircle } from 'lucide-react'
+import {
+  MessageSquare,
+  Settings,
+  Smile,
+  Info,
+  Hash,
+  ArrowLeft,
+  AlertCircle,
+} from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
 import { Button } from '@/components/ui/button'
 import {
@@ -66,6 +75,7 @@ const defaultValues: Partial<CommentSettingsValues> = {
 }
 
 export function CommentsForm({ prev }: { prev?: () => void }) {
+  const posthog = usePostHog()
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
   const { data: user } = useGetUserQuery()
@@ -152,6 +162,11 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
     } else {
       createCommentSetting(payload)
     }
+
+    posthog?.capture('comment_settings_submitted', {
+      hasExisting,
+      ...data,
+    })
   }
 
   return (
