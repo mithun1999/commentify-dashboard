@@ -2,6 +2,7 @@ import { HTMLAttributes, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +14,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { sendPasswordResetLink } from '../../utils/auth.util'
 
 type ForgotFormProps = HTMLAttributes<HTMLFormElement>
 
@@ -31,14 +33,18 @@ export function ForgotPasswordForm({ className, ...props }: ForgotFormProps) {
     defaultValues: { email: '' },
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
-    setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(data)
-
-    setTimeout(() => {
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      setIsLoading(true)
+      await sendPasswordResetLink(data?.email)
+      toast.success('Password reset link sent successfully')
+      form.reset()
+    } catch (error: unknown) {
+      console.error(error)
+      toast.error(error instanceof Error ? error.message : 'An error occurred')
+    } finally {
       setIsLoading(false)
-    }, 3000)
+    }
   }
 
   return (
