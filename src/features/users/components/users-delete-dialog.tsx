@@ -22,7 +22,7 @@ export function UsersDeleteDialog({ open, onOpenChange, currentRow }: Props) {
     if (value.trim() !== currentRow.username) return
 
     onOpenChange(false)
-    showSubmittedData(currentRow, 'The following user has been deleted:')
+    showSubmittedData('User deleted successfully')
   }
 
   return (

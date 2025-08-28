@@ -47,9 +47,9 @@ export function UsersInviteDialog({ open, onOpenChange }: Props) {
     defaultValues: { email: '', role: '', desc: '' },
   })
 
-  const onSubmit = (values: UserInviteForm) => {
+  const onSubmit = (_values: UserInviteForm) => {
     form.reset()
-    showSubmittedData(values)
+    showSubmittedData('Invitation sent successfully')
     onOpenChange(false)
   }
 

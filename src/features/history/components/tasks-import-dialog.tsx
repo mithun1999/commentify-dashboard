@@ -51,12 +51,7 @@ export function TasksImportDialog({ open, onOpenChange }: Props) {
     const file = form.getValues('file')
 
     if (file && file[0]) {
-      const fileDetails = {
-        name: file[0].name,
-        size: file[0].size,
-        type: file[0].type,
-      }
-      showSubmittedData(fileDetails, 'You have imported the following file:')
+      showSubmittedData('File imported successfully')
     }
     onOpenChange(false)
   }

@@ -38,9 +38,9 @@ export function OtpForm({ className, ...props }: OtpFormProps) {
 
   const otp = form.watch('otp')
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  function onSubmit(_data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    showSubmittedData(data)
+    showSubmittedData('OTP verified successfully')
 
     setTimeout(() => {
       setIsLoading(false)

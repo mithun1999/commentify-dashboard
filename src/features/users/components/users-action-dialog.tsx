@@ -117,9 +117,9 @@ export function UsersActionDialog({ currentRow, open, onOpenChange }: Props) {
         },
   })
 
-  const onSubmit = (values: UserForm) => {
+  const onSubmit = (_values: UserForm) => {
     form.reset()
-    showSubmittedData(values)
+    showSubmittedData('User details saved successfully')
     onOpenChange(false)
   }
 

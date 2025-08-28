@@ -52,11 +52,11 @@ export function TasksMutateDrawer({ open, onOpenChange, currentRow }: Props) {
     },
   })
 
-  const onSubmit = (data: TasksForm) => {
+  const onSubmit = (_data: TasksForm) => {
     // do something with the form data
     onOpenChange(false)
     form.reset()
-    showSubmittedData(data)
+    showSubmittedData('Task saved successfully')
   }
 
   return (
