@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
-import commentifyLogo from '@/assets/images/logo.svg'
+import logoWhite from '@/assets/images/logo.svg'
+import logoBlack from '@/assets/images/logo-black.svg'
 import { Button } from '@/components/ui/button'
 import { ThemeSwitch } from '@/components/theme-switch'
 
@@ -9,7 +10,8 @@ export function OnboardingHeader() {
     <header className='sticky top-0 z-40 backdrop-blur-md'>
       <div className='container flex h-16 items-center justify-between'>
         <div className='flex items-center gap-2'>
-          <img src={commentifyLogo} alt='commentify' />
+          <img src={logoBlack} alt='commentify' className='block dark:hidden' />
+          <img src={logoWhite} alt='commentify' className='hidden dark:block' />
         </div>
         <div className='flex items-center gap-4'>
           <Link to='/'>
