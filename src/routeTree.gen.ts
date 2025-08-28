@@ -21,6 +21,7 @@ import { Route as OnboardingLinkedinImport } from './routes/onboarding/linkedin'
 import { Route as OnboardingExtensionImport } from './routes/onboarding/extension'
 import { Route as OnboardingDemoImport } from './routes/onboarding/demo'
 import { Route as OnboardingCommentSettingsImport } from './routes/onboarding/comment-settings'
+import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
 import { Route as errors503Import } from './routes/(errors)/503'
 import { Route as errors500Import } from './routes/(errors)/500'
 import { Route as errors404Import } from './routes/(errors)/404'
@@ -98,6 +99,12 @@ const OnboardingCommentSettingsRoute = OnboardingCommentSettingsImport.update({
   id: '/comment-settings',
   path: '/comment-settings',
   getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const AuthenticatedBillingRoute = AuthenticatedBillingImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 const errors503Route = errors503Import.update({
@@ -301,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof errors503Import
       parentRoute: typeof rootRoute
     }
+    '/_authenticated/billing': {
+      id: '/_authenticated/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AuthenticatedBillingImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/onboarding/comment-settings': {
       id: '/onboarding/comment-settings'
       path: '/comment-settings'
@@ -422,6 +436,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
@@ -431,6 +446,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
@@ -479,6 +495,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/billing': typeof AuthenticatedBillingRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
@@ -507,6 +524,7 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/billing': typeof AuthenticatedBillingRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
@@ -538,6 +556,7 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
@@ -570,6 +589,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/billing'
     | '/onboarding/comment-settings'
     | '/onboarding/demo'
     | '/onboarding/extension'
@@ -597,6 +617,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/billing'
     | '/onboarding/comment-settings'
     | '/onboarding/demo'
     | '/onboarding/extension'
@@ -626,6 +647,7 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/billing'
     | '/onboarding/comment-settings'
     | '/onboarding/demo'
     | '/onboarding/extension'
@@ -701,6 +723,7 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/route.tsx",
       "children": [
         "/_authenticated/settings",
+        "/_authenticated/billing",
         "/_authenticated/",
         "/_authenticated/help-center/",
         "/_authenticated/history/",
@@ -757,6 +780,10 @@ export const routeTree = rootRoute
     },
     "/(errors)/503": {
       "filePath": "(errors)/503.tsx"
+    },
+    "/_authenticated/billing": {
+      "filePath": "_authenticated/billing.tsx",
+      "parent": "/_authenticated"
     },
     "/onboarding/comment-settings": {
       "filePath": "onboarding/comment-settings.tsx",

@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
+import commentifyLogo from '@/assets/images/logo.svg'
 import { Button } from '@/components/ui/button'
 import { ThemeSwitch } from '@/components/theme-switch'
 
@@ -8,11 +9,7 @@ export function OnboardingHeader() {
     <header className='sticky top-0 z-40 backdrop-blur-md'>
       <div className='container flex h-16 items-center justify-between'>
         <div className='flex items-center gap-2'>
-          {/* <div className="flex h-8 w-8 items-center justify-center rounded-full bg-lime-500  shadow-md">
-            <span className="text-sm font-bold text-primary-foreground">C</span>
-          </div> */}
-
-          <span className='text-foreground text-xl font-bold'>commentify</span>
+          <img src={commentifyLogo} alt='commentify' />
         </div>
         <div className='flex items-center gap-4'>
           <Link to='/'>

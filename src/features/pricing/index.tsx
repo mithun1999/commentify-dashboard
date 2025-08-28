@@ -4,6 +4,10 @@ import { useMemo, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
+import { Header } from '@/components/layout/header'
+import { Main } from '@/components/layout/main'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { ThemeSwitch } from '@/components/theme-switch'
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import {
@@ -41,27 +45,29 @@ export default function Pricing() {
   })
 
   const updatedPlans: IDisplayProduct[] = useMemo(() => {
-    return plans?.map((plan) => {
-      const variant = plan.variant.find(
-        (v) => v.name.toLowerCase() === subscriptionType
-      )
-      const updatedVariant = {
-        ...variant,
-        displayPrice: `$${Math.round(variant?.price / 100)}`,
-      }
+    const safePlans = Array.isArray(plans) ? plans : []
+    return safePlans
+      .map((plan) => {
+        const found = (plan.variant || []).find(
+          (v) => (v.name || '').toLowerCase() === subscriptionType
+        )
+        const priceCents = found?.price ?? 0
+        const updatedVariant = {
+          ...(found || {}),
+          displayPrice: `$${Math.round(priceCents / 100)}`,
+        } as IDisplayProduct['variant']
 
-      if (popularPlans.includes(plan.name.toLowerCase())) {
-        return {
+        const base = {
           ...plan,
-          popular: true,
           variant: updatedVariant,
+        } as unknown as IDisplayProduct
+
+        if (popularPlans.includes((plan.name || '').toLowerCase())) {
+          return { ...base, popular: true }
         }
-      }
-      return {
-        ...plan,
-        variant: updatedVariant,
-      }
-    })
+        return base
+      })
+      .filter((p) => Boolean(p?.variant?._id))
   }, [plans, subscriptionType])
 
   const handleUpdatingSubscription = () => {
@@ -94,56 +100,81 @@ export default function Pricing() {
 
   if (isFetchingPlans) {
     return (
-      <div className='mt-5 pt-20 md:pt-20 xl:pt-20'>
-        <div className='mx-auto max-w-4xl'>
-          <Card>
-            <CardContent className='flex flex-col items-center justify-center gap-5 p-8'>
-              <h2 className='text-center text-lg font-bold'>
-                Hold tight! Plan's en route! 🚀
-              </h2>
-              <Loader2 className='text-primary h-6 w-6 animate-spin' />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <>
+        <Header fixed>
+          <div className='ml-auto flex items-center space-x-4'>
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+
+        <Main>
+          <div className='mt-10'>
+            <div className='mx-auto max-w-4xl'>
+              <Card>
+                <CardContent className='flex flex-col items-center justify-center gap-5 p-8'>
+                  <h2 className='text-center text-lg font-bold'>
+                    Hold tight! Plan's en route! 🚀
+                  </h2>
+                  <Loader2 className='text-primary h-6 w-6 animate-spin' />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </Main>
+      </>
     )
   }
 
   return (
-    <div className='mt-5 py-12 pt-20 md:pt-20 xl:pt-20'>
-      <div className='flex flex-col items-center justify-center space-y-2 text-center'>
-        <h1 className='text-4xl font-bold'>Plans that fit your need</h1>
-        <p className='text-muted-foreground text-lg'>
-          Simple price, Big impact
-        </p>
-        <SubscriptionToggle
-          subscriptionType={subscriptionType}
-          onChange={handleUpdatingSubscription}
-        />
-      </div>
+    <>
+      <Header fixed>
+        <div className='ml-auto flex items-center space-x-4'>
+          <ThemeSwitch />
+          <ProfileDropdown />
+        </div>
+      </Header>
 
-      <div className='flex flex-col items-center justify-center space-y-4 py-10 md:flex-row md:items-start md:space-y-0 md:space-x-10'>
-        {updatedPlans?.map((data, idx) => (
-          <PricingCell
-            key={idx}
-            onClick={() =>
-              handlePlanSelect({
-                variantId: data?.variant?._id,
-                productId: data?._id,
-              })
-            }
-            disabled={
-              isCreatingCheckoutUrl ||
-              isUpdatingSubscriptionPlan ||
-              getDisabledPlanState(data)
-            }
-            isSubmitLoading={
-              isCreatingCheckoutUrl || isUpdatingSubscriptionPlan
-            }
-            {...data}
-          />
-        ))}
-      </div>
-    </div>
+      <Main>
+        <div className='py-8'>
+          <div className='flex flex-col items-center justify-center space-y-2 text-center'>
+            <h1 className='text-3xl font-semibold'>Plans that fit your need</h1>
+            <p className='text-muted-foreground text-lg'>
+              Simple price, Big impact
+            </p>
+            <SubscriptionToggle
+              subscriptionType={subscriptionType}
+              onChange={handleUpdatingSubscription}
+            />
+            <div className='text-sm font-medium text-muted-foreground'>
+              (Switch to annual plan for 20% off)
+            </div>
+          </div>
+
+          <div className='flex flex-col items-center justify-center space-y-4 py-10 md:flex-row md:items-start md:space-y-0 md:space-x-10'>
+            {updatedPlans?.map((data, idx) => (
+              <PricingCell
+                key={idx}
+                onClick={() =>
+                  handlePlanSelect({
+                    variantId: data.variant!._id!,
+                    productId: data._id!,
+                  })
+                }
+                disabled={
+                  isCreatingCheckoutUrl ||
+                  isUpdatingSubscriptionPlan ||
+                  getDisabledPlanState(data)
+                }
+                isSubmitLoading={
+                  isCreatingCheckoutUrl || isUpdatingSubscriptionPlan
+                }
+                {...data}
+              />
+            ))}
+          </div>
+        </div>
+      </Main>
+    </>
   )
 }

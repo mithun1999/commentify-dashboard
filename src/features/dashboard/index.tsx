@@ -1,5 +1,8 @@
+import { Link } from '@tanstack/react-router'
 import { IconFidgetSpinner } from '@tabler/icons-react'
 import { useProfileStore } from '@/stores/profile.store'
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
@@ -7,6 +10,8 @@ import { Main } from '@/components/layout/main'
 import ProfileConnectionGuard from '@/components/profile-connection-guard'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 import { Overview } from './components/overview'
 import { ProfileOverview } from './components/profile-overview'
@@ -15,6 +20,7 @@ export default function Dashboard() {
   const { data: linkedInStats, isLoading: isLoadingLinkedInStats } =
     useGetLinkedInStats()
   const activeProfile = useProfileStore((s) => s.activeProfile)
+  const { data: user } = useGetUserQuery()
 
   // Formatting helpers
   const formatNumber = new Intl.NumberFormat('en-US')
@@ -108,6 +114,17 @@ export default function Dashboard() {
         <div className='mb-2 flex items-center justify-between space-y-2'>
           <h1 className='text-2xl font-bold tracking-tight'>Profile Stats</h1>
         </div>
+        {user?.status === UserSubscriptionStatus.TRIAL_EXPIRED && (
+          <Alert className='mb-4 flex flex-col gap-2' variant='destructive'>
+            <p className='text-md font-medium'>
+              Your trial has expired. Upgrade to blow up your followers or bring
+              leads.
+            </p>
+            <Button variant='destructive' size='sm' asChild>
+              <Link to='/pricing'>Upgrade</Link>
+            </Button>
+          </Alert>
+        )}
         <Tabs
           orientation='vertical'
           defaultValue='overview'

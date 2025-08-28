@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { QueryService } from '@/services/query.service'
@@ -15,7 +16,6 @@ import {
 export enum SubscriptionQueryEnum {
   GET_CUSTOMER_PORTAL_URL = 'get-customer-portal-url',
 }
-
 
 export const useUpdateSubscriptionPlan = () => {
   const router = useRouter()
@@ -71,16 +71,39 @@ export const useGetCustomerPortalUrlQuery = ({ user }: { user: IUser }) => {
     updatePaymentMethod: '',
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: [SubscriptionQueryEnum.GET_CUSTOMER_PORTAL_URL],
     queryFn: () =>
       user?.subscription ? getCustomerPortalUrl() : placeholderData,
     placeholderData,
-    retry: 2,
+    retry: 1,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     staleTime: 1000 * 60 * 60 * 24,
   })
+
+  // Show error toast when portal data is unavailable (query failed or returned placeholder)
+  const hasToastedRef = useRef(false)
+  useEffect(() => {
+    if (isError && !hasToastedRef.current) {
+      hasToastedRef.current = true
+      toast.error('Unable to fetch billing portal details', {
+        id: 'portal-error',
+      })
+    }
+  }, [isError])
+
+  if (
+    !isLoading &&
+    !data?.customerPortal &&
+    user?.subscription &&
+    !hasToastedRef.current
+  ) {
+    hasToastedRef.current = true
+    toast.error('Unable to fetch billing portal details', {
+      id: 'portal-error',
+    })
+  }
 
   return { data, isLoading }
 }

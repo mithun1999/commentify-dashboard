@@ -6,6 +6,7 @@ import {
   Sparkles,
   Settings,
   HelpCircle,
+  CreditCard,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -129,9 +130,11 @@ export function NavUser() {
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem>
-              <Sparkles className='mr-2 h-4 w-4' />
-              Upgrade to Pro
+            <DropdownMenuItem asChild>
+              <Link to='/pricing' className='w-full'>
+                <Sparkles className='mr-2 h-4 w-4' />
+                Upgrade to Pro
+              </Link>
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
@@ -144,9 +147,9 @@ export function NavUser() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to='/settings' className='w-full'>
-                  <HelpCircle className='mr-2 h-4 w-4' />
-                  Help Center
+                <Link to='/billing' className='w-full'>
+                  <CreditCard className='mr-2 h-4 w-4' />
+                  Billing
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>

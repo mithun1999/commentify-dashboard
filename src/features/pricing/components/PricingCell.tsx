@@ -31,7 +31,7 @@ function PricingCell({
           </span>
         </div>
         <div className='px-12 py-4'>
-          <h3 className='text-2xl font-medium'>{name}</h3>
+          <h3 className='text-2xl font-medium text-center mb-2'>{name}</h3>
           <div className='flex justify-center'>
             <span className='text-5xl font-black'>
               {variant?.displayPrice ?? defaultDisplayPrice}
@@ -65,7 +65,7 @@ function PricingCell({
   return (
     <PriceWrapper>
       <div className='px-12 py-4'>
-        <h3 className='text-2xl font-medium'>{name}</h3>
+        <h3 className='text-2xl font-medium text-center mb-2'>{name}</h3>
         <div className='flex justify-center'>
           <span className='text-5xl font-black'>
             {variant?.displayPrice ?? defaultDisplayPrice}
