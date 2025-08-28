@@ -4,36 +4,39 @@ import { useGetUserQuery } from '../query/user.query'
 
 export const useOnboardingRedirect = () => {
   const navigate = useNavigate()
-  const { data: user, isFetched } = useGetUserQuery()
+  const { data: user, isFetched, isLoading } = useGetUserQuery()
 
   useEffect(() => {
-    if (isFetched && user?.metadata?.onboarding?.status === 'completed') {
-      return
-    }
-    if (isFetched && !user?.metadata?.onboarding) {
+    // Do nothing until user query resolves to avoid premature redirects
+    if (!isFetched || isLoading || !user) return
+
+    // If onboarding is completed, don't redirect anywhere from here
+    if (user?.metadata?.onboarding?.status === 'completed') return
+
+    // If onboarding metadata is missing, start at the first step
+    if (!user?.metadata?.onboarding) {
       navigate({ to: '/onboarding/extension' })
       return
     }
-    if (isFetched && user?.metadata?.onboarding) {
-      const { step } = user.metadata.onboarding
 
-      switch (step) {
-        case 1:
-          navigate({ to: '/onboarding/linkedin' })
-          break
-        case 2:
-          navigate({ to: '/onboarding/post-settings' })
-          break
-        case 3:
-          navigate({ to: '/onboarding/comment-settings' })
-          break
-        case 4:
-          // Step 4 completed, onboarding is done
-          return
-        default:
-          navigate({ to: '/onboarding/extension' })
-          break
-      }
+    // Otherwise, direct to the correct in-progress step
+    const { step } = user.metadata.onboarding
+    switch (step) {
+      case 1:
+        navigate({ to: '/onboarding/linkedin' })
+        break
+      case 2:
+        navigate({ to: '/onboarding/post-settings' })
+        break
+      case 3:
+        navigate({ to: '/onboarding/comment-settings' })
+        break
+      case 4:
+        // Step 4 completed, onboarding is done
+        return
+      default:
+        navigate({ to: '/onboarding/extension' })
+        break
     }
   }, [user, isFetched, navigate])
 
