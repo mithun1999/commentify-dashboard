@@ -1,12 +1,7 @@
-import { Link } from '@tanstack/react-router'
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useRouter } from '@tanstack/react-router'
+import { ChevronsUpDown, LogOut, Sparkles, Settings, CreditCard } from 'lucide-react'
+import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -23,17 +18,59 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { signOut } from '@/features/auth/utils/auth.util'
 
-export function NavUser({
-  user,
-}: {
-  user: {
+export function NavUser() {
+  const { isMobile } = useSidebar()
+  const router = useRouter()
+  const session = useAuthStore((state) => state.session)
+  const [user, setUser] = useState<{
     name: string
     email: string
-    avatar: string
+    avatar?: string
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (session?.user) {
+      setUser({
+        name:
+          session.user.user_metadata?.full_name || session.user.email || 'User',
+        email: session.user.email || '',
+        avatar: session.user.user_metadata?.avatar_url,
+      })
+      setLoading(false)
+    } else {
+      setLoading(false)
+    }
+  }, [session])
+
+  const handleLogout = async () => {
+    await signOut()
+    router.navigate({ to: '/sign-in' })
   }
-}) {
-  const { isMobile } = useSidebar()
+
+  if (loading) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size='lg'>Loading...</SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
+
+  if (!user) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size='lg' asChild>
+            <Link to='/sign-in'>Sign In</Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
 
   return (
     <SidebarMenu>
@@ -46,7 +83,12 @@ export function NavUser({
             >
               <Avatar className='h-8 w-8 rounded-lg'>
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className='rounded-lg'>SN</AvatarFallback>
+                <AvatarFallback className='rounded-lg'>
+                  {user.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')}
+                </AvatarFallback>
               </Avatar>
               <div className='grid flex-1 text-left text-sm leading-tight'>
                 <span className='truncate font-semibold'>{user.name}</span>
@@ -63,9 +105,14 @@ export function NavUser({
           >
             <DropdownMenuLabel className='p-0 font-normal'>
               <div className='flex items-center gap-2 px-1 py-1.5 text-left text-sm'>
-                <Avatar className='h-8 w-8 rounded-lg'>
+                <Avatar className='h-10 w-10 rounded-lg'>
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className='rounded-lg'>SN</AvatarFallback>
+                  <AvatarFallback className='rounded-lg'>
+                    {user.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')}
+                  </AvatarFallback>
                 </Avatar>
                 <div className='grid flex-1 text-left text-sm leading-tight'>
                   <span className='truncate font-semibold'>{user.name}</span>
@@ -73,37 +120,40 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
+
+            <DropdownMenuItem asChild>
+              <Link to='/pricing' className='w-full'>
+                <Sparkles className='mr-2 h-4 w-4' />
                 Upgrade to Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
+              </Link>
+            </DropdownMenuItem>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to='/settings/account'>
-                  <BadgeCheck />
-                  Account
+                <Link to='/settings' className='w-full'>
+                  <Settings className='mr-2 h-4 w-4' />
+                  Settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to='/settings'>
-                  <CreditCard />
+                <Link to='/billing' className='w-full'>
+                  <CreditCard className='mr-2 h-4 w-4' />
                   Billing
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to='/settings/notifications'>
-                  <Bell />
-                  Notifications
-                </Link>
-              </DropdownMenuItem>
             </DropdownMenuGroup>
+
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOut />
+
+            <DropdownMenuItem
+              className='text-red-600 focus:bg-red-50 focus:text-red-600'
+              onClick={handleLogout}
+            >
+              <LogOut className='mr-2 h-4 w-4' />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

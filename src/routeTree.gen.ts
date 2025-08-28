@@ -11,8 +11,17 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding/route'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated/route'
+import { Route as OnboardingIndexImport } from './routes/onboarding/index'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
+import { Route as OnboardingPostSettingsImport } from './routes/onboarding/post-settings'
+import { Route as OnboardingOtherSettingsImport } from './routes/onboarding/other-settings'
+import { Route as OnboardingLinkedinImport } from './routes/onboarding/linkedin'
+import { Route as OnboardingExtensionImport } from './routes/onboarding/extension'
+import { Route as OnboardingDemoImport } from './routes/onboarding/demo'
+import { Route as OnboardingCommentSettingsImport } from './routes/onboarding/comment-settings'
+import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
 import { Route as errors503Import } from './routes/(errors)/503'
 import { Route as errors500Import } from './routes/(errors)/500'
 import { Route as errors404Import } from './routes/(errors)/404'
@@ -25,26 +34,76 @@ import { Route as authOtpImport } from './routes/(auth)/otp'
 import { Route as authForgotPasswordImport } from './routes/(auth)/forgot-password'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedUsersIndexImport } from './routes/_authenticated/users/index'
-import { Route as AuthenticatedTasksIndexImport } from './routes/_authenticated/tasks/index'
-import { Route as AuthenticatedSettingsIndexImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedPricingIndexImport } from './routes/_authenticated/pricing/index'
+import { Route as AuthenticatedHistoryIndexImport } from './routes/_authenticated/history/index'
 import { Route as AuthenticatedHelpCenterIndexImport } from './routes/_authenticated/help-center/index'
-import { Route as AuthenticatedChatsIndexImport } from './routes/_authenticated/chats/index'
-import { Route as AuthenticatedAppsIndexImport } from './routes/_authenticated/apps/index'
-import { Route as AuthenticatedSettingsNotificationsImport } from './routes/_authenticated/settings/notifications'
-import { Route as AuthenticatedSettingsDisplayImport } from './routes/_authenticated/settings/display'
-import { Route as AuthenticatedSettingsAppearanceImport } from './routes/_authenticated/settings/appearance'
-import { Route as AuthenticatedSettingsAccountImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedSettingsPostImport } from './routes/_authenticated/settings/post'
+import { Route as AuthenticatedSettingsCommentsImport } from './routes/_authenticated/settings/comments'
 
 // Create/Update Routes
+
+const OnboardingRouteRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const AuthenticatedRouteRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRoute,
 } as any)
 
+const OnboardingIndexRoute = OnboardingIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
 const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
+const OnboardingPostSettingsRoute = OnboardingPostSettingsImport.update({
+  id: '/post-settings',
+  path: '/post-settings',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OnboardingOtherSettingsRoute = OnboardingOtherSettingsImport.update({
+  id: '/other-settings',
+  path: '/other-settings',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OnboardingLinkedinRoute = OnboardingLinkedinImport.update({
+  id: '/linkedin',
+  path: '/linkedin',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OnboardingExtensionRoute = OnboardingExtensionImport.update({
+  id: '/extension',
+  path: '/extension',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OnboardingDemoRoute = OnboardingDemoImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OnboardingCommentSettingsRoute = OnboardingCommentSettingsImport.update({
+  id: '/comment-settings',
+  path: '/comment-settings',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const AuthenticatedBillingRoute = AuthenticatedBillingImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -122,19 +181,17 @@ const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
-const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexImport.update({
-  id: '/tasks/',
-  path: '/tasks/',
+const AuthenticatedPricingIndexRoute = AuthenticatedPricingIndexImport.update({
+  id: '/pricing/',
+  path: '/pricing/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
-const AuthenticatedSettingsIndexRoute = AuthenticatedSettingsIndexImport.update(
-  {
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any,
-)
+const AuthenticatedHistoryIndexRoute = AuthenticatedHistoryIndexImport.update({
+  id: '/history/',
+  path: '/history/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 const AuthenticatedHelpCenterIndexRoute =
   AuthenticatedHelpCenterIndexImport.update({
@@ -143,43 +200,16 @@ const AuthenticatedHelpCenterIndexRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
-const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexImport.update({
-  id: '/chats/',
-  path: '/chats/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const AuthenticatedSettingsPostRoute = AuthenticatedSettingsPostImport.update({
+  id: '/post',
+  path: '/post',
+  getParentRoute: () => AuthenticatedSettingsRouteRoute,
 } as any)
 
-const AuthenticatedAppsIndexRoute = AuthenticatedAppsIndexImport.update({
-  id: '/apps/',
-  path: '/apps/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-
-const AuthenticatedSettingsNotificationsRoute =
-  AuthenticatedSettingsNotificationsImport.update({
-    id: '/notifications',
-    path: '/notifications',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-
-const AuthenticatedSettingsDisplayRoute =
-  AuthenticatedSettingsDisplayImport.update({
-    id: '/display',
-    path: '/display',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-
-const AuthenticatedSettingsAppearanceRoute =
-  AuthenticatedSettingsAppearanceImport.update({
-    id: '/appearance',
-    path: '/appearance',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-
-const AuthenticatedSettingsAccountRoute =
-  AuthenticatedSettingsAccountImport.update({
-    id: '/account',
-    path: '/account',
+const AuthenticatedSettingsCommentsRoute =
+  AuthenticatedSettingsCommentsImport.update({
+    id: '/comments',
+    path: '/comments',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
 
@@ -192,6 +222,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: ''
       preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRoute
     }
     '/_authenticated/settings': {
@@ -271,6 +308,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof errors503Import
       parentRoute: typeof rootRoute
     }
+    '/_authenticated/billing': {
+      id: '/_authenticated/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AuthenticatedBillingImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/onboarding/comment-settings': {
+      id: '/onboarding/comment-settings'
+      path: '/comment-settings'
+      fullPath: '/onboarding/comment-settings'
+      preLoaderRoute: typeof OnboardingCommentSettingsImport
+      parentRoute: typeof OnboardingRouteImport
+    }
+    '/onboarding/demo': {
+      id: '/onboarding/demo'
+      path: '/demo'
+      fullPath: '/onboarding/demo'
+      preLoaderRoute: typeof OnboardingDemoImport
+      parentRoute: typeof OnboardingRouteImport
+    }
+    '/onboarding/extension': {
+      id: '/onboarding/extension'
+      path: '/extension'
+      fullPath: '/onboarding/extension'
+      preLoaderRoute: typeof OnboardingExtensionImport
+      parentRoute: typeof OnboardingRouteImport
+    }
+    '/onboarding/linkedin': {
+      id: '/onboarding/linkedin'
+      path: '/linkedin'
+      fullPath: '/onboarding/linkedin'
+      preLoaderRoute: typeof OnboardingLinkedinImport
+      parentRoute: typeof OnboardingRouteImport
+    }
+    '/onboarding/other-settings': {
+      id: '/onboarding/other-settings'
+      path: '/other-settings'
+      fullPath: '/onboarding/other-settings'
+      preLoaderRoute: typeof OnboardingOtherSettingsImport
+      parentRoute: typeof OnboardingRouteImport
+    }
+    '/onboarding/post-settings': {
+      id: '/onboarding/post-settings'
+      path: '/post-settings'
+      fullPath: '/onboarding/post-settings'
+      preLoaderRoute: typeof OnboardingPostSettingsImport
+      parentRoute: typeof OnboardingRouteImport
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
@@ -278,47 +364,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
-    '/_authenticated/settings/account': {
-      id: '/_authenticated/settings/account'
-      path: '/account'
-      fullPath: '/settings/account'
-      preLoaderRoute: typeof AuthenticatedSettingsAccountImport
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexImport
+      parentRoute: typeof OnboardingRouteImport
+    }
+    '/_authenticated/settings/comments': {
+      id: '/_authenticated/settings/comments'
+      path: '/comments'
+      fullPath: '/settings/comments'
+      preLoaderRoute: typeof AuthenticatedSettingsCommentsImport
       parentRoute: typeof AuthenticatedSettingsRouteImport
     }
-    '/_authenticated/settings/appearance': {
-      id: '/_authenticated/settings/appearance'
-      path: '/appearance'
-      fullPath: '/settings/appearance'
-      preLoaderRoute: typeof AuthenticatedSettingsAppearanceImport
+    '/_authenticated/settings/post': {
+      id: '/_authenticated/settings/post'
+      path: '/post'
+      fullPath: '/settings/post'
+      preLoaderRoute: typeof AuthenticatedSettingsPostImport
       parentRoute: typeof AuthenticatedSettingsRouteImport
-    }
-    '/_authenticated/settings/display': {
-      id: '/_authenticated/settings/display'
-      path: '/display'
-      fullPath: '/settings/display'
-      preLoaderRoute: typeof AuthenticatedSettingsDisplayImport
-      parentRoute: typeof AuthenticatedSettingsRouteImport
-    }
-    '/_authenticated/settings/notifications': {
-      id: '/_authenticated/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
-      preLoaderRoute: typeof AuthenticatedSettingsNotificationsImport
-      parentRoute: typeof AuthenticatedSettingsRouteImport
-    }
-    '/_authenticated/apps/': {
-      id: '/_authenticated/apps/'
-      path: '/apps'
-      fullPath: '/apps'
-      preLoaderRoute: typeof AuthenticatedAppsIndexImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
-    '/_authenticated/chats/': {
-      id: '/_authenticated/chats/'
-      path: '/chats'
-      fullPath: '/chats'
-      preLoaderRoute: typeof AuthenticatedChatsIndexImport
-      parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/help-center/': {
       id: '/_authenticated/help-center/'
@@ -327,18 +392,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
-    '/_authenticated/settings/': {
-      id: '/_authenticated/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof AuthenticatedSettingsIndexImport
-      parentRoute: typeof AuthenticatedSettingsRouteImport
+    '/_authenticated/history/': {
+      id: '/_authenticated/history/'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AuthenticatedHistoryIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
     }
-    '/_authenticated/tasks/': {
-      id: '/_authenticated/tasks/'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof AuthenticatedTasksIndexImport
+    '/_authenticated/pricing/': {
+      id: '/_authenticated/pricing/'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof AuthenticatedPricingIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/users/': {
@@ -354,21 +419,14 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 interface AuthenticatedSettingsRouteRouteChildren {
-  AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
-  AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
-  AuthenticatedSettingsDisplayRoute: typeof AuthenticatedSettingsDisplayRoute
-  AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
-  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
+  AuthenticatedSettingsCommentsRoute: typeof AuthenticatedSettingsCommentsRoute
+  AuthenticatedSettingsPostRoute: typeof AuthenticatedSettingsPostRoute
 }
 
 const AuthenticatedSettingsRouteRouteChildren: AuthenticatedSettingsRouteRouteChildren =
   {
-    AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
-    AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
-    AuthenticatedSettingsDisplayRoute: AuthenticatedSettingsDisplayRoute,
-    AuthenticatedSettingsNotificationsRoute:
-      AuthenticatedSettingsNotificationsRoute,
-    AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
+    AuthenticatedSettingsCommentsRoute: AuthenticatedSettingsCommentsRoute,
+    AuthenticatedSettingsPostRoute: AuthenticatedSettingsPostRoute,
   }
 
 const AuthenticatedSettingsRouteRouteWithChildren =
@@ -378,29 +436,54 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
-  AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
-  AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
+  AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
+  AuthenticatedPricingIndexRoute: typeof AuthenticatedPricingIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
-  AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
-  AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
+  AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
+  AuthenticatedPricingIndexRoute: AuthenticatedPricingIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface OnboardingRouteRouteChildren {
+  OnboardingCommentSettingsRoute: typeof OnboardingCommentSettingsRoute
+  OnboardingDemoRoute: typeof OnboardingDemoRoute
+  OnboardingExtensionRoute: typeof OnboardingExtensionRoute
+  OnboardingLinkedinRoute: typeof OnboardingLinkedinRoute
+  OnboardingOtherSettingsRoute: typeof OnboardingOtherSettingsRoute
+  OnboardingPostSettingsRoute: typeof OnboardingPostSettingsRoute
+  OnboardingIndexRoute: typeof OnboardingIndexRoute
+}
+
+const OnboardingRouteRouteChildren: OnboardingRouteRouteChildren = {
+  OnboardingCommentSettingsRoute: OnboardingCommentSettingsRoute,
+  OnboardingDemoRoute: OnboardingDemoRoute,
+  OnboardingExtensionRoute: OnboardingExtensionRoute,
+  OnboardingLinkedinRoute: OnboardingLinkedinRoute,
+  OnboardingOtherSettingsRoute: OnboardingOtherSettingsRoute,
+  OnboardingPostSettingsRoute: OnboardingPostSettingsRoute,
+  OnboardingIndexRoute: OnboardingIndexRoute,
+}
+
+const OnboardingRouteRouteWithChildren = OnboardingRouteRoute._addFileChildren(
+  OnboardingRouteRouteChildren,
+)
+
 export interface FileRoutesByFullPath {
   '': typeof AuthenticatedRouteRouteWithChildren
+  '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
@@ -412,20 +495,25 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/demo': typeof OnboardingDemoRoute
+  '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/linkedin': typeof OnboardingLinkedinRoute
+  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
+  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
   '/': typeof AuthenticatedIndexRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountRoute
-  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
-  '/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/apps': typeof AuthenticatedAppsIndexRoute
-  '/chats': typeof AuthenticatedChatsIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/settings/comments': typeof AuthenticatedSettingsCommentsRoute
+  '/settings/post': typeof AuthenticatedSettingsPostRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
-  '/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/tasks': typeof AuthenticatedTasksIndexRoute
+  '/history': typeof AuthenticatedHistoryIndexRoute
+  '/pricing': typeof AuthenticatedPricingIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
 }
 
 export interface FileRoutesByTo {
+  '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/sign-in': typeof authSignInRoute
@@ -436,22 +524,27 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/demo': typeof OnboardingDemoRoute
+  '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/linkedin': typeof OnboardingLinkedinRoute
+  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
+  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
   '/': typeof AuthenticatedIndexRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountRoute
-  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
-  '/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/apps': typeof AuthenticatedAppsIndexRoute
-  '/chats': typeof AuthenticatedChatsIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
+  '/settings/comments': typeof AuthenticatedSettingsCommentsRoute
+  '/settings/post': typeof AuthenticatedSettingsPostRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
-  '/settings': typeof AuthenticatedSettingsIndexRoute
-  '/tasks': typeof AuthenticatedTasksIndexRoute
+  '/history': typeof AuthenticatedHistoryIndexRoute
+  '/pricing': typeof AuthenticatedPricingIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/onboarding': typeof OnboardingRouteRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/otp': typeof authOtpRoute
@@ -463,16 +556,20 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/_authenticated/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/demo': typeof OnboardingDemoRoute
+  '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/linkedin': typeof OnboardingLinkedinRoute
+  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
+  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
-  '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
-  '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
-  '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
-  '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/_authenticated/settings/comments': typeof AuthenticatedSettingsCommentsRoute
+  '/_authenticated/settings/post': typeof AuthenticatedSettingsPostRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
-  '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
+  '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
+  '/_authenticated/pricing/': typeof AuthenticatedPricingIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
 }
 
@@ -480,6 +577,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | ''
+    | '/onboarding'
     | '/settings'
     | '/forgot-password'
     | '/otp'
@@ -491,19 +589,24 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/billing'
+    | '/onboarding/comment-settings'
+    | '/onboarding/demo'
+    | '/onboarding/extension'
+    | '/onboarding/linkedin'
+    | '/onboarding/other-settings'
+    | '/onboarding/post-settings'
     | '/'
-    | '/settings/account'
-    | '/settings/appearance'
-    | '/settings/display'
-    | '/settings/notifications'
-    | '/apps'
-    | '/chats'
+    | '/onboarding/'
+    | '/settings/comments'
+    | '/settings/post'
     | '/help-center'
-    | '/settings/'
-    | '/tasks'
+    | '/history'
+    | '/pricing'
     | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/settings'
     | '/forgot-password'
     | '/otp'
     | '/sign-in'
@@ -514,20 +617,25 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/billing'
+    | '/onboarding/comment-settings'
+    | '/onboarding/demo'
+    | '/onboarding/extension'
+    | '/onboarding/linkedin'
+    | '/onboarding/other-settings'
+    | '/onboarding/post-settings'
     | '/'
-    | '/settings/account'
-    | '/settings/appearance'
-    | '/settings/display'
-    | '/settings/notifications'
-    | '/apps'
-    | '/chats'
+    | '/onboarding'
+    | '/settings/comments'
+    | '/settings/post'
     | '/help-center'
-    | '/settings'
-    | '/tasks'
+    | '/history'
+    | '/pricing'
     | '/users'
   id:
     | '__root__'
     | '/_authenticated'
+    | '/onboarding'
     | '/_authenticated/settings'
     | '/(auth)/forgot-password'
     | '/(auth)/otp'
@@ -539,22 +647,27 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/billing'
+    | '/onboarding/comment-settings'
+    | '/onboarding/demo'
+    | '/onboarding/extension'
+    | '/onboarding/linkedin'
+    | '/onboarding/other-settings'
+    | '/onboarding/post-settings'
     | '/_authenticated/'
-    | '/_authenticated/settings/account'
-    | '/_authenticated/settings/appearance'
-    | '/_authenticated/settings/display'
-    | '/_authenticated/settings/notifications'
-    | '/_authenticated/apps/'
-    | '/_authenticated/chats/'
+    | '/onboarding/'
+    | '/_authenticated/settings/comments'
+    | '/_authenticated/settings/post'
     | '/_authenticated/help-center/'
-    | '/_authenticated/settings/'
-    | '/_authenticated/tasks/'
+    | '/_authenticated/history/'
+    | '/_authenticated/pricing/'
     | '/_authenticated/users/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authOtpRoute: typeof authOtpRoute
   authSignInRoute: typeof authSignInRoute
@@ -569,6 +682,7 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  OnboardingRouteRoute: OnboardingRouteRouteWithChildren,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authOtpRoute: authOtpRoute,
   authSignInRoute: authSignInRoute,
@@ -592,6 +706,7 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/_authenticated",
+        "/onboarding",
         "/(auth)/forgot-password",
         "/(auth)/otp",
         "/(auth)/sign-in",
@@ -608,23 +723,32 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/route.tsx",
       "children": [
         "/_authenticated/settings",
+        "/_authenticated/billing",
         "/_authenticated/",
-        "/_authenticated/apps/",
-        "/_authenticated/chats/",
         "/_authenticated/help-center/",
-        "/_authenticated/tasks/",
+        "/_authenticated/history/",
+        "/_authenticated/pricing/",
         "/_authenticated/users/"
+      ]
+    },
+    "/onboarding": {
+      "filePath": "onboarding/route.tsx",
+      "children": [
+        "/onboarding/comment-settings",
+        "/onboarding/demo",
+        "/onboarding/extension",
+        "/onboarding/linkedin",
+        "/onboarding/other-settings",
+        "/onboarding/post-settings",
+        "/onboarding/"
       ]
     },
     "/_authenticated/settings": {
       "filePath": "_authenticated/settings/route.tsx",
       "parent": "/_authenticated",
       "children": [
-        "/_authenticated/settings/account",
-        "/_authenticated/settings/appearance",
-        "/_authenticated/settings/display",
-        "/_authenticated/settings/notifications",
-        "/_authenticated/settings/"
+        "/_authenticated/settings/comments",
+        "/_authenticated/settings/post"
       ]
     },
     "/(auth)/forgot-password": {
@@ -657,44 +781,60 @@ export const routeTree = rootRoute
     "/(errors)/503": {
       "filePath": "(errors)/503.tsx"
     },
+    "/_authenticated/billing": {
+      "filePath": "_authenticated/billing.tsx",
+      "parent": "/_authenticated"
+    },
+    "/onboarding/comment-settings": {
+      "filePath": "onboarding/comment-settings.tsx",
+      "parent": "/onboarding"
+    },
+    "/onboarding/demo": {
+      "filePath": "onboarding/demo.tsx",
+      "parent": "/onboarding"
+    },
+    "/onboarding/extension": {
+      "filePath": "onboarding/extension.tsx",
+      "parent": "/onboarding"
+    },
+    "/onboarding/linkedin": {
+      "filePath": "onboarding/linkedin.tsx",
+      "parent": "/onboarding"
+    },
+    "/onboarding/other-settings": {
+      "filePath": "onboarding/other-settings.tsx",
+      "parent": "/onboarding"
+    },
+    "/onboarding/post-settings": {
+      "filePath": "onboarding/post-settings.tsx",
+      "parent": "/onboarding"
+    },
     "/_authenticated/": {
       "filePath": "_authenticated/index.tsx",
       "parent": "/_authenticated"
     },
-    "/_authenticated/settings/account": {
-      "filePath": "_authenticated/settings/account.tsx",
+    "/onboarding/": {
+      "filePath": "onboarding/index.tsx",
+      "parent": "/onboarding"
+    },
+    "/_authenticated/settings/comments": {
+      "filePath": "_authenticated/settings/comments.tsx",
       "parent": "/_authenticated/settings"
     },
-    "/_authenticated/settings/appearance": {
-      "filePath": "_authenticated/settings/appearance.tsx",
+    "/_authenticated/settings/post": {
+      "filePath": "_authenticated/settings/post.tsx",
       "parent": "/_authenticated/settings"
-    },
-    "/_authenticated/settings/display": {
-      "filePath": "_authenticated/settings/display.tsx",
-      "parent": "/_authenticated/settings"
-    },
-    "/_authenticated/settings/notifications": {
-      "filePath": "_authenticated/settings/notifications.tsx",
-      "parent": "/_authenticated/settings"
-    },
-    "/_authenticated/apps/": {
-      "filePath": "_authenticated/apps/index.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/chats/": {
-      "filePath": "_authenticated/chats/index.tsx",
-      "parent": "/_authenticated"
     },
     "/_authenticated/help-center/": {
       "filePath": "_authenticated/help-center/index.tsx",
       "parent": "/_authenticated"
     },
-    "/_authenticated/settings/": {
-      "filePath": "_authenticated/settings/index.tsx",
-      "parent": "/_authenticated/settings"
+    "/_authenticated/history/": {
+      "filePath": "_authenticated/history/index.tsx",
+      "parent": "/_authenticated"
     },
-    "/_authenticated/tasks/": {
-      "filePath": "_authenticated/tasks/index.tsx",
+    "/_authenticated/pricing/": {
+      "filePath": "_authenticated/pricing/index.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/users/": {

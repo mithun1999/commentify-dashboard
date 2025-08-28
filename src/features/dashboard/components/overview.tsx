@@ -1,79 +1,121 @@
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+'use client'
 
-const data = [
-  {
-    name: 'Jan',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Feb',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Mar',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Apr',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'May',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Jun',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Jul',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Aug',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Sep',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Oct',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Nov',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-  {
-    name: 'Dec',
-    total: Math.floor(Math.random() * 5000) + 1000,
-  },
-]
+import { FileWarning } from 'lucide-react'
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 
 export function Overview() {
+  const { data: linkedInStats } = useGetLinkedInStats()
+
+  const growth = linkedInStats?.followersStats?.growth ?? []
+
+  // ✅ Handle API error or empty data gracefully
+  const hasValidData = Array.isArray(growth) && growth.length > 0
+  if (!hasValidData) {
+    return (
+      <div className='text-muted-foreground flex h-[350px] flex-col items-center justify-center'>
+        <FileWarning className='mb-2 h-10 w-10' />
+        <p className='text-center text-sm'>No data found for this profile</p>
+      </div>
+    )
+  }
+
+  // ✅ Proceed to build chart data
+  const getIntervalData = () => {
+    if (growth.length <= 9) return growth
+    const interval = Math.ceil(growth.length / 12)
+    return growth.filter((_, index) => index % interval === 0).slice(0, 12)
+  }
+
+  const intervalData = getIntervalData()
+
+  const chartData = intervalData.map((entry) => ({
+    name: new Date(entry.period).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }),
+    total: entry.followersGrowth,
+  }))
+
+  const maxValue = Math.max(...chartData.map((item) => item.total), 0)
+  const yDomain = [0, maxValue * 1.2]
+
   return (
     <ResponsiveContainer width='100%' height={350}>
-      <BarChart data={data}>
+      <BarChart data={chartData} margin={{ bottom: 40 }}>
         <XAxis
           dataKey='name'
           stroke='#888888'
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          interval={0}
+          tick={({ x, y, payload }) => {
+            const [month, day] = payload.value.split(' ')
+            return (
+              <g transform={`translate(${x},${y})`}>
+                <text
+                  x={0}
+                  y={0}
+                  dy={10}
+                  textAnchor='middle'
+                  fill='#888888'
+                  fontSize={12}
+                >
+                  {month}
+                </text>
+                <text
+                  x={0}
+                  y={0}
+                  dy={24}
+                  textAnchor='middle'
+                  fill='#888888'
+                  fontSize={12}
+                >
+                  {day}
+                </text>
+              </g>
+            )
+          }}
         />
         <YAxis
           stroke='#888888'
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `$${value}`}
+          domain={yDomain}
+          tick={{ fill: '#888888' }}
+        />
+        <Tooltip
+          cursor={false}
+          wrapperStyle={{ outline: 'none' }}
+          contentStyle={{
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+            backgroundColor: '#ffffff',
+            color: '#111111',
+          }}
+          labelStyle={{ color: '#6b7280' }}
+          itemStyle={{ color: '#111111' }}
+          formatter={(value: number) => [
+            new Intl.NumberFormat().format(value ?? 0),
+            'Followers',
+          ]}
+          labelFormatter={(label: string) => label}
         />
         <Bar
           dataKey='total'
           fill='currentColor'
           radius={[4, 4, 0, 0]}
           className='fill-primary'
+          animationDuration={2000}
         />
       </BarChart>
     </ResponsiveContainer>

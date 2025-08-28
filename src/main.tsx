@@ -8,11 +8,11 @@ import {
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { useAuthStore } from '@/stores/auth.store'
 import { handleServerError } from '@/utils/handle-server-error'
 import { FontProvider } from './context/font-context'
 import { ThemeProvider } from './context/theme-context'
 import { signOut } from './features/auth/utils/auth.util'
+// Add this import
 import './index.css'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
@@ -21,9 +21,6 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-        // eslint-disable-next-line no-console
-        if (import.meta.env.DEV) console.log({ failureCount, error })
-
         if (failureCount >= 0 && import.meta.env.DEV) return false
         if (failureCount > 3 && import.meta.env.PROD) return false
 
@@ -73,13 +70,10 @@ const router = createRouter({
   routeTree,
   context: {
     queryClient,
-    get auth() {
-      const { isSessionLoaded, session } = useAuthStore()
-      return {
-        isSignedIn: !!session?.user?.id,
-        isSessionLoaded,
-        session,
-      }
+    auth: {
+      isSignedIn: false,
+      isSessionLoaded: false,
+      session: null,
     },
   },
   defaultPreload: 'intent',

@@ -1,29 +1,109 @@
+import { Link } from '@tanstack/react-router'
+import { IconFidgetSpinner } from '@tabler/icons-react'
+import { useProfileStore } from '@/stores/profile.store'
+import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-import { TopNav } from '@/components/layout/top-nav'
+import ProfileConnectionGuard from '@/components/profile-connection-guard'
 import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 import { Overview } from './components/overview'
-import { RecentSales } from './components/recent-sales'
+import { ProfileOverview } from './components/profile-overview'
 
 export default function Dashboard() {
+  const { data: linkedInStats, isLoading: isLoadingLinkedInStats } =
+    useGetLinkedInStats()
+  const activeProfile = useProfileStore((s) => s.activeProfile)
+  const { data: user } = useGetUserQuery()
+
+  // Formatting helpers
+  const formatNumber = new Intl.NumberFormat('en-US')
+  const formatPercent = (n?: number | string | null) => {
+    if (n === undefined || n === null) return '--'
+    if (typeof n === 'string') {
+      const s = n.trim()
+      if (s === '') return '--'
+      return s
+    }
+    const num = Number(n)
+    if (!Number.isFinite(num)) return '--'
+    return `${num > 0 ? '+' : ''}${new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: 2,
+    }).format(num)}%`
+  }
+
+  // Followers (main)
+  const fs = linkedInStats?.followersStats
+  const followersHas3m = typeof fs?.followersGrowthSinceThreeMonths === 'number'
+  const followersHasSinceApp =
+    typeof fs?.followersGrowthSinceStartedUsingThisApp === 'number'
+  const followersValue = followersHas3m
+    ? fs?.followersGrowthSinceThreeMonths
+    : followersHasSinceApp
+      ? fs?.followersGrowthSinceStartedUsingThisApp
+      : fs?.followersGrowth
+  const followersPercent = followersHas3m
+    ? fs?.followersGrowthSinceThreeMonthsPercent
+    : followersHasSinceApp
+      ? fs?.followersGrowthSinceStartedUsingThisAppPercent
+      : fs?.followersGrowthPercent
+  const followersSuffix = followersHas3m
+    ? 'in the last 3 months'
+    : followersHasSinceApp
+      ? 'since Commentify'
+      : 'in the last 3 months'
+
+  // Followers (weekly)
+  const weeklyFollowersValue = fs?.weeklyFollowersGrowth
+  const weeklyFollowersPercent = fs?.weeklyFollowersGrowthPercent
+
+  // Profile Views (main)
+  const ps = linkedInStats?.profileViewerStats
+  const profileHasSinceApp =
+    typeof ps?.profileViewersGrowthSinceStartedUsingThisApp === 'number'
+  const profileViewsValue = profileHasSinceApp
+    ? ps?.profileViewersGrowthSinceStartedUsingThisApp
+    : ps?.profileViewersGrowth
+  const profileViewsPercent = profileHasSinceApp
+    ? ps?.profileViewersGrowthSinceStartedUsingThisAppPercent
+    : ps?.profileViewersGrowthPercent
+  const profileViewsSuffix = profileHasSinceApp
+    ? 'since Commentify'
+    : 'in the last 3 months'
+
+  // Profile Views (weekly)
+  const weeklyProfileViewsValue = ps?.weeklyProfileViewersGrowth
+  const weeklyProfileViewsPercent = ps?.weeklyProfileViewersGrowthPercent
+
+  // Zero-activity guidance checks
+  const pendingCount = linkedInStats?.postCommentStats?.pending ?? 0
+  const completedCount = linkedInStats?.postCommentStats?.completed ?? 0
+  const scheduledCount = linkedInStats?.postCommentStats?.scheduled ?? 0
+  const arePostStatsZero =
+    Number(pendingCount) === 0 &&
+    Number(completedCount) === 0 &&
+    Number(scheduledCount) === 0
+  const createdAtDate = activeProfile?.createdAt
+    ? new Date(activeProfile.createdAt as unknown as string)
+    : null
+  const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000
+  const isOlderThan2Days = createdAtDate
+    ? Date.now() - createdAtDate.getTime() >= TWO_DAYS_MS
+    : false
+
+  const hasProfileViewStats = Boolean(linkedInStats?.profileViewerStats)
+
   return (
     <>
       {/* ===== Top Heading ===== */}
       <Header>
-        <TopNav links={topNav} />
         <div className='ml-auto flex items-center space-x-4'>
-          <Search />
           <ThemeSwitch />
           <ProfileDropdown />
         </div>
@@ -32,185 +112,296 @@ export default function Dashboard() {
       {/* ===== Main ===== */}
       <Main>
         <div className='mb-2 flex items-center justify-between space-y-2'>
-          <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
-          <div className='flex items-center space-x-2'>
-            <Button>Download</Button>
-          </div>
+          <h1 className='text-2xl font-bold tracking-tight'>Profile Stats</h1>
         </div>
+        {user?.status === UserSubscriptionStatus.TRIAL_EXPIRED && (
+          <Alert className='mb-4 flex flex-col gap-2' variant='destructive'>
+            <p className='text-md font-medium'>
+              Your trial has expired. Upgrade to blow up your followers or bring
+              leads.
+            </p>
+            <Button variant='destructive' size='sm' asChild>
+              <Link to='/pricing'>Upgrade</Link>
+            </Button>
+          </Alert>
+        )}
         <Tabs
           orientation='vertical'
           defaultValue='overview'
           className='space-y-4'
         >
-          <div className='w-full overflow-x-auto pb-2'>
-            <TabsList>
-              <TabsTrigger value='overview'>Overview</TabsTrigger>
-              <TabsTrigger value='analytics' disabled>
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger value='reports' disabled>
-                Reports
-              </TabsTrigger>
-              <TabsTrigger value='notifications' disabled>
-                Notifications
-              </TabsTrigger>
-            </TabsList>
-          </div>
           <TabsContent value='overview' className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Total Revenue
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='text-muted-foreground h-4 w-4'
-                  >
-                    <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>$45,231.89</div>
-                  <p className='text-muted-foreground text-xs'>
-                    +20.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Subscriptions
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='text-muted-foreground h-4 w-4'
-                  >
-                    <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
-                    <circle cx='9' cy='7' r='4' />
-                    <path d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+2350</div>
-                  <p className='text-muted-foreground text-xs'>
-                    +180.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>Sales</CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='text-muted-foreground h-4 w-4'
-                  >
-                    <rect width='20' height='14' x='2' y='5' rx='2' />
-                    <path d='M2 10h20' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+12,234</div>
-                  <p className='text-muted-foreground text-xs'>
-                    +19% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Active Now
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='text-muted-foreground h-4 w-4'
-                  >
-                    <path d='M22 12h-4l-3 9L9 3l-3 9H2' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+573</div>
-                  <p className='text-muted-foreground text-xs'>
-                    +201 since last hour
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-              <Card className='col-span-1 lg:col-span-4'>
-                <CardHeader>
-                  <CardTitle>Overview</CardTitle>
-                </CardHeader>
-                <CardContent className='pl-2'>
-                  <Overview />
-                </CardContent>
-              </Card>
-              <Card className='col-span-1 lg:col-span-3'>
-                <CardHeader>
-                  <CardTitle>Recent Sales</CardTitle>
-                  <CardDescription>
-                    You made 265 sales this month.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RecentSales />
-                </CardContent>
-              </Card>
-            </div>
+            {isLoadingLinkedInStats ? (
+              <div className='mt-10 flex w-full items-center justify-center'>
+                <Card>
+                  <CardContent>
+                    <div className='flex flex-col items-center justify-center text-center'>
+                      <IconFidgetSpinner className='animate-spin' />
+                      <p className='mt-2 text-sm'>
+                        <span className='font-bold'>
+                          Pulling your LinkedIn numbers{' '}
+                        </span>
+                        <br />
+                        <span className='text-muted-foreground text-sm'>
+                          Tip: Meaningful comments often get you more profile
+                          visits than the post itself.
+                        </span>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <>
+                {/* Guidance when no activity yet */}
+                {arePostStatsZero && activeProfile && (
+                  <Card className='w-full'>
+                    <CardContent>
+                      <div className='py-3 text-center text-sm'>
+                        {isOlderThan2Days ? (
+                          <>
+                            <p className='text-md font-bold'>
+                              😕 Something’s not adding up…
+                            </p>
+                            <p className='text-muted-foreground mt-3 text-sm'>
+                              Either your LinkedIn profile’s been quiet lately,
+                              or a setting needs a little tweak.
+                              <br />
+                              If all looks good on your end, ping us - we’ll
+                              take a peek under the hood.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className='text-md font-bold'>
+                              ⏳ Just warming things up…
+                            </p>
+                            <p className='text-muted-foreground mt-3 text-sm'>
+                              It usually takes up to 48 hours for stats to roll
+                              in.
+                              <br />
+                              Hang tight - good stuff’s on the way!
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {/* Fallback: nothing available at all */}
+                {!linkedInStats?.followersStats &&
+                !linkedInStats?.profileViewerStats &&
+                !linkedInStats?.postCommentStats ? (
+                  <Card className='mt-8 w-full'>
+                    <CardContent>
+                      <div className='flex flex-col items-center justify-center text-center'>
+                        <div className='text-4xl'>😕</div>
+                        <p className='mt-2'>
+                          <span className='font-bold'>
+                            We couldn’t pull your data right now…
+                          </span>
+                          <br />
+                          <span className='text-muted-foreground text-sm'>
+                            but here’s a quick tip:
+                            <br />
+                            💡 In comments, share a personal insight instead of
+                            just agreeing - it makes you more memorable.
+                          </span>
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    {/* LinkedIn summary cards (render only when available) */}
+                    {(linkedInStats?.followersStats ||
+                      linkedInStats?.profileViewerStats) && (
+                      <div
+                        className={`grid gap-4 sm:grid-cols-2 ${hasProfileViewStats ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}
+                      >
+                        {linkedInStats?.followersStats && (
+                          <>
+                            <Card>
+                              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                <CardTitle className='text-sm font-medium'>
+                                  Followers
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className='text-2xl font-bold'>
+                                  {followersValue !== undefined &&
+                                  followersValue !== null
+                                    ? formatNumber.format(followersValue)
+                                    : '--'}
+                                </div>
+                                <p className='text-muted-foreground text-xs'>
+                                  {formatPercent(followersPercent)}{' '}
+                                  {followersSuffix}
+                                </p>
+                              </CardContent>
+                            </Card>
+
+                            <Card>
+                              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                <CardTitle className='text-sm font-medium'>
+                                  New Followers (This Week)
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className='text-2xl font-bold'>
+                                  {weeklyFollowersValue !== undefined &&
+                                  weeklyFollowersValue !== null
+                                    ? formatNumber.format(weeklyFollowersValue)
+                                    : '--'}
+                                </div>
+                                <p className='text-muted-foreground text-xs'>
+                                  {formatPercent(weeklyFollowersPercent)} vs
+                                  last week
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </>
+                        )}
+
+                        {linkedInStats?.profileViewerStats && (
+                          <>
+                            <Card>
+                              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                <CardTitle className='text-sm font-medium'>
+                                  Profile Views
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className='text-2xl font-bold'>
+                                  {profileViewsValue !== undefined &&
+                                  profileViewsValue !== null
+                                    ? formatNumber.format(profileViewsValue)
+                                    : '--'}
+                                </div>
+                                <p className='text-muted-foreground text-xs'>
+                                  {formatPercent(profileViewsPercent)}{' '}
+                                  {profileViewsSuffix}
+                                </p>
+                              </CardContent>
+                            </Card>
+
+                            <Card>
+                              <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                                <CardTitle className='text-sm font-medium'>
+                                  Profile Views (This Week)
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className='text-2xl font-bold'>
+                                  {weeklyProfileViewsValue !== undefined &&
+                                  weeklyProfileViewsValue !== null
+                                    ? formatNumber.format(
+                                        weeklyProfileViewsValue
+                                      )
+                                    : '--'}
+                                </div>
+                                <p className='text-muted-foreground text-xs'>
+                                  {formatPercent(weeklyProfileViewsPercent)} vs
+                                  last week
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Post comment stats (render only when available) */}
+                    {linkedInStats?.postCommentStats && (
+                      <div className='grid gap-4 lg:grid-cols-3'>
+                        <Card>
+                          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                            <CardTitle className='text-sm font-medium'>
+                              Comments Scheduled
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className='text-2xl font-bold'>
+                              {linkedInStats?.postCommentStats?.scheduled ??
+                                '--'}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                            <CardTitle className='text-sm font-medium'>
+                              Comments Pending
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className='text-2xl font-bold'>
+                              {linkedInStats?.postCommentStats?.pending ?? '--'}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                            <CardTitle className='text-sm font-medium'>
+                              Comments Posted
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className='text-2xl font-bold'>
+                              {linkedInStats?.postCommentStats?.completed ??
+                                '--'}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+
+                    {/* LinkedIn unavailable notice when only post stats exist */}
+                    {!linkedInStats?.followersStats &&
+                      !linkedInStats?.profileViewerStats &&
+                      linkedInStats?.postCommentStats && (
+                        <Card className='w-full'>
+                          <CardContent>
+                            <div className='text-muted-foreground flex items-center justify-center py-3 text-center text-sm'>
+                              We’re a little sad… we usually show your follower
+                              stats here, <br />
+                              but LinkedIn ghosted us this time 👻
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                    {/* Charts (render only when data available) */}
+                    {linkedInStats?.followersStats && (
+                      <Card className='w-full'>
+                        <CardHeader className='flex flex-row items-center justify-between'>
+                          <CardTitle>Followers Growth</CardTitle>
+                        </CardHeader>
+                        <CardContent className='pl-2'>
+                          <Overview />
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {linkedInStats?.profileViewerStats && (
+                      <Card className='w-full'>
+                        <CardHeader className='flex flex-row items-center justify-between'>
+                          <CardTitle>Profile Viewers Growth</CardTitle>
+                        </CardHeader>
+                        <CardContent className='pl-2'>
+                          <ProfileOverview />
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </TabsContent>
         </Tabs>
+        <ProfileConnectionGuard />
       </Main>
     </>
   )
 }
-
-const topNav = [
-  {
-    title: 'Overview',
-    href: 'dashboard/overview',
-    isActive: true,
-    disabled: false,
-  },
-  {
-    title: 'Customers',
-    href: 'dashboard/customers',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Products',
-    href: 'dashboard/products',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Settings',
-    href: 'dashboard/settings',
-    isActive: false,
-    disabled: true,
-  },
-]

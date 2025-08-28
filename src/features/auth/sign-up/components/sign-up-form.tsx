@@ -2,7 +2,9 @@ import { HTMLAttributes, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useNavigate } from '@tanstack/react-router'
 import { IconBrandGoogle } from '@tabler/icons-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,6 +17,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import { signUpWithPassword, signInWithGoogle } from '../../utils/auth.util'
 
 type SignUpFormProps = HTMLAttributes<HTMLFormElement>
 
@@ -39,6 +42,7 @@ const formSchema = z
 
 export function SignUpForm({ className, ...props }: SignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,14 +55,40 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
     },
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(data)
+    try {
+      const user = await signUpWithPassword(data)
 
-    setTimeout(() => {
+      if (user) {
+        toast.success('Account created successfully')
+        setTimeout(() => {
+          navigate({ to: '/onboarding/extension' })
+        }, 500)
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message)
+      } else {
+        toast.error('Sign up failed')
+      }
+    } finally {
       setIsLoading(false)
-    }, 3000)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true)
+      await signInWithGoogle()
+    } catch (err) {
+      toast.error('Google sign-in failed')
+      if (err instanceof Error) {
+        toast.error(err.message)
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -135,8 +165,8 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={isLoading}>
-          Create Account
+        <Button className='mt-2' type='submit' disabled={isLoading}>
+          {isLoading ? 'Creating...' : 'Create Account'}
         </Button>
 
         <div className='relative my-2'>
@@ -151,8 +181,13 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
         </div>
 
         <div className='grid grid-cols-1'>
-          <Button variant='outline' type='button' disabled={isLoading}>
-            <IconBrandGoogle className='h-4 w-4' /> Google
+          <Button
+            variant='outline'
+            type='button'
+            disabled={isLoading}
+            onClick={handleGoogleSignIn}
+          >
+            <IconBrandGoogle className='mr-2 h-4 w-4' /> Google
           </Button>
         </div>
       </form>

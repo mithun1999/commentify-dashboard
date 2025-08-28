@@ -9,6 +9,26 @@ import useAuth from '@/features/auth/hooks/useAuth'
 import GeneralError from '@/features/errors/general-error'
 import NotFoundError from '@/features/errors/not-found-error'
 
+// Create a proper React component
+function RootComponent() {
+  useAuth()
+
+  return (
+    <>
+      <NavigationProgress />
+      <Outlet />
+      <Toaster duration={50000} />
+      {import.meta.env.MODE === 'development' && (
+        <>
+          <ReactQueryDevtools buttonPosition='bottom-right' />
+          <TanStackRouterDevtools position='bottom-right' />
+        </>
+      )}
+    </>
+  )
+}
+
+// Use the named component in your route
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
   auth: {
@@ -17,23 +37,7 @@ export const Route = createRootRouteWithContext<{
     session: Session | null
   }
 }>()({
-  component: () => {
-    useAuth()
-
-    return (
-      <>
-        <NavigationProgress />
-        <Outlet />
-        <Toaster duration={50000} />
-        {import.meta.env.MODE === 'development' && (
-          <>
-            <ReactQueryDevtools buttonPosition='bottom-right' />
-            <TanStackRouterDevtools position='bottom-right' />
-          </>
-        )}
-      </>
-    )
-  },
+  component: RootComponent,
   notFoundComponent: NotFoundError,
   errorComponent: GeneralError,
 })

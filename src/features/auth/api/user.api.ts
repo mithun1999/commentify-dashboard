@@ -8,3 +8,15 @@ export async function getUser() {
   })
   return data as IUser
 }
+
+export async function updateOnboardingStatus(data: {
+  status: 'not-started' | 'in-progress' | 'completed'
+  step: number
+}) {
+  const { data: response } = await axiosInstance({
+    method: 'PATCH',
+    url: `/user/onboarding`,
+    data,
+  })
+  return response
+}

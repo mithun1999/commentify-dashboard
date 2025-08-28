@@ -49,15 +49,25 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsLoading(true)
-    const { session, error } = await signInWithPassword(data)
-    setIsLoading(false)
-    if (error) {
-      toast.error(error.message)
-    } else if (session?.user?.user_metadata?.userId) {
-      form.reset()
-    } else {
-      toast.error("You're not authorized")
-      form.reset()
+    try {
+      const { error } = await signInWithPassword(data)
+
+      if (error) {
+        toast.error(error.message || 'Invalid email or password')
+      } else {
+        toast.success('Login successful!')
+      }
+    } catch (err) {
+      toast.error('Unexpected error occurred')
+
+      if (err instanceof Error) {
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
+          console.error(err)
+        }
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -100,7 +110,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={isLoading}>
+        <Button className='mt-2' type='submit' disabled={isLoading}>
           Login
         </Button>
 
