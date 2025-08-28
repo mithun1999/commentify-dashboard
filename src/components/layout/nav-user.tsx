@@ -140,7 +140,7 @@ export function NavUser() {
 
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to='/settings' className='w-full'>
+                <Link to='/settings/post' className='w-full'>
                   <Settings className='mr-2 h-4 w-4' />
                   Settings
                 </Link>
