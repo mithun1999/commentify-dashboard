@@ -7,8 +7,10 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { PostHogProvider } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { handleServerError } from '@/utils/handle-server-error'
+import { envConfig } from './config/env.config'
 import { FontProvider } from './context/font-context'
 import { ThemeProvider } from './context/theme-context'
 import { signOut } from './features/auth/utils/auth.util'
@@ -16,6 +18,20 @@ import { signOut } from './features/auth/utils/auth.util'
 import './index.css'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
+
+// Read optional PostHog bootstrap identifiers from URL hash for cross-origin session linking
+const hashParams = new URLSearchParams(window.location.hash.substring(1))
+const distinctId = hashParams.get('distinct_id')
+const sessionId = hashParams.get('session_id')
+const posthogBootstrapOptions =
+  sessionId || distinctId
+    ? {
+        bootstrap: {
+          ...(sessionId ? { sessionID: sessionId } : {}),
+          ...(distinctId ? { distinctID: distinctId } : {}),
+        },
+      }
+    : {}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,11 +110,20 @@ if (!rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme='light' storageKey='vite-ui-theme'>
-          <FontProvider>
-            <RouterProvider router={router} />
-          </FontProvider>
-        </ThemeProvider>
+        <PostHogProvider
+          apiKey={envConfig.postHogKey}
+          options={{
+            api_host: envConfig.postHogHost,
+            debug: import.meta.env.DEV,
+            ...posthogBootstrapOptions,
+          }}
+        >
+          <ThemeProvider defaultTheme='light' storageKey='vite-ui-theme'>
+            <FontProvider>
+              <RouterProvider router={router} />
+            </FontProvider>
+          </ThemeProvider>
+        </PostHogProvider>
       </QueryClientProvider>
     </StrictMode>
   )

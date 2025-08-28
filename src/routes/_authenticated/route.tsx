@@ -9,6 +9,7 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
 import SkipToMain from '@/components/skip-to-main'
+import useInitiatePosthog from '@/features/auth/hooks/useInitiatePosthog'
 import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedirect'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import GeneralError from '@/features/errors/general-error'
@@ -31,6 +32,8 @@ function RouteComponent() {
 
   // Handle onboarding redirection
   useOnboardingRedirect()
+  // Initialize PostHog user identification
+  useInitiatePosthog()
 
   useEffect(() => {
     if (isSessionLoaded && !isSignedIn) {
