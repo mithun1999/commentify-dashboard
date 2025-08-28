@@ -81,7 +81,7 @@ export function DemoStep() {
   const [activePost, setActivePost] = useState<number | null>(null)
 
   // Use stored value from context
-  const autoApprove = data.autoApprove
+  const autoApprove = data.scrapeSetting.autoApprove
 
   const handleLikeDemo = () => {
     setApprovalDialogOpen(true)
@@ -93,7 +93,7 @@ export function DemoStep() {
 
   const finishOnboarding = () => {
     setLoading(true)
-    updateData({ autoApprove })
+    updateData({ scrapeSetting: { ...data.scrapeSetting, autoApprove } })
     markStepCompleted('demo')
 
     // Mock API call to save preferences
@@ -313,7 +313,11 @@ export function DemoStep() {
                 'flex-1 cursor-pointer rounded-lg border p-4',
                 autoApprove ? 'border-primary bg-primary/5' : 'border-border'
               )}
-              onClick={() => updateData({ autoApprove: true })}
+              onClick={() =>
+                updateData({
+                  scrapeSetting: { ...data.scrapeSetting, autoApprove: true },
+                })
+              }
             >
               <div className='mb-2 flex items-center gap-2'>
                 <div
@@ -338,7 +342,11 @@ export function DemoStep() {
                 'flex-1 cursor-pointer rounded-lg border p-4',
                 !autoApprove ? 'border-primary bg-primary/5' : 'border-border'
               )}
-              onClick={() => updateData({ autoApprove: false })}
+              onClick={() =>
+                updateData({
+                  scrapeSetting: { ...data.scrapeSetting, autoApprove: false },
+                })
+              }
             >
               <div className='mb-2 flex items-center gap-2'>
                 <div

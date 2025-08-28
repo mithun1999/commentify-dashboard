@@ -2,11 +2,8 @@ import {
   IconArrowDown,
   IconArrowRight,
   IconArrowUp,
-  IconCircle,
   IconCircleCheck,
-  IconCircleX,
   IconExclamationCircle,
-  IconStopwatch,
 } from '@tabler/icons-react'
 
 export const labels = [

@@ -16,9 +16,7 @@ export { createOnboardingPostSetting, createOnboardingCommentSetting } from './a
 // Queries
 export { 
   useCreateOnboardingPostQuery, 
-  useCreateOnboardingCommentQuery,
-  useUpdateExtensionStep,
-  useUpdateLinkedInStep
+  useCreateOnboardingCommentQuery
 } from './query/onboarding.query'
 
 // Interfaces

@@ -1,13 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
-import {
-  ChevronsUpDown,
-  LogOut,
-  Sparkles,
-  Settings,
-  HelpCircle,
-  CreditCard,
-} from 'lucide-react'
+import { ChevronsUpDown, LogOut, Sparkles, Settings, CreditCard } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {

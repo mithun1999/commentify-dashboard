@@ -5,7 +5,7 @@ import { IPost } from '../interface/post.interface'
 import { DataTableColumnHeader } from './data-table-column-header'
 import { DataTableRowActions } from './data-table-row-actions'
 
-export function getPostColumns(status: 'pending' | 'completed') {
+export function getPostColumns(_status: 'pending' | 'completed') {
   const columns: ColumnDef<IPost>[] = [
     {
       id: 'select',

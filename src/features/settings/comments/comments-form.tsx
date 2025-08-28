@@ -5,16 +5,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { planSetting } from '@/config/plan-setting.config'
-import {
-  MessageSquare,
-  Settings,
-  Smile,
-  Info,
-  Hash,
-  ArrowLeft,
-  AlertCircle,
-  Lock,
-} from 'lucide-react'
+import { MessageSquare, Settings, Smile, Info, Hash, ArrowLeft, AlertCircle } from 'lucide-react'
 import { useProfileStore } from '@/stores/profile.store'
 import { Button } from '@/components/ui/button'
 import {
