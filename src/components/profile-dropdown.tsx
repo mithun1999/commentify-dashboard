@@ -82,14 +82,14 @@ export function ProfileDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to='/settings' className='w-full'>
+            <Link to='/' className='w-full'>
               <User className='mr-2 h-4 w-4' />
               Profile
               <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to='/settings' className='w-full'>
+            <Link to='/billing' className='w-full'>
               <CreditCard className='mr-2 h-4 w-4' />
               Billing
               <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>

@@ -6,6 +6,7 @@ import {
   IconPackages,
   IconSettings,
   IconTool,
+  IconBubbleText,
 } from '@tabler/icons-react'
 import { type SidebarData } from '../types'
 
@@ -51,6 +52,11 @@ export const sidebarData: SidebarData = {
   bottomGroups: [
     {
       items: [
+        {
+          title: 'Join Community',
+          url: 'https://chat.whatsapp.com/HZ65AMvN24YEtBSvswLlcT',
+          icon: IconBubbleText,
+        },
         {
           title: 'Feature Request',
           url: 'https://commentify.canny.io',
