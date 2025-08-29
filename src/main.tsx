@@ -123,6 +123,8 @@ if (!rootElement.innerHTML) {
           apiKey={envConfig.postHogKey}
           options={{
             api_host: envConfig.postHogHost,
+            ui_host: 'https://us.posthog.com',
+            defaults: '2025-05-24',
             debug: import.meta.env.DEV,
             ...posthogBootstrapOptions,
           }}
