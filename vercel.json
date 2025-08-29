@@ -1,4 +1,26 @@
 {
+  "redirects": [
+    {
+      "source": "/auth/sign-in",
+      "destination": "/sign-in",
+      "permanent": true
+    },
+    {
+      "source": "/auth/sign-in/",
+      "destination": "/sign-in",
+      "permanent": true
+    },
+    {
+      "source": "/auth/sign-up",
+      "destination": "/sign-up",
+      "permanent": true
+    },
+    {
+      "source": "/auth/sign-up/",
+      "destination": "/sign-up",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!.*\\.).*)",
@@ -6,5 +28,3 @@
     }
   ]
 }
-
-

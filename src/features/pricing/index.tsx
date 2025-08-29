@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Header } from '@/components/layout/header'
@@ -18,7 +19,6 @@ import PricingCell from './components/PricingCell'
 import SubscriptionToggle from './components/SubscriptionToggle'
 import type { IDisplayProduct } from './interfaces/price.interface'
 import { useGetPlans } from './query/pricing.query'
-import { usePostHog } from 'posthog-js/react'
 
 export default function Pricing() {
   const posthog = usePostHog()
@@ -84,9 +84,12 @@ export default function Pricing() {
   }
 
   const getDisabledPlanState = (data: IDisplayProduct): boolean => {
-    if (user?.status === UserSubscriptionStatus.IN_TRIAL) return false
-    else if (user?.subscribedProductVariantId === data?.variant?._id)
+    if (
+      user?.status === UserSubscriptionStatus.ACTIVE &&
+      user?.subscribedProductVariantId === data?.variant?._id
+    ) {
       return true
+    }
     return false
   }
 
@@ -158,7 +161,7 @@ export default function Pricing() {
               subscriptionType={subscriptionType}
               onChange={handleUpdatingSubscription}
             />
-            <div className='text-sm font-medium text-muted-foreground'>
+            <div className='text-muted-foreground text-sm font-medium'>
               (Switch to annual plan for 20% off)
             </div>
           </div>
