@@ -23,16 +23,39 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!.*\\.).*)",
-      "destination": "/index.html"
-    },
-    {
       "source": "/relay-QrJG/static/(.*)",
       "destination": "https://us-assets.i.posthog.com/static/$1"
     },
     {
       "source": "/relay-QrJG/(.*)",
       "destination": "https://us.i.posthog.com/$1"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/relay-QrJG/(.*)",
+      "headers": [
+        {
+          "key": "access-control-allow-origin",
+          "value": "https://app.commentify.co"
+        },
+        {
+          "key": "access-control-allow-methods",
+          "value": "POST, OPTIONS"
+        },
+        {
+          "key": "access-control-allow-headers",
+          "value": "content-type, content-encoding, authorization"
+        },
+        {
+          "key": "access-control-max-age",
+          "value": "86400"
+        }
+      ]
     }
   ]
 }
