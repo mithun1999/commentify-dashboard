@@ -71,10 +71,10 @@ export const useGetCustomerPortalUrlQuery = ({ user }: { user: IUser }) => {
     updatePaymentMethod: '',
   }
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: [SubscriptionQueryEnum.GET_CUSTOMER_PORTAL_URL],
-    queryFn: () =>
-      user?.subscription ? getCustomerPortalUrl() : placeholderData,
+  const { data, isLoading, isError, isFetching, status } = useQuery({
+    queryKey: [SubscriptionQueryEnum.GET_CUSTOMER_PORTAL_URL, user?._id],
+    queryFn: () => getCustomerPortalUrl(),
+    enabled: Boolean(user?.subscription),
     placeholderData,
     retry: 1,
     refetchOnWindowFocus: false,
@@ -85,18 +85,24 @@ export const useGetCustomerPortalUrlQuery = ({ user }: { user: IUser }) => {
   // Show error toast when portal data is unavailable (query failed or returned placeholder)
   const hasToastedRef = useRef(false)
   useEffect(() => {
-    if (isError && !hasToastedRef.current) {
+    if (
+      user?.subscription &&
+      isError &&
+      !isFetching &&
+      !hasToastedRef.current
+    ) {
       hasToastedRef.current = true
       toast.error('Unable to fetch billing portal details', {
         id: 'portal-error',
       })
     }
-  }, [isError])
+  }, [user?.subscription, isError, isFetching])
 
   if (
-    !isLoading &&
-    !data?.customerPortal &&
     user?.subscription &&
+    status === 'success' &&
+    !isFetching &&
+    !data?.customerPortal &&
     !hasToastedRef.current
   ) {
     hasToastedRef.current = true
