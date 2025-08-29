@@ -7,6 +7,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import * as Sentry from '@sentry/react'
 import { PostHogProvider } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { handleServerError } from '@/utils/handle-server-error'
@@ -18,6 +19,11 @@ import { signOut } from './features/auth/utils/auth.util'
 import './index.css'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
+
+Sentry.init({
+  dsn: envConfig.sentryDsn,
+  sendDefaultPii: true,
+})
 
 // Read optional PostHog bootstrap identifiers from URL hash for cross-origin session linking
 const hashParams = new URLSearchParams(window.location.hash.substring(1))

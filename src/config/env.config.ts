@@ -20,4 +20,7 @@ export const envConfig = {
     'phc_NYYVXRjptZtafTvffop2imyZgIQrUpjdTKM9oicQrJG',
   postHogHost:
     (import.meta.env.VITE_POSTHOG_HOST as string) || 'https://us.i.posthog.com',
+  sentryDsn:
+    (import.meta.env.VITE_SENTRY_DSN as string) ||
+    'https://6a2618fd7a1e411fd5024bd1e78993bb@o567228.ingest.us.sentry.io/4509928539160576',
 }
