@@ -23,6 +23,9 @@ import { routeTree } from './routeTree.gen'
 Sentry.init({
   dsn: envConfig.sentryDsn,
   sendDefaultPii: true,
+  integrations: [
+    Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] }),
+  ],
 })
 
 // Read optional PostHog bootstrap identifiers from URL hash for cross-origin session linking
