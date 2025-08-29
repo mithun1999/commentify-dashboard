@@ -6,6 +6,7 @@ import { useProfileStore } from '@/stores/profile.store'
 import { cn } from '@/lib/utils'
 import { SearchProvider } from '@/context/search-context'
 import useInitializeLemonSqueezy from '@/hooks/useInitializeLemonSqueezy'
+import useChatSupport from '@/hooks/useChatSupport'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
@@ -37,6 +38,8 @@ function RouteComponent() {
   useInitiatePosthog()
   // Initialize Lemon Squeezy script and helpers
   useInitializeLemonSqueezy()
+  // Initialize Crisp chat support in production
+  useChatSupport()
 
   useEffect(() => {
     if (isSessionLoaded && !isSignedIn) {
