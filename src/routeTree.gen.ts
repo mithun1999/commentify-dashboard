@@ -18,6 +18,7 @@ import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index
 import { Route as OnboardingPostSettingsImport } from './routes/onboarding/post-settings'
 import { Route as OnboardingOtherSettingsImport } from './routes/onboarding/other-settings'
 import { Route as OnboardingLinkedinImport } from './routes/onboarding/linkedin'
+import { Route as OnboardingIdentityImport } from './routes/onboarding/identity'
 import { Route as OnboardingExtensionImport } from './routes/onboarding/extension'
 import { Route as OnboardingDemoImport } from './routes/onboarding/demo'
 import { Route as OnboardingCommentSettingsImport } from './routes/onboarding/comment-settings'
@@ -80,6 +81,12 @@ const OnboardingOtherSettingsRoute = OnboardingOtherSettingsImport.update({
 const OnboardingLinkedinRoute = OnboardingLinkedinImport.update({
   id: '/linkedin',
   path: '/linkedin',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OnboardingIdentityRoute = OnboardingIdentityImport.update({
+  id: '/identity',
+  path: '/identity',
   getParentRoute: () => OnboardingRouteRoute,
 } as any)
 
@@ -336,6 +343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingExtensionImport
       parentRoute: typeof OnboardingRouteImport
     }
+    '/onboarding/identity': {
+      id: '/onboarding/identity'
+      path: '/identity'
+      fullPath: '/onboarding/identity'
+      preLoaderRoute: typeof OnboardingIdentityImport
+      parentRoute: typeof OnboardingRouteImport
+    }
     '/onboarding/linkedin': {
       id: '/onboarding/linkedin'
       path: '/linkedin'
@@ -461,6 +475,7 @@ interface OnboardingRouteRouteChildren {
   OnboardingCommentSettingsRoute: typeof OnboardingCommentSettingsRoute
   OnboardingDemoRoute: typeof OnboardingDemoRoute
   OnboardingExtensionRoute: typeof OnboardingExtensionRoute
+  OnboardingIdentityRoute: typeof OnboardingIdentityRoute
   OnboardingLinkedinRoute: typeof OnboardingLinkedinRoute
   OnboardingOtherSettingsRoute: typeof OnboardingOtherSettingsRoute
   OnboardingPostSettingsRoute: typeof OnboardingPostSettingsRoute
@@ -471,6 +486,7 @@ const OnboardingRouteRouteChildren: OnboardingRouteRouteChildren = {
   OnboardingCommentSettingsRoute: OnboardingCommentSettingsRoute,
   OnboardingDemoRoute: OnboardingDemoRoute,
   OnboardingExtensionRoute: OnboardingExtensionRoute,
+  OnboardingIdentityRoute: OnboardingIdentityRoute,
   OnboardingLinkedinRoute: OnboardingLinkedinRoute,
   OnboardingOtherSettingsRoute: OnboardingOtherSettingsRoute,
   OnboardingPostSettingsRoute: OnboardingPostSettingsRoute,
@@ -499,6 +515,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/identity': typeof OnboardingIdentityRoute
   '/onboarding/linkedin': typeof OnboardingLinkedinRoute
   '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
   '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
@@ -528,6 +545,7 @@ export interface FileRoutesByTo {
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/identity': typeof OnboardingIdentityRoute
   '/onboarding/linkedin': typeof OnboardingLinkedinRoute
   '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
   '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
@@ -560,6 +578,7 @@ export interface FileRoutesById {
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/identity': typeof OnboardingIdentityRoute
   '/onboarding/linkedin': typeof OnboardingLinkedinRoute
   '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
   '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
@@ -593,6 +612,7 @@ export interface FileRouteTypes {
     | '/onboarding/comment-settings'
     | '/onboarding/demo'
     | '/onboarding/extension'
+    | '/onboarding/identity'
     | '/onboarding/linkedin'
     | '/onboarding/other-settings'
     | '/onboarding/post-settings'
@@ -621,6 +641,7 @@ export interface FileRouteTypes {
     | '/onboarding/comment-settings'
     | '/onboarding/demo'
     | '/onboarding/extension'
+    | '/onboarding/identity'
     | '/onboarding/linkedin'
     | '/onboarding/other-settings'
     | '/onboarding/post-settings'
@@ -651,6 +672,7 @@ export interface FileRouteTypes {
     | '/onboarding/comment-settings'
     | '/onboarding/demo'
     | '/onboarding/extension'
+    | '/onboarding/identity'
     | '/onboarding/linkedin'
     | '/onboarding/other-settings'
     | '/onboarding/post-settings'
@@ -737,6 +759,7 @@ export const routeTree = rootRoute
         "/onboarding/comment-settings",
         "/onboarding/demo",
         "/onboarding/extension",
+        "/onboarding/identity",
         "/onboarding/linkedin",
         "/onboarding/other-settings",
         "/onboarding/post-settings",
@@ -795,6 +818,10 @@ export const routeTree = rootRoute
     },
     "/onboarding/extension": {
       "filePath": "onboarding/extension.tsx",
+      "parent": "/onboarding"
+    },
+    "/onboarding/identity": {
+      "filePath": "onboarding/identity.tsx",
       "parent": "/onboarding"
     },
     "/onboarding/linkedin": {

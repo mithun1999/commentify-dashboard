@@ -32,6 +32,7 @@ export interface IUser {
       status: 'not-started' | 'in-progress' | 'completed'
       step: number
     }
+    heardFrom?: string
   }
 }
 

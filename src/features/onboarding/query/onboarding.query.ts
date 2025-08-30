@@ -64,7 +64,7 @@ export const useCreateOnboardingCommentQuery = () => {
         refetchType: 'active',
       })
       updateOnboardingStatus({
-        status: 'completed',
+        status: 'in-progress',
         step: 4,
       })
     },

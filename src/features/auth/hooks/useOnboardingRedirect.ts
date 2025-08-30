@@ -6,6 +6,8 @@ export const useOnboardingRedirect = () => {
   const navigate = useNavigate()
   const { data: user, isFetched, isLoading } = useGetUserQuery()
 
+  console.log('user', user, isFetched, isLoading)
+
   useEffect(() => {
     // Do nothing until user query resolves to avoid premature redirects
     if (!isFetched || isLoading || !user) return
@@ -32,7 +34,10 @@ export const useOnboardingRedirect = () => {
         navigate({ to: '/onboarding/comment-settings' })
         break
       case 4:
-        // Step 4 completed, onboarding is done
+        navigate({ to: '/onboarding/identity' })
+        break
+      case 5:
+        // Completed
         return
       default:
         navigate({ to: '/onboarding/extension' })

@@ -12,19 +12,19 @@ import {
 } from '@/components/ui/tooltip'
 
 const STEPS = [
-  { path: '/onboarding/extension', label: 'Install Chrome Extension' },
-  { path: '/onboarding/linkedin', label: 'Connect your LinkedIn profile' },
-  { path: '/onboarding/post-settings', label: 'Post preferences' },
-  { path: '/onboarding/comment-settings', label: 'Comment preferences' },
-  // { path: "/onboarding/other-settings", label: "Other Settings" },
+  { path: '/onboarding/extension', label: 'Install Extension' },
+  { path: '/onboarding/linkedin', label: 'Connect LinkedIn' },
+  { path: '/onboarding/post-settings', label: 'Set Post Preferences' },
+  { path: '/onboarding/comment-settings', label: 'Set Comment Style' },
+  { path: '/onboarding/identity', label: 'How did you find us?' },
 ]
 
 const STAGE_MESSAGES = [
-  'Just few steps to automate your LinkedIn',
-  "Great! Now let's connect your LinkedIn account",
-  'Almost there! Configure your post preferences',
-  'Few steps are remaining for complete setup',
-  'Last 2 steps to complete your automation setup',
+  'Kick things off by installing the extension 🚀',
+  'Great! Let’s link your LinkedIn profile',
+  'Almost there - set how you want posts handled',
+  'Now choose your comment style & tone',
+  'Final step - how did you hear about us?',
 ]
 
 export function OnboardingProgress() {

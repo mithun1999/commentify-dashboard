@@ -416,7 +416,7 @@ export function CommentSettingsStep() {
           </div>
 
           <OnboardingNavigation
-            nextStep='/'
+            nextStep='/onboarding/identity'
             loading={isCreatingOnboardingComment}
             onNext={async () => {
               const isValid = await form.trigger()

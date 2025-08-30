@@ -1,6 +1,7 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { QueryService } from '@/services/query.service'
 import { getUser, updateOnboardingStatus } from '../api/user.api'
+import { IUser } from '../interface/user.interface'
 
 export enum UserQueryEnum {
   GET_USER = 'get-user',
@@ -21,16 +22,25 @@ export const useGetUserQuery = () => {
 }
 
 export const useUpdateOnboardingStatus = () => {
-  const queryClient = QueryService.getQueryClient()
-  const { mutate, isPending } = useMutation({
+  const queryClient = useQueryClient()
+  const { mutate, mutateAsync, isPending } = useMutation<
+    IUser,
+    unknown,
+    {
+      status: 'not-started' | 'in-progress' | 'completed'
+      step: number
+      heardFrom?: string
+    }
+  >({
     mutationFn: updateOnboardingStatus,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [UserQueryEnum.GET_USER] })
+    onSuccess: (data) => {
+      queryClient.setQueryData([UserQueryEnum.GET_USER], data)
     },
   })
 
   return {
     updateOnboardingStatus: mutate,
+    updateOnboardingStatusAsync: mutateAsync,
     isUpdatingOnboardingStatus: isPending,
   }
 }
