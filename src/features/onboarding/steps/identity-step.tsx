@@ -106,6 +106,7 @@ export function IdentityStep() {
                   return false
                 }
               }}
+              currentStep='identity'
             />
           </OnboardingCard>
         </div>

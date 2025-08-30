@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Info,
 } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
 import {
   Form,
@@ -44,7 +45,6 @@ import { ICreateOnboardingCommentDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useCreateOnboardingCommentQuery } from '../query/onboarding.query'
-import { usePostHog } from 'posthog-js/react'
 
 const commentSettingsSchema = z.object({
   aboutProfile: z
@@ -426,6 +426,7 @@ export function CommentSettingsStep() {
               const result = await onSubmit(values)
               return Boolean(result)
             }}
+            currentStep='comment_settings'
           />
         </OnboardingCard>
       </form>

@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { envConfig } from '@/config/env.config'
 import { Download, CheckCircle2, Info } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import extensionImage from '@/assets/images/install-extension.png'
 import { useOnboarding } from '@/stores/onboarding.store'
 import { checkIsExtensionInstalled } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { usePostHog } from 'posthog-js/react'
 import {
   Tooltip,
   TooltipContent,
@@ -170,6 +170,7 @@ export function ExtensionStep() {
           <OnboardingNavigation
             nextStep='/onboarding/linkedin'
             loading={isUpdatingOnboardingStatus}
+            currentStep='extension'
           />
         )}
       </OnboardingCard>

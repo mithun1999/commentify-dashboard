@@ -1,8 +1,8 @@
 'use client'
 
 import { useNavigate } from '@tanstack/react-router'
-import { usePostHog } from 'posthog-js/react'
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import { Button } from '@/components/ui/button'
 
 interface OnboardingNavigationProps {
@@ -11,6 +11,7 @@ interface OnboardingNavigationProps {
   nextLabel?: string
   onNext?: () => Promise<boolean> | boolean
   loading?: boolean
+  currentStep: string
 }
 
 export function OnboardingNavigation({
@@ -19,6 +20,7 @@ export function OnboardingNavigation({
   nextLabel = 'Continue',
   onNext,
   loading = false,
+  currentStep,
 }: OnboardingNavigationProps) {
   const navigate = useNavigate()
   const posthog = usePostHog()
@@ -30,7 +32,7 @@ export function OnboardingNavigation({
     }
 
     if (nextStep) {
-      posthog?.capture('onboarding_next_clicked', { nextStep })
+      posthog?.capture(`onboarding_${currentStep}_step_completed`)
       navigate({ to: nextStep })
     }
   }

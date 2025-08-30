@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { envConfig } from '@/config/env.config'
 import { Linkedin, CheckCircle2, Info, Loader2 } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { useOnboarding } from '@/stores/onboarding.store'
 import {
@@ -26,7 +27,6 @@ import {
   useGetAllProfileQuery,
   useLinkProfile,
 } from '@/features/users/query/profile.query'
-import { usePostHog } from 'posthog-js/react'
 
 export function LinkedInStep() {
   const posthog = usePostHog()
@@ -275,7 +275,10 @@ export function LinkedInStep() {
         </div>
 
         {extensionProfileData && (
-          <OnboardingNavigation nextStep='/onboarding/post-settings' />
+          <OnboardingNavigation
+            nextStep='/onboarding/post-settings'
+            currentStep='linkedin'
+          />
         )}
       </OnboardingCard>
     </div>

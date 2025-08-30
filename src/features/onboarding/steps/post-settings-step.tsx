@@ -14,6 +14,7 @@ import {
   X,
   CircleSlash,
 } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
 import {
   Form,
@@ -35,7 +36,6 @@ import { ICreateOnboardingPostDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useCreateOnboardingPostQuery } from '../query/onboarding.query'
-import { usePostHog } from 'posthog-js/react'
 
 const authorTitlesList = ['Founder', 'CEO', 'CTO', 'CMO', 'VP', 'Director']
 
@@ -549,6 +549,7 @@ export function PostSettingsStep() {
               const result = await onSubmit(values)
               return Boolean(result)
             }}
+            currentStep='post_settings'
           />
         </OnboardingCard>
       </form>
