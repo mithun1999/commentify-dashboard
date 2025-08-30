@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { QueryService } from '@/services/query.service'
 import { getUser, updateOnboardingStatus } from '../api/user.api'
 import { IUser } from '../interface/user.interface'
 
