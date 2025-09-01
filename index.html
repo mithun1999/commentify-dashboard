@@ -59,6 +59,16 @@
     />
 
     <meta name="theme-color" content="#fff" />
+    <script>
+      ;(function () {
+        try {
+          var h = window.location.hash || ''
+          if (h && /access_token=|refresh_token=|type=/.test(h)) {
+            sessionStorage.setItem('supabase_oauth_hash', h)
+          }
+        } catch (e) {}
+      })()
+    </script>
   </head>
 
   <body class="group/body">

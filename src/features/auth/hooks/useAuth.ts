@@ -6,7 +6,6 @@ import { useAuthStore } from '@/stores/auth.store'
 import { AuthEnum } from '../enum/auth.enum'
 
 function useAuth() {
-  const supabase = SupabaseInstance.getSupabase()
   const setSession = useAuthStore((state) => state.setSession)
 
   const getSessionDataForCookie = (session: Session | null) => {
@@ -25,12 +24,22 @@ function useAuth() {
   }
 
   useEffect(() => {
+    const storedOauthHash = sessionStorage.getItem('supabase_oauth_hash') || ''
+    if (!window.location.hash && storedOauthHash) {
+      try {
+        window.location.hash = storedOauthHash
+      } catch (e) {}
+    }
+
+    const supabase = SupabaseInstance.getSupabase()
+
     supabase.auth.getSession().then(({ data }) => {
       const { session } = data
       const sessionDataForCookie = getSessionDataForCookie(session)
       if (sessionDataForCookie) {
         Cookies.set(AuthEnum.AUTH_COOKIE_KEY, sessionDataForCookie)
         setSession(session)
+        if (storedOauthHash) sessionStorage.removeItem('supabase_oauth_hash')
       }
     })
 
