@@ -6,8 +6,6 @@ export const useOnboardingRedirect = () => {
   const navigate = useNavigate()
   const { data: user, isFetched, isLoading } = useGetUserQuery()
 
-  console.log('user', user, isFetched, isLoading)
-
   useEffect(() => {
     // Do nothing until user query resolves to avoid premature redirects
     if (!isFetched || isLoading || !user) return

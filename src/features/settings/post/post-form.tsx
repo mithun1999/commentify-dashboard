@@ -192,9 +192,9 @@ export function PostForm() {
     if (extraTitles.length) setCustomTitles(extraTitles)
 
     const { hours24, minutes } = wallTimeInZoneToLocal(
-      scrape.jobTiming.hours,
-      scrape.jobTiming.minutes,
-      scrape.jobTiming.tz
+      scrape?.jobTiming.hours,
+      scrape?.jobTiming.minutes,
+      scrape?.jobTiming.tz
     )
 
     const hp = toPaddedHourAndPeriod(hours24)

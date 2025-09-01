@@ -2,6 +2,7 @@ import Cookies from 'js-cookie'
 import { SupabaseInstance } from '@/services/supabase.service'
 import { Session } from '@supabase/supabase-js'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth.store'
 import { AuthEnum } from '../enum/auth.enum'
 
 export async function signInWithPassword(data: {
@@ -101,11 +102,8 @@ export async function signOut() {
 }
 
 export function getAuthToken() {
-  const session = Cookies.get(AuthEnum.AUTH_COOKIE_KEY)
-  if (session) {
-    const sessionObj = JSON.parse(session) as Session
-    if (sessionObj?.access_token) return sessionObj.access_token
-  }
+  const { session } = useAuthStore.getState()
+  return session?.access_token
 }
 
 export function getUserId() {
