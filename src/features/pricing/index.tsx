@@ -38,7 +38,7 @@ export default function Pricing() {
     } catch (error: unknown) {
       toast.error('Checkout url is not valid')
       // eslint-disable-next-line no-console
-      console.log(error)
+      console.error(error)
     }
   }
 
@@ -96,15 +96,21 @@ export default function Pricing() {
   const handlePlanSelect = ({
     productId,
     variantId,
+    planName,
+    chargeType,
   }: {
     variantId: string
     productId: string
+    planName: string
+    chargeType: string
   }) => {
     posthog?.capture('select_plan_clicked', {
       productId,
       variantId,
       subscriptionType,
       hasActiveSubscription: Boolean(user?.subscription),
+      planName,
+      chargeType,
     })
     if (user?.subscription) {
       updateSubscriptionPlan({ productId, variantId })
@@ -174,6 +180,8 @@ export default function Pricing() {
                   handlePlanSelect({
                     variantId: data.variant!._id!,
                     productId: data._id!,
+                    planName: data.name!,
+                    chargeType: subscriptionType,
                   })
                 }
                 disabled={
