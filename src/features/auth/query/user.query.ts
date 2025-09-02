@@ -1,12 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getUser, updateOnboardingStatus } from '../api/user.api'
 import { IUser } from '../interface/user.interface'
+import { useAuthStore } from '@/stores/auth.store'
 
 export enum UserQueryEnum {
   GET_USER = 'get-user',
 }
 
 export const useGetUserQuery = () => {
+  const isSessionLoaded = useAuthStore((state) => state.isSessionLoaded)
+  const isSignedIn = useAuthStore((state) => Boolean(state.session?.user?.id))
+
   const { data, isLoading, isFetching, isFetched } = useQuery({
     queryKey: [UserQueryEnum.GET_USER],
     queryFn: getUser,
@@ -14,6 +18,7 @@ export const useGetUserQuery = () => {
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     staleTime: 1000 * 60 * 5,
+    enabled: Boolean(isSessionLoaded && isSignedIn),
     // CHECK: Keeping this because it was added previously due to some error
     // placeholderData: null,
   })

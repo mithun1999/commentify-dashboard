@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
 import { updateOnboardingStatus } from '@/features/auth/api/user.api'
 import {
@@ -19,9 +20,13 @@ export enum ProfileQueryEnum {
 export const useGetAllProfileQuery = () => {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const setActiveProfile = useProfileStore((s) => s.setActiveProfile)
+  const isSessionLoaded = useAuthStore((state) => state.isSessionLoaded)
+  const isSignedIn = useAuthStore((state) => Boolean(state.session?.user?.id))
+
   const { data, isLoading } = useQuery<IProfile[]>({
     queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
     queryFn: getAllProfile,
+    enabled: Boolean(isSessionLoaded && isSignedIn),
   })
 
   useEffect(() => {
