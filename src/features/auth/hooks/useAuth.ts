@@ -35,10 +35,10 @@ function useAuth() {
 
     supabase.auth.getSession().then(({ data }) => {
       const { session } = data
+      setSession(session)
       const sessionDataForCookie = getSessionDataForCookie(session)
       if (sessionDataForCookie) {
         Cookies.set(AuthEnum.AUTH_COOKIE_KEY, sessionDataForCookie)
-        setSession(session)
         if (storedOauthHash) sessionStorage.removeItem('supabase_oauth_hash')
       }
     })
@@ -46,11 +46,11 @@ function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
       const sessionDataForCookie = getSessionDataForCookie(session)
       if (sessionDataForCookie) {
         Cookies.set(AuthEnum.AUTH_COOKIE_KEY, sessionDataForCookie)
       }
-      setSession(session)
     })
 
     return () => subscription.unsubscribe()
