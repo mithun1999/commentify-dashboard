@@ -39,13 +39,13 @@ export function ExtensionStep() {
       )
 
       if (installed) {
+        posthog?.capture('onboarding_extension_installed')
         updateData({ isExtensionInstalled: true })
         markStepCompleted('extension')
         if (
           user?.metadata?.onboarding?.status === 'not-started' ||
           !user?.metadata?.onboarding
         ) {
-          posthog?.capture('onboarding_extension_installed')
           updateOnboardingStatus({
             status: 'in-progress',
             step: 1,

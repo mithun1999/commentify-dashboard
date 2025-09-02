@@ -66,7 +66,6 @@ export function LinkedInStep() {
       if (!isInstalled) return
 
       const profileDetails = await getProfileDetailsFromExtension()
-      console.log('profileDetails', profileDetails)
 
       const hasName = Boolean(
         profileDetails?.firstName && profileDetails?.lastName
