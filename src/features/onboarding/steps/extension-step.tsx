@@ -45,6 +45,7 @@ export function ExtensionStep() {
           user?.metadata?.onboarding?.status === 'not-started' ||
           !user?.metadata?.onboarding
         ) {
+          posthog?.capture('onboarding_extension_installed')
           updateOnboardingStatus({
             status: 'in-progress',
             step: 1,
