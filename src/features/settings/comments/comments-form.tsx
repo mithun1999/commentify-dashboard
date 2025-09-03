@@ -154,6 +154,7 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
         : false,
       length: data.length as CommentLengthEnum,
       rules: shouldDisplayCommentRulesSetting ? data.rules : '',
+      about: data.about,
     }
 
     const hasExisting = Boolean(existingCommentSetting?._id)
