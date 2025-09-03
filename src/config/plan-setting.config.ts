@@ -20,7 +20,7 @@ export const planSetting: Record<
   },
   engagementThreshold: {
     starter: false,
-    pro: true,
+    pro: false,
     premium: true,
   },
   scrapeRules: {
