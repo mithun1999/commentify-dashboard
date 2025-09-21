@@ -1,11 +1,12 @@
 // src/components/team-switcher.tsx
 import { useState } from 'react'
 import { LinkedInLogoIcon } from '@radix-ui/react-icons'
-import { ChevronsUpDown, Plus } from 'lucide-react'
+import { ChevronsUpDown, Plus, Trash2 } from 'lucide-react'
 // import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
 // import { useAuthStore } from '@/stores/auth.store'
 import { getProfileDetailsFromExtension } from '@/utils/utils'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,10 +26,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { IProfile } from '@/features/users/interface/profile.interface'
 import {
-  // useDeleteProfile,
+  useDeleteProfile,
   useLinkProfile,
 } from '@/features/users/query/profile.query'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
@@ -39,6 +42,8 @@ export function TeamSwitcher() {
   const { data: user } = useGetUserQuery()
   const [isLinking, setIsLinking] = useState(false)
   const { isLinkingProfile, linkProfile } = useLinkProfile()
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  const [profileToDelete, setProfileToDelete] = useState<IProfile | null>(null)
 
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const setActiveProfile = useProfileStore((s) => s.setActiveProfile)
@@ -53,6 +58,15 @@ export function TeamSwitcher() {
     await linkProfile(profileDetails)
     setIsLinking(false)
   }
+
+  const handleSuccessDeleteProfile = () => {
+    setActiveProfile(null)
+    window.location.reload()
+  }
+
+  const { deleteProfile, isDeletingProfile } = useDeleteProfile({
+    onSuccess: handleSuccessDeleteProfile,
+  })
 
   // no-op
 
@@ -73,7 +87,7 @@ export function TeamSwitcher() {
           <SidebarMenuButton
             size='lg'
             onClick={handleLinking}
-            className='gap-2'
+            className='gap-2 border'
           >
             <LinkedInLogoIcon className='h-5 w-5' />
             {isLinking || isLinkingProfile
@@ -129,7 +143,7 @@ export function TeamSwitcher() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className='w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg'
+            className='z-100 w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg'
             align='start'
             side={isMobile ? 'bottom' : 'right'}
             sideOffset={4}
@@ -160,6 +174,22 @@ export function TeamSwitcher() {
                         ? 'Disconnected'
                         : 'Deactivated'}
                   </div>
+                </div>
+                <div className='ml-auto flex items-center'>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='text-destructive h-8 w-8'
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setProfileToDelete(profile)
+                      setIsConfirmOpen(true)
+                    }}
+                    disabled={isDeletingProfile}
+                  >
+                    <Trash2 className='size-4' />
+                  </Button>
                 </div>
               </DropdownMenuItem>
             ))}
@@ -196,6 +226,27 @@ export function TeamSwitcher() {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+      <ConfirmDialog
+        open={isConfirmOpen}
+        onOpenChange={(open) => {
+          setIsConfirmOpen(open)
+          if (!open) setProfileToDelete(null)
+        }}
+        destructive
+        title='Delete profile'
+        desc={`Are you sure you want to delete ${profileToDelete ? `"${profileToDelete.firstName}" profile` : 'this profile'}? This action cannot be undone.`}
+        isLoading={isDeletingProfile}
+        handleConfirm={() => {
+          if (profileToDelete) {
+            if (activeProfile?._id === profileToDelete._id) {
+              setActiveProfile(null)
+            }
+            deleteProfile(profileToDelete._id)
+          }
+          setIsConfirmOpen(false)
+        }}
+        confirmText='Delete'
+      />
     </SidebarMenu>
   )
 }

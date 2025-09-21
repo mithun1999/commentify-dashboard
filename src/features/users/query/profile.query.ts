@@ -23,7 +23,7 @@ export const useGetAllProfileQuery = () => {
   const isSessionLoaded = useAuthStore((state) => state.isSessionLoaded)
   const isSignedIn = useAuthStore((state) => Boolean(state.session?.user?.id))
 
-  const { data, isLoading } = useQuery<IProfile[]>({
+  const { data, isLoading, isFetched } = useQuery<IProfile[]>({
     queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
     queryFn: getAllProfile,
     enabled: Boolean(isSessionLoaded && isSignedIn),
@@ -35,17 +35,21 @@ export const useGetAllProfileQuery = () => {
     }
   }, [activeProfile, data, setActiveProfile])
 
-  return { data, isLoading }
+  return { data, isLoading, isFetched }
 }
 
-export const useDeleteProfile = () => {
+export const useDeleteProfile = ({ onSuccess }: { onSuccess?: () => void }) => {
   const queryClient = useQueryClient()
   const { mutate, isPending } = useMutation({
     mutationFn: deleteProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+        queryKey: [
+          ProfileQueryEnum.GET_ALL_PROFILE,
+          ProfileQueryEnum.GET_LINKEDIN_STATS,
+        ],
       })
+      onSuccess?.()
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {

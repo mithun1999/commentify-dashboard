@@ -8,6 +8,7 @@ import { SearchProvider } from '@/context/search-context'
 import useChatSupport from '@/hooks/useChatSupport'
 import useInitializeLemonSqueezy from '@/hooks/useInitializeLemonSqueezy'
 import { SidebarProvider } from '@/components/ui/sidebar'
+import ConnectProfileCard from '@/components/connect-profile-card'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
 import SkipToMain from '@/components/skip-to-main'
@@ -29,7 +30,11 @@ function RouteComponent() {
   const isSessionLoaded = useAuthStore((state) => state?.isSessionLoaded)
   const { data: user, isFetched, isLoading } = useGetUserQuery()
   // Preload user profiles and set default activeProfile globally
-  const { isLoading: isLoadingProfiles } = useGetAllProfileQuery()
+  const {
+    data: profiles,
+    isLoading: isLoadingProfiles,
+    isFetched: isProfilesFetched,
+  } = useGetAllProfileQuery()
   const activeProfile = useProfileStore((s) => s.activeProfile)
 
   // Handle onboarding redirection
@@ -72,7 +77,13 @@ function RouteComponent() {
             'has-[main.fixed-main]:group-data-[scroll-locked=1]/body:h-svh'
           )}
         >
-          <Outlet />
+          {!isLoadingProfiles &&
+          isProfilesFetched &&
+          (!profiles || profiles.length === 0) ? (
+            <ConnectProfileCard />
+          ) : (
+            <Outlet />
+          )}
         </div>
       </SidebarProvider>
     </SearchProvider>
