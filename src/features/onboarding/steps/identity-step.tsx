@@ -12,6 +12,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 // import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '../onboarding-card'
@@ -24,13 +25,41 @@ export function IdentityStep() {
 
   const identitySchema = z.object({
     heardFrom: z.string().min(1, 'Please select how you heard about us'),
+    otherDetails: z.string().optional(),
   })
   type IdentityValues = z.infer<typeof identitySchema>
 
   const form = useForm<IdentityValues>({
     resolver: zodResolver(identitySchema),
-    defaultValues: { heardFrom: '' },
+    defaultValues: { heardFrom: '', otherDetails: '' },
   })
+
+  const handleSubmitAndNext = async (): Promise<boolean> => {
+    const isValid = await form.trigger()
+    if (!isValid) return false
+    const values = form.getValues()
+    try {
+      const other = (values.otherDetails ?? '').trim()
+      const heardFromValue =
+        values.heardFrom === 'Other'
+          ? other
+            ? `Other - ${other}`
+            : 'Other'
+          : values.heardFrom
+
+      posthog?.capture('onboarding_identity_submitted', {
+        heardFrom: heardFromValue,
+      })
+      await updateOnboardingStatusAsync({
+        status: 'completed',
+        step: 5,
+        heardFrom: heardFromValue,
+      })
+      return true
+    } catch {
+      return false
+    }
+  }
 
   return (
     <Form {...form}>
@@ -63,7 +92,7 @@ export function IdentityStep() {
                           'Twitter / Facebook / YouTube',
                           'Friend / Colleague',
                           'Google Search',
-                          'Founder community',
+                          'Founder / Slack community',
                           'Other',
                         ].map((option) => (
                           <label
@@ -78,6 +107,27 @@ export function IdentityStep() {
                         ))}
                       </RadioGroup>
                     </FormControl>
+                    {field.value === 'Other' && (
+                      <FormField
+                        control={form.control}
+                        name='otherDetails'
+                        render={({ field: otherField }) => (
+                          <FormItem className='space-y-3'>
+                            <FormLabel className='text-foreground font-medium'>
+                              Where else did you find us?
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder='e.g., Reddit, ProductHunt, newsletter, etc.'
+                                className='focus-visible:ring-primary bg-card border-border text-card-foreground focus-visible:ring-2 focus-visible:ring-offset-2'
+                                {...otherField}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -88,24 +138,7 @@ export function IdentityStep() {
               nextStep='/'
               nextLabel='Finish'
               loading={isUpdatingOnboardingStatus}
-              onNext={async () => {
-                const isValid = await form.trigger()
-                if (!isValid) return false
-                const values = form.getValues()
-                try {
-                  posthog?.capture('onboarding_identity_submitted', {
-                    heardFrom: values.heardFrom,
-                  })
-                  await updateOnboardingStatusAsync({
-                    status: 'completed',
-                    step: 5,
-                    heardFrom: values.heardFrom,
-                  })
-                  return true
-                } catch {
-                  return false
-                }
-              }}
+              onNext={handleSubmitAndNext}
               currentStep='identity'
             />
           </OnboardingCard>
