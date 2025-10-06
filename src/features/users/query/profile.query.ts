@@ -27,10 +27,11 @@ export const useGetAllProfileQuery = () => {
     queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
     queryFn: getAllProfile,
     enabled: Boolean(isSessionLoaded && isSignedIn),
+    refetchOnWindowFocus: false,
   })
 
   useEffect(() => {
-    if (!activeProfile && Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data) && data.length > 0) {
       setActiveProfile(data[data.length - 1])
     }
   }, [activeProfile, data, setActiveProfile])
@@ -106,6 +107,7 @@ export const useGetLinkedInStats = () => {
     enabled: Boolean(activeProfile?._id),
     staleTime: ONE_HOUR_MS,
     gcTime: ONE_HOUR_MS,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!activeProfile?._id) return null
       const data = await getLinkedInStats(activeProfile._id)
