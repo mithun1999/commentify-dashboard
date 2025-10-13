@@ -29,7 +29,6 @@ export const useGetCompletedPostsQuery = (page: number, limit: number) => {
     },
     placeholderData: (prev) => prev ?? null,
     retry: 1,
-    refetchOnWindowFocus: false,
   })
 
   return { isPending, isError, error, data, isFetching }
@@ -46,7 +45,6 @@ export const useGetPendingPostsQuery = (page: number, limit: number) => {
       return data
     },
     placeholderData: (prev) => prev ?? null,
-    refetchOnWindowFocus: false,
   })
 
   return {
