@@ -19,19 +19,35 @@ export interface ITransactionPayload {
   intent?: string
 }
 
-export interface IProduct {
-  name: string
-  slug: string
-  description?: string
-  defaultDisplayPrice?: string
-  defaultPrice: number
-  paymentUrl: string
-  imageUrl?: string
+export interface IProviderData {
+  provider: string
   providerId: string
-  variant?: IProductVariant[]
-  createdAt: Date
-  features: string[]
+  slug: string
+  paymentUrl: string
+  metadata?: {
+    oldProductId?: string
+    oldVariantId?: string
+    originalProductName?: string
+    originalVariantName?: string
+  }
+}
+
+export interface IProduct {
   _id: string
+  name: string
+  description?: string
+  defaultDisplayPrice: string
+  defaultPrice: number
+  currency: string
+  imageUrl?: string
+  providerData: IProviderData[]
+  interval: 'monthly' | 'yearly'
+  hasFreeTrial: boolean
+  status: string
+  createdAt: string
+  updatedAt: string
+  features: string[]
+  __v?: number
 }
 
 export interface IProductVariant {
@@ -49,6 +65,7 @@ export interface IDisplayProductVariant extends IProductVariant {
   displayPrice?: string
 }
 
-export interface IDisplayProduct extends Omit<IProduct, 'variant'> {
-  variant?: IDisplayProductVariant
+export interface IDisplayProduct extends IProduct {
+  popular?: boolean
+  displayPrice?: string
 }
