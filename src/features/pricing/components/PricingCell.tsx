@@ -10,6 +10,7 @@ interface PricingCellProps extends IDisplayProduct {
   disabled?: boolean
   popular?: boolean
   isSubmitLoading?: boolean
+  isCurrentPlan?: boolean
 }
 
 function PricingCell({
@@ -20,6 +21,7 @@ function PricingCell({
   onClick,
   disabled,
   isSubmitLoading,
+  isCurrentPlan,
 }: PricingCellProps) {
   // Extract base name without "Monthly" or "Yearly"
   const baseName = name.replace(/\s+(Monthly|Yearly)$/i, '')
@@ -54,7 +56,7 @@ function PricingCell({
               disabled={disabled}
               loading={isSubmitLoading}
             >
-              Select
+              {isCurrentPlan ? 'Current Plan' : 'Select'}
             </LoadingButton>
           </div>
         </div>
@@ -86,7 +88,7 @@ function PricingCell({
             disabled={disabled}
             loading={isSubmitLoading}
           >
-            Select
+            {isCurrentPlan ? 'Current Plan' : 'Select'}
           </LoadingButton>
         </div>
       </div>

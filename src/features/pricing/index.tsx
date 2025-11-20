@@ -19,6 +19,7 @@ import PricingCell from './components/PricingCell'
 import SubscriptionToggle from './components/SubscriptionToggle'
 import type { IDisplayProduct } from './interfaces/price.interface'
 import { useGetPlans } from './query/pricing.query'
+import { getCurrencySymbol } from './utils/prices.util'
 
 export default function Pricing() {
   const posthog = usePostHog()
@@ -49,12 +50,13 @@ export default function Pricing() {
   const updatedPlans: IDisplayProduct[] = useMemo(() => {
     const safePlans = Array.isArray(plans) ? plans : []
 
-    // Filter plans by subscription type and format them
+    // Filter plans by subscription type (interval: monthly/yearly)
     return safePlans
       .filter((plan) => plan.interval === subscriptionType)
       .map((plan) => {
-        // Format display price
-        const displayPrice = `$${plan.defaultDisplayPrice}`
+        // Format display price with currency symbol
+        const currencySymbol = getCurrencySymbol(plan.currency)
+        const displayPrice = `${currencySymbol}${plan.defaultDisplayPrice}`
 
         // Extract base plan name (e.g., "Premium" from "Premium Monthly")
         const basePlanName = plan.name
@@ -84,12 +86,11 @@ export default function Pricing() {
     })
   }
 
-  const getDisabledPlanState = (data: IDisplayProduct): boolean => {
-    if (
-      user?.status === UserSubscriptionStatus.ACTIVE &&
-      user?.subscribedProductId === data._id
-    ) {
-      return true
+  const isCurrentPlan = (data: IDisplayProduct): boolean => {
+    // Check if this plan is the user's current active subscription
+    if (user?.status === UserSubscriptionStatus.ACTIVE) {
+      // Compare with subscribedProductId to check if this is the active plan
+      return user?.subscribedProductId === data._id
     }
     return false
   }
@@ -171,27 +172,31 @@ export default function Pricing() {
           </div>
 
           <div className='flex flex-col items-center justify-center space-y-4 py-10 md:flex-row md:items-start md:space-y-0 md:space-x-10'>
-            {updatedPlans?.map((data, idx) => (
-              <PricingCell
-                key={idx}
-                onClick={() =>
-                  handlePlanSelect({
-                    productId: data._id,
-                    planName: data.name,
-                    chargeType: subscriptionType,
-                  })
-                }
-                disabled={
-                  isCreatingCheckoutUrl ||
-                  isUpdatingSubscriptionPlan ||
-                  getDisabledPlanState(data)
-                }
-                isSubmitLoading={
-                  isCreatingCheckoutUrl || isUpdatingSubscriptionPlan
-                }
-                {...data}
-              />
-            ))}
+            {updatedPlans?.map((data, idx) => {
+              const isCurrent = isCurrentPlan(data)
+              return (
+                <PricingCell
+                  key={idx}
+                  onClick={() =>
+                    handlePlanSelect({
+                      productId: data._id,
+                      planName: data.name,
+                      chargeType: subscriptionType,
+                    })
+                  }
+                  disabled={
+                    isCreatingCheckoutUrl ||
+                    isUpdatingSubscriptionPlan ||
+                    isCurrent
+                  }
+                  isSubmitLoading={
+                    isCreatingCheckoutUrl || isUpdatingSubscriptionPlan
+                  }
+                  isCurrentPlan={isCurrent}
+                  {...data}
+                />
+              )
+            })}
           </div>
         </div>
       </Main>
