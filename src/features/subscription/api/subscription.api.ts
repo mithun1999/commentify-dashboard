@@ -3,7 +3,7 @@ import { ILsSubscription } from '../interfaces/subscription.interface'
 
 export async function upgradeDowngradeSubscription(payload: {
   productId: string
-  variantId: string
+  provider?: 'lemon_squeezy' | 'dodo_payments'
 }) {
   const { data } = await axiosInstance({
     method: 'PATCH',
@@ -14,8 +14,12 @@ export async function upgradeDowngradeSubscription(payload: {
 }
 
 export async function createCheckoutUrl(payload: {
-  variantId: string
+  productId: string
+  provider: 'lemon_squeezy' | 'dodo_payments'
   embed?: boolean
+  quantity?: number
+  email?: string
+  name?: string
 }) {
   const { data } = await axiosInstance({
     method: 'POST',

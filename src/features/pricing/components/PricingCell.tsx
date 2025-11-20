@@ -15,13 +15,15 @@ interface PricingCellProps extends IDisplayProduct {
 function PricingCell({
   name,
   features,
-  variant,
-  defaultDisplayPrice,
+  displayPrice,
   popular,
   onClick,
   disabled,
   isSubmitLoading,
 }: PricingCellProps) {
+  // Extract base name without "Monthly" or "Yearly"
+  const baseName = name.replace(/\s+(Monthly|Yearly)$/i, '')
+
   if (popular) {
     return (
       <PriceWrapper className='relative'>
@@ -31,11 +33,9 @@ function PricingCell({
           </span>
         </div>
         <div className='px-12 py-4'>
-          <h3 className='text-2xl font-medium text-center mb-2'>{name}</h3>
+          <h3 className='mb-2 text-center text-2xl font-medium'>{baseName}</h3>
           <div className='flex justify-center'>
-            <span className='text-5xl font-black'>
-              {variant?.displayPrice ?? defaultDisplayPrice}
-            </span>
+            <span className='text-5xl font-black'>{displayPrice}</span>
           </div>
         </div>
         <div className='bg-muted/50 rounded-b-xl py-4'>
@@ -65,11 +65,9 @@ function PricingCell({
   return (
     <PriceWrapper>
       <div className='px-12 py-4'>
-        <h3 className='text-2xl font-medium text-center mb-2'>{name}</h3>
+        <h3 className='mb-2 text-center text-2xl font-medium'>{baseName}</h3>
         <div className='flex justify-center'>
-          <span className='text-5xl font-black'>
-            {variant?.displayPrice ?? defaultDisplayPrice}
-          </span>
+          <span className='text-5xl font-black'>{displayPrice}</span>
         </div>
       </div>
       <div className='bg-muted/50 rounded-b-xl py-4'>

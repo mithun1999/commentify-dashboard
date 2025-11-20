@@ -48,28 +48,29 @@ export default function Pricing() {
 
   const updatedPlans: IDisplayProduct[] = useMemo(() => {
     const safePlans = Array.isArray(plans) ? plans : []
+
+    // Filter plans by subscription type and format them
     return safePlans
+      .filter((plan) => plan.interval === subscriptionType)
       .map((plan) => {
-        const found = (plan.variant || []).find(
-          (v) => (v.name || '').toLowerCase() === subscriptionType
-        )
-        const priceCents = found?.price ?? 0
-        const updatedVariant = {
-          ...(found || {}),
-          displayPrice: `$${Math.round(priceCents / 100)}`,
-        } as IDisplayProduct['variant']
+        // Format display price
+        const displayPrice = `$${plan.defaultDisplayPrice}`
 
-        const base = {
+        // Extract base plan name (e.g., "Premium" from "Premium Monthly")
+        const basePlanName = plan.name
+          .replace(/\s+(Monthly|Yearly)$/i, '')
+          .toLowerCase()
+
+        // Create display product
+        const displayProduct: IDisplayProduct = {
           ...plan,
-          variant: updatedVariant,
-        } as unknown as IDisplayProduct
-
-        if (popularPlans.includes((plan.name || '').toLowerCase())) {
-          return { ...base, popular: true }
+          displayPrice,
+          popular: popularPlans.includes(basePlanName),
         }
-        return base
+
+        return displayProduct
       })
-      .filter((p) => Boolean(p?.variant?._id))
+      .filter((p) => p.status === 'active')
   }, [plans, subscriptionType])
 
   const handleUpdatingSubscription = () => {
@@ -86,7 +87,7 @@ export default function Pricing() {
   const getDisabledPlanState = (data: IDisplayProduct): boolean => {
     if (
       user?.status === UserSubscriptionStatus.ACTIVE &&
-      user?.subscribedProductVariantId === data?.variant?._id
+      user?.subscribedProductId === data._id
     ) {
       return true
     }
@@ -95,27 +96,24 @@ export default function Pricing() {
 
   const handlePlanSelect = ({
     productId,
-    variantId,
     planName,
     chargeType,
   }: {
-    variantId: string
     productId: string
     planName: string
     chargeType: string
   }) => {
     posthog?.capture('select_plan_clicked', {
       productId,
-      variantId,
       subscriptionType,
       hasActiveSubscription: Boolean(user?.subscription),
       planName,
       chargeType,
     })
     if (user?.subscription) {
-      updateSubscriptionPlan({ productId, variantId })
+      updateSubscriptionPlan({ productId, provider: 'lemon_squeezy' })
     } else {
-      createCheckoutUrl({ variantId, embed: false })
+      createCheckoutUrl({ productId, provider: 'lemon_squeezy', embed: false })
     }
   }
 
@@ -178,9 +176,8 @@ export default function Pricing() {
                 key={idx}
                 onClick={() =>
                   handlePlanSelect({
-                    variantId: data.variant!._id!,
-                    productId: data._id!,
-                    planName: data.name!,
+                    productId: data._id,
+                    planName: data.name,
                     chargeType: subscriptionType,
                   })
                 }

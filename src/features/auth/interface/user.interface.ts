@@ -1,7 +1,4 @@
-import {
-  IProduct,
-  IProductVariant,
-} from '@/features/pricing/interfaces/price.interface'
+import { IProduct } from '@/features/pricing/interfaces/price.interface'
 import { ISubscription } from '@/features/subscription/interfaces/subscription.interface'
 
 export enum UserSubscriptionStatus {
@@ -23,8 +20,6 @@ export interface IUser {
   intent: string
   subscribedProduct?: IProduct
   subscribedProductId: string
-  subscribedProductVariantId: string
-  subscribedProductVariant?: IProductVariant
   status: UserSubscriptionStatus
   subscription?: ISubscription | null
   metadata: {

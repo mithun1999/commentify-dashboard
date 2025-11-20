@@ -1,11 +1,9 @@
-import {
-  IProduct,
-  IProductVariant,
-} from '@/features/pricing/interfaces/price.interface'
+import { IProduct } from '@/features/pricing/interfaces/price.interface'
 import { SubscriptionStatusEnum } from '../enum/subscription.enum'
 
 export interface ISubscription {
   _id: string
+  provider: 'lemon_squeezy' | 'dodo_payments'
   providerId: string
   providerCustomerId: number
   orderId: number
@@ -17,7 +15,6 @@ export interface ISubscription {
   endsAt: string | null
   trialEndsAt: string | null
   productId: string
-  variantId: string
   billingAnchor: number
   ownerId: string
   status: SubscriptionStatusEnum
@@ -25,7 +22,6 @@ export interface ISubscription {
   createdAt: string
   updatedAt: string
   product?: IProduct
-  variant?: IProductVariant
   quantity?: number
 }
 
