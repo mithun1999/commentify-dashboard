@@ -35,6 +35,7 @@ export interface IProviderData {
 export interface IProduct {
   _id: string
   name: string
+  sku?: string
   description?: string
   defaultDisplayPrice: string
   defaultPrice: number

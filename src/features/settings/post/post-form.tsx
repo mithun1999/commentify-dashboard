@@ -112,10 +112,10 @@ export function PostForm() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
-  // Extract base plan name (e.g., "Pro" from "Pro Monthly") and convert to lowercase
-  const basePlanName = user?.subscribedProduct?.name
-    ?.replace(/\s+(Monthly|Yearly)$/i, '')
-    .toLowerCase()
+  // Extract base plan from SKU (e.g., "premium_monthly" → "premium")
+  const basePlanName = user?.subscribedProduct?.sku
+    ?.split('_')[0]
+    ?.toLowerCase()
   const userPlan = (basePlanName as 'starter' | 'pro' | 'premium') ?? 'starter'
   const { createScrapeSetting, isCreatingScrapeSetting } =
     useCreateScrapeSettingQuery()
