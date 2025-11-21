@@ -1,4 +1,3 @@
-import { getProfileDetailsFromExtension } from '@/utils/utils'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -13,8 +12,7 @@ export function ConnectProfileCard() {
   const { linkProfile, isLinkingProfile } = useLinkProfile()
 
   const handleConnect = async () => {
-    const profileDetails = await getProfileDetailsFromExtension()
-    linkProfile(profileDetails)
+    await linkProfile()
   }
 
   return (

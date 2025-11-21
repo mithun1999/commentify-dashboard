@@ -72,6 +72,12 @@ export function LinkedInStep() {
       )
       if (!profileDetails || !hasName) return
 
+      // Check if public identifier is available before proceeding
+      if (!profileDetails?.publicIdentifier) {
+        toast.error('Please log in to LinkedIn first to continue')
+        return
+      }
+
       setExtensionProfileData(profileDetails)
       markStepCompleted('linkedin')
       updateData({
@@ -108,28 +114,38 @@ export function LinkedInStep() {
         )
       }
     }
-  }, [user?.metadata?.onboarding, updateData, markStepCompleted, linkProfile])
+  }, [
+    user?.metadata?.onboarding,
+    updateData,
+    markStepCompleted,
+    linkProfile,
+    posthog,
+  ])
 
   const handleLinking = async () => {
-    // If no profile data found, redirect to LinkedIn
-    if (!extensionProfileData) {
-      posthog?.capture('onboarding_linkedin_connect_clicked', {
-        hasExtensionProfileData: false,
-      })
-      window.open('https://linkedin.com/', '_blank')
-      return
-    }
-
     setIsLinking(true)
     try {
-      posthog?.capture('onboarding_linkedin_connect_clicked', {
-        hasExtensionProfileData: true,
-      })
-      // Link the profile (data already collected)
-      if (!hasLinkedRef.current) {
-        hasLinkedRef.current = true
-        await linkProfile(extensionProfileData)
-        posthog?.capture('onboarding_linkedin_link_success')
+      // If we have profile data, use it. Otherwise, linkProfile will fetch it.
+      if (extensionProfileData) {
+        posthog?.capture('onboarding_linkedin_connect_clicked', {
+          hasExtensionProfileData: true,
+        })
+
+        if (!hasLinkedRef.current) {
+          hasLinkedRef.current = true
+          await linkProfile(extensionProfileData)
+          posthog?.capture('onboarding_linkedin_link_success')
+        }
+      } else {
+        posthog?.capture('onboarding_linkedin_connect_clicked', {
+          hasExtensionProfileData: false,
+        })
+
+        if (!hasLinkedRef.current) {
+          hasLinkedRef.current = true
+          await linkProfile()
+          posthog?.capture('onboarding_linkedin_link_success')
+        }
       }
     } catch (error) {
       console.error('Error linking profile:', error)

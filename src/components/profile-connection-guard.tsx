@@ -1,7 +1,5 @@
 // no explicit React import needed
-import { toast } from 'sonner'
 import { useProfileStore } from '@/stores/profile.store'
-import { getProfileDetailsFromExtension } from '@/utils/utils'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,12 +19,7 @@ export function ProfileConnectionGuard() {
     activeProfile?.status === ProfileStatusEnum.ACTION_REQUIRED
 
   const handleReconnect = async () => {
-    try {
-      const profileDetails = await getProfileDetailsFromExtension()
-      linkProfile(profileDetails)
-    } catch (error) {
-      toast.error('Failed to reconnect LinkedIn profile')
-    }
+    await linkProfile()
   }
 
   return (

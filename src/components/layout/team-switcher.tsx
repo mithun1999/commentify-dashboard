@@ -5,7 +5,6 @@ import { ChevronsUpDown, Plus, Trash2 } from 'lucide-react'
 // import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
 // import { useAuthStore } from '@/stores/auth.store'
-import { getProfileDetailsFromExtension } from '@/utils/utils'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -54,8 +53,7 @@ export function TeamSwitcher() {
   const handleLinking = async () => {
     if (!canConnectMultipleProfiles) return
     setIsLinking(true)
-    const profileDetails = await getProfileDetailsFromExtension()
-    await linkProfile(profileDetails)
+    await linkProfile()
     setIsLinking(false)
   }
 

@@ -1,8 +1,13 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { envConfig } from '@/config/env.config'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
+import {
+  checkIsExtensionInstalled,
+  getProfileDetailsFromExtension,
+} from '@/utils/utils'
 import { updateOnboardingStatus } from '@/features/auth/api/user.api'
 import {
   deleteProfile,
@@ -10,7 +15,11 @@ import {
   getLinkedInStats,
   linkProfile,
 } from '../api/profile.api'
-import { ILinkedInStats, IProfile } from '../interface/profile.interface'
+import {
+  ILinkedInStats,
+  IProfile,
+  IProfileResponseFromExtension,
+} from '../interface/profile.interface'
 
 export enum ProfileQueryEnum {
   GET_ALL_PROFILE = 'get-all-profile',
@@ -94,7 +103,55 @@ export const useLinkProfile = (isOnboardingStep: boolean = false) => {
     },
   })
 
-  return { linkProfile: mutate, isLinkingProfile: isPending }
+  const linkProfileWithValidation = async (
+    profileData?: IProfileResponseFromExtension
+  ) => {
+    try {
+      // If profile data is provided, use it directly (for onboarding flow)
+      if (profileData) {
+        // Validate public identifier
+        if (!profileData.publicIdentifier) {
+          toast.error('Please log in to LinkedIn first to continue')
+          window.open('https://www.linkedin.com', '_blank')
+          return
+        }
+        mutate(profileData)
+        return
+      }
+
+      // Otherwise, fetch from extension (for connect/reconnect flows)
+      // First check if extension is installed
+      const isExtensionInstalled = await checkIsExtensionInstalled(
+        envConfig.chromeExtensionId,
+        envConfig.chromeExtensionIconUrl
+      )
+
+      if (!isExtensionInstalled) {
+        toast.error('Commentify extension is not installed', {
+          description: 'Please install the Chrome extension to continue.',
+        })
+        window.open(envConfig.extensionUrl, '_blank')
+        return
+      }
+
+      // Then get profile details
+      const profileDetails = await getProfileDetailsFromExtension()
+
+      // Finally check if public identifier is available
+      if (!profileDetails.publicIdentifier) {
+        toast.error('Please log in to LinkedIn first to continue')
+        window.open('https://www.linkedin.com', '_blank')
+        return
+      }
+
+      mutate(profileDetails)
+    } catch (error) {
+      console.error('Error linking profile:', error)
+      toast.error('Failed to link profile. Please try again.')
+    }
+  }
+
+  return { linkProfile: linkProfileWithValidation, isLinkingProfile: isPending }
 }
 
 export const useGetLinkedInStats = () => {
