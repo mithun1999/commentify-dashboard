@@ -79,11 +79,11 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
   const { data: user } = useGetUserQuery()
-  const userPlan =
-    (user?.subscribedProduct?.name?.toLowerCase() as
-      | 'starter'
-      | 'pro'
-      | 'premium') ?? 'starter'
+  // Extract base plan name (e.g., "Pro" from "Pro Monthly") and convert to lowercase
+  const basePlanName = user?.subscribedProduct?.name
+    ?.replace(/\s+(Monthly|Yearly)$/i, '')
+    .toLowerCase()
+  const userPlan = (basePlanName as 'starter' | 'pro' | 'premium') ?? 'starter'
   const { createCommentSetting, isCreatingCommentSetting } =
     useCreateCommentSettingQuery()
   const { updateCommentSetting, isUpdatingCommentSetting } =
