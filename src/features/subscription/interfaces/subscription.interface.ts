@@ -67,3 +67,5 @@ export interface ILsSubscription {
     test_mode: boolean
   }
 }
+
+export type PaymentProvider = 'lemon_squeezy' | 'dodo_payments'

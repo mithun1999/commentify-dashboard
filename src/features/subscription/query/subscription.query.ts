@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
-import { QueryService } from '@/services/query.service'
 import { toast } from 'sonner'
 import type { IUser } from '@/features/auth/interface/user.interface'
 import { UserQueryEnum } from '@/features/auth/query/user.query'
@@ -19,13 +18,19 @@ export enum SubscriptionQueryEnum {
 
 export const useUpdateSubscriptionPlan = () => {
   const router = useRouter()
-  const queryClient = QueryService.getQueryClient()
+  const queryClient = useQueryClient()
 
   const { mutate, isPending } = useMutation({
     mutationFn: upgradeDowngradeSubscription,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [UserQueryEnum.GET_USER] })
-      router.navigate({ to: '/pricing' })
+      queryClient.invalidateQueries({
+        queryKey: [UserQueryEnum.GET_USER],
+      })
+
+      toast.success(
+        'Subscription plan updated! Changes will be reflected shortly.'
+      )
+      router.navigate({ to: '/billing' })
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { paymentConfig } from '@/config/payment.config'
 import { Loader2 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
@@ -11,6 +12,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { PaymentProvider } from '../subscription/interfaces/subscription.interface'
 import {
   useCreateCheckoutUrl,
   useUpdateSubscriptionPlan,
@@ -43,8 +45,17 @@ export default function Pricing() {
     }
   }
 
+  const handleCheckoutUrl = (url: string) => {
+    const provider = paymentConfig.defaultPaymentProvider as PaymentProvider
+    if (provider === 'lemon_squeezy') {
+      handleOpenLsModal(url)
+    } else if (provider === 'dodo_payments') {
+      window.location.href = url
+    }
+  }
+
   const { createCheckoutUrl, isCreatingCheckoutUrl } = useCreateCheckoutUrl({
-    cb: handleOpenLsModal,
+    cb: handleCheckoutUrl,
   })
 
   const updatedPlans: IDisplayProduct[] = useMemo(() => {
@@ -111,10 +122,14 @@ export default function Pricing() {
       planName,
       chargeType,
     })
-    if (user?.subscription) {
-      updateSubscriptionPlan({ productId, provider: 'lemon_squeezy' })
+    if (user?.status === UserSubscriptionStatus.ACTIVE) {
+      updateSubscriptionPlan({ productId })
     } else {
-      createCheckoutUrl({ productId, provider: 'lemon_squeezy', embed: false })
+      createCheckoutUrl({
+        productId,
+        provider: paymentConfig.defaultPaymentProvider as PaymentProvider,
+        embed: false,
+      })
     }
   }
 

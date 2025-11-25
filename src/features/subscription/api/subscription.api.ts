@@ -1,5 +1,8 @@
 import { axiosInstance } from '@/utils/axios.util'
-import { ILsSubscription } from '../interfaces/subscription.interface'
+import {
+  ILsSubscription,
+  PaymentProvider,
+} from '../interfaces/subscription.interface'
 
 export async function upgradeDowngradeSubscription(payload: {
   productId: string
@@ -15,7 +18,7 @@ export async function upgradeDowngradeSubscription(payload: {
 
 export async function createCheckoutUrl(payload: {
   productId: string
-  provider: 'lemon_squeezy' | 'dodo_payments'
+  provider: PaymentProvider
   embed?: boolean
   quantity?: number
   email?: string

@@ -5,6 +5,10 @@ export async function getUser() {
   const { data } = await axiosInstance({
     method: 'GET',
     url: `/user/me`,
+    headers: {
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
   })
   return data as IUser
 }
