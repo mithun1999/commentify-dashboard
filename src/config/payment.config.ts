@@ -1,3 +1,3 @@
 export const paymentConfig = {
-  defaultPaymentProvider: 'dodo_payments',
+  defaultPaymentProvider: 'lemon_squeezy',
 }
