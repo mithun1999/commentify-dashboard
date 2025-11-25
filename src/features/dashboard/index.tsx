@@ -54,13 +54,23 @@ export default function Dashboard() {
     if (typeof n === 'string') {
       const s = n.trim()
       if (s === '') return '--'
-      return s
+      const parsed = Number(s)
+      if (!Number.isFinite(parsed)) return s
+      n = parsed
     }
     const num = Number(n)
     if (!Number.isFinite(num)) return '--'
-    // Round to nearest integer for percentages
     const rounded = Math.round(num)
-    return `${rounded > 0 ? '+' : ''}${rounded}%`
+    if (rounded === 0) return '0%'
+
+    const compact = Intl.NumberFormat('en', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    })
+      .format(Math.abs(rounded))
+      .toLowerCase()
+
+    return `${rounded > 0 ? '+' : '-'}${compact}%`
   }
 
   // Followers (main)
