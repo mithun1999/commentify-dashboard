@@ -25,7 +25,30 @@ export default function Dashboard() {
   const { data: user } = useGetUserQuery()
 
   // Formatting helpers
-  const formatNumber = new Intl.NumberFormat('en-US')
+  const formatNumber = (n?: number | string | null) => {
+    if (n === undefined || n === null) return '--'
+    if (typeof n === 'string') {
+      const s = n.trim()
+      if (s === '') return '--'
+      const num = Number(s)
+      if (!Number.isFinite(num)) return '--'
+      n = num
+    }
+    const num = Number(n)
+    if (!Number.isFinite(num)) return '--'
+
+    // Round the number first
+    const rounded = Math.round(num)
+
+    // Use Intl.NumberFormat with compact notation
+    return Intl.NumberFormat('en', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    })
+      .format(rounded)
+      .toLowerCase()
+  }
+
   const formatPercent = (n?: number | string | null) => {
     if (n === undefined || n === null) return '--'
     if (typeof n === 'string') {
@@ -35,9 +58,9 @@ export default function Dashboard() {
     }
     const num = Number(n)
     if (!Number.isFinite(num)) return '--'
-    return `${num > 0 ? '+' : ''}${new Intl.NumberFormat('en-US', {
-      maximumFractionDigits: 2,
-    }).format(num)}%`
+    // Round to nearest integer for percentages
+    const rounded = Math.round(num)
+    return `${rounded > 0 ? '+' : ''}${rounded}%`
   }
 
   // Followers (main)
@@ -238,10 +261,7 @@ export default function Dashboard() {
                               </CardHeader>
                               <CardContent>
                                 <div className='text-2xl font-bold'>
-                                  {followersValue !== undefined &&
-                                  followersValue !== null
-                                    ? formatNumber.format(followersValue)
-                                    : '--'}
+                                  {formatNumber(followersValue)}
                                 </div>
                                 <p className='text-muted-foreground text-xs'>
                                   {formatPercent(followersPercent)}{' '}
@@ -258,10 +278,7 @@ export default function Dashboard() {
                               </CardHeader>
                               <CardContent>
                                 <div className='text-2xl font-bold'>
-                                  {weeklyFollowersValue !== undefined &&
-                                  weeklyFollowersValue !== null
-                                    ? formatNumber.format(weeklyFollowersValue)
-                                    : '--'}
+                                  {formatNumber(weeklyFollowersValue)}
                                 </div>
                                 <p className='text-muted-foreground text-xs'>
                                   {formatPercent(weeklyFollowersPercent)} vs
@@ -282,10 +299,7 @@ export default function Dashboard() {
                               </CardHeader>
                               <CardContent>
                                 <div className='text-2xl font-bold'>
-                                  {profileViewsValue !== undefined &&
-                                  profileViewsValue !== null
-                                    ? formatNumber.format(profileViewsValue)
-                                    : '--'}
+                                  {formatNumber(profileViewsValue)}
                                 </div>
                                 <p className='text-muted-foreground text-xs'>
                                   {formatPercent(profileViewsPercent)}{' '}
@@ -302,12 +316,7 @@ export default function Dashboard() {
                               </CardHeader>
                               <CardContent>
                                 <div className='text-2xl font-bold'>
-                                  {weeklyProfileViewsValue !== undefined &&
-                                  weeklyProfileViewsValue !== null
-                                    ? formatNumber.format(
-                                        weeklyProfileViewsValue
-                                      )
-                                    : '--'}
+                                  {formatNumber(weeklyProfileViewsValue)}
                                 </div>
                                 <p className='text-muted-foreground text-xs'>
                                   {formatPercent(weeklyProfileViewsPercent)} vs
@@ -331,8 +340,9 @@ export default function Dashboard() {
                           </CardHeader>
                           <CardContent>
                             <div className='text-2xl font-bold'>
-                              {linkedInStats?.postCommentStats?.scheduled ??
-                                '--'}
+                              {formatNumber(
+                                linkedInStats?.postCommentStats?.scheduled
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -345,7 +355,9 @@ export default function Dashboard() {
                           </CardHeader>
                           <CardContent>
                             <div className='text-2xl font-bold'>
-                              {linkedInStats?.postCommentStats?.pending ?? '--'}
+                              {formatNumber(
+                                linkedInStats?.postCommentStats?.pending
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -358,8 +370,9 @@ export default function Dashboard() {
                           </CardHeader>
                           <CardContent>
                             <div className='text-2xl font-bold'>
-                              {linkedInStats?.postCommentStats?.completed ??
-                                '--'}
+                              {formatNumber(
+                                linkedInStats?.postCommentStats?.completed
+                              )}
                             </div>
                           </CardContent>
                         </Card>
