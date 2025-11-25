@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { usePostHog } from 'posthog-js/react'
 import { IconFidgetSpinner } from '@tabler/icons-react'
+import { usePostHog } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -94,9 +94,9 @@ export default function Dashboard() {
   const createdAtDate = activeProfile?.createdAt
     ? new Date(activeProfile.createdAt as unknown as string)
     : null
-  const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000
-  const isOlderThan2Days = createdAtDate
-    ? Date.now() - createdAtDate.getTime() >= TWO_DAYS_MS
+  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000
+  const isOlderThan3Days = createdAtDate
+    ? Date.now() - createdAtDate.getTime() >= THREE_DAYS_MS
     : false
 
   const hasProfileViewStats = Boolean(linkedInStats?.profileViewerStats)
@@ -125,7 +125,9 @@ export default function Dashboard() {
             <Button variant='destructive' size='sm' asChild>
               <Link
                 to='/pricing'
-                onClick={() => posthog?.capture('upgrade_plan_dashboard_clicked')}
+                onClick={() =>
+                  posthog?.capture('upgrade_plan_dashboard_clicked')
+                }
               >
                 Upgrade
               </Link>
@@ -165,7 +167,7 @@ export default function Dashboard() {
                   <Card className='w-full'>
                     <CardContent>
                       <div className='py-3 text-center text-sm'>
-                        {isOlderThan2Days ? (
+                        {isOlderThan3Days ? (
                           <>
                             <p className='text-md font-bold'>
                               😕 Something’s not adding up…
@@ -184,8 +186,8 @@ export default function Dashboard() {
                               ⏳ Just warming things up…
                             </p>
                             <p className='text-muted-foreground mt-3 text-sm'>
-                              It usually takes up to 48 hours for stats to roll
-                              in.
+                              It usually takes up to 24 hours for Commentify to
+                              auto comment on LinkedIn posts.
                               <br />
                               Hang tight - good stuff’s on the way!
                             </p>
