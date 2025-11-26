@@ -1,6 +1,15 @@
 'use client'
 
-import { Loader2, ExternalLink, CheckCircle2, XCircle } from 'lucide-react'
+import { Crisp } from 'crisp-sdk-web'
+import {
+  Loader2,
+  ExternalLink,
+  CheckCircle2,
+  XCircle,
+  MessageSquare,
+  Mail,
+} from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Header } from '@/components/layout/header'
@@ -17,6 +26,14 @@ export default function Billing() {
     user,
   })
 
+  const handleChatSupportClick = () => {
+    if (Crisp.isCrispInjected()) {
+      Crisp.chat.open()
+    } else {
+      window.open('mailto:support@commentify.co', '_blank')
+    }
+  }
+
   return (
     <>
       <Header fixed>
@@ -30,6 +47,33 @@ export default function Billing() {
         <div className='mb-2 flex items-center justify-between'>
           <h2 className='text-2xl font-bold tracking-tight'>Billing</h2>
         </div>
+
+        <Alert className='border-primary/40 bg-primary/5 mt-4'>
+          <AlertTitle>Need help with billing?</AlertTitle>
+          <AlertDescription className='text-sm'>
+            <p>
+              If you face any issues, reach out via chat or email us at{' '}
+              <a
+                href='mailto:support@commentify.co'
+                className='text-primary font-medium underline underline-offset-2'
+              >
+                support@commentify.co
+              </a>
+              .
+            </p>
+            <div className='flex flex-wrap items-center gap-2'>
+              <Button
+                size='sm'
+                variant='secondary'
+                className='gap-2'
+                onClick={handleChatSupportClick}
+              >
+                <MessageSquare className='h-4 w-4' />
+                Chat with us
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
 
         <div className='mt-10 grid gap-6 md:grid-cols-2'>
           <Card>
