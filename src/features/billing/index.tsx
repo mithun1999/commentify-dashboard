@@ -2,12 +2,11 @@
 
 import { Crisp } from 'crisp-sdk-web'
 import {
-  Loader2,
-  ExternalLink,
   CheckCircle2,
-  XCircle,
+  ExternalLink,
+  Loader2,
   MessageSquare,
-  Mail,
+  XCircle,
 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -59,7 +58,7 @@ export default function Billing() {
               >
                 support@commentify.co
               </a>
-              .
+                .
             </p>
             <div className='flex flex-wrap items-center gap-2'>
               <Button
