@@ -2,6 +2,7 @@
 
 import { Crisp } from 'crisp-sdk-web'
 import {
+  AlertCircle,
   CheckCircle2,
   ExternalLink,
   Loader2,
@@ -25,6 +26,9 @@ export default function Billing() {
     user,
   })
 
+  const searchParams = new URLSearchParams(window.location.search)
+  const paymentStatus = searchParams.get('status')
+
   const handleChatSupportClick = () => {
     if (Crisp.isCrispInjected()) {
       Crisp.chat.open()
@@ -46,6 +50,28 @@ export default function Billing() {
         <div className='mb-2 flex items-center justify-between'>
           <h2 className='text-2xl font-bold tracking-tight'>Billing</h2>
         </div>
+
+        {paymentStatus === 'success' && (
+          <Alert className='mt-4 border-green-500/40 bg-green-500/5'>
+            <CheckCircle2 className='h-4 w-4 text-green-500' />
+            <AlertTitle>Payment Successful</AlertTitle>
+            <AlertDescription>
+              Your payment was successful. We’re updating your subscription…
+              this might take a few minutes.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {paymentStatus === 'failed' && (
+          <Alert variant='destructive' className='mt-4'>
+            <AlertCircle className='h-4 w-4' />
+            <AlertTitle>Payment Failed</AlertTitle>
+            <AlertDescription>
+              Your payment could not be processed. Please try again. If you
+              continue to experience issues, please contact support.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Alert className='border-primary/40 bg-primary/5 mt-4'>
           <AlertTitle>Need help with billing?</AlertTitle>
