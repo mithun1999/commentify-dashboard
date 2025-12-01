@@ -51,7 +51,7 @@ export default function Billing() {
           <h2 className='text-2xl font-bold tracking-tight'>Billing</h2>
         </div>
 
-        {paymentStatus === 'success' && (
+        {paymentStatus === 'active' && (
           <Alert className='mt-4 border-green-500/40 bg-green-500/5'>
             <CheckCircle2 className='h-4 w-4 text-green-500' />
             <AlertTitle>Payment Successful</AlertTitle>
