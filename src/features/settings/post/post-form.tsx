@@ -175,7 +175,7 @@ export function PostForm() {
   const rulesValue = form.watch('rules') || ''
 
   // Build LinkedIn search URL for selected keywords
-  const liSearchUrl = buildSearchUrl(selectedKeywords)
+  const liSearchUrl = buildSearchUrl(selectedKeywords, authorTitles)
 
   const populateFromSetting = () => {
     if (!activeProfile?.setting) return
@@ -902,6 +902,13 @@ export function PostForm() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            <p className='text-muted-foreground mt-2 flex gap-2 text-sm'>
+              <span className='border-border mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border'>
+                <Info className='text-muted-foreground h-3 w-3' />
+              </span>
+              This filter currently provides around 30-40% accuracy. We&apos;re
+              actively improving it to deliver even better results.
+            </p>
           </div>
         </UnlockWrapper>
 
