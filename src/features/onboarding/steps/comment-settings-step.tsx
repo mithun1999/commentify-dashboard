@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  AlertCircle,
 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
@@ -84,6 +85,7 @@ export function CommentSettingsStep() {
   const form = useForm<CommentSettingsValues>({
     resolver: zodResolver(commentSettingsSchema),
     defaultValues,
+    mode: 'onChange',
   })
 
   // Form values are now handled by FormField components
@@ -128,8 +130,13 @@ export function CommentSettingsStep() {
             <FormField
               control={form.control}
               name='aboutProfile'
-              render={({ field }) => (
-                <FormItem className='space-y-3'>
+              render={({ field }) => {
+                const remainingChars = Math.max(
+                  0,
+                  500 - (field.value?.length ?? 0)
+                )
+                return (
+                  <FormItem className='space-y-3'>
                   <div className='flex items-center gap-2'>
                     <MessageSquare className='text-muted-foreground h-4 w-4' />
                     <FormLabel className='text-foreground font-medium'>
@@ -164,9 +171,20 @@ export function CommentSettingsStep() {
                   <span className='text-muted-foreground text-xs'>
                     This helps our AI understand your voice and expertise
                   </span>
-                  <FormMessage />
-                </FormItem>
-              )}
+                    <p className='text-muted-foreground text-xs'>
+                      {remainingChars} characters left
+                    </p>
+                  <FormMessage>
+                    {form.formState.errors.aboutProfile && (
+                      <div className='text-destructive flex items-center gap-2 text-sm'>
+                        <AlertCircle className='h-4 w-4' />
+                        {form.formState.errors.aboutProfile.message}
+                      </div>
+                    )}
+                  </FormMessage>
+                  </FormItem>
+                )
+              }}
             />
 
             {/* Comment Settings Row - Collapsible */}

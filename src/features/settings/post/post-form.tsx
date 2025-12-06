@@ -74,7 +74,12 @@ const notificationsFormSchema = z.object({
   skipJobUpdatePosts: z.boolean(),
   skipArticlePosts: z.boolean(),
   autoSchedule: z.boolean(),
-  rules: z.string().optional(),
+  rules: z
+    .string()
+    .max(100, {
+      message: 'Rules must be at most 100 characters.',
+    })
+    .optional(),
   startHour: z.enum([
     '01',
     '02',
@@ -167,6 +172,7 @@ export function PostForm() {
   const selectedKeywords = form.watch('keywords') || []
   const authorTitles = form.watch('authorTitles') || []
   const selectedGeographies = form.watch('geography') || []
+  const rulesValue = form.watch('rules') || ''
 
   // Build LinkedIn search URL for selected keywords
   const liSearchUrl = buildSearchUrl(selectedKeywords)
@@ -995,8 +1001,18 @@ export function PostForm() {
           <Textarea
             placeholder='Set a rule, e.g., Skip posts with hashtags like #ad or #sponsored.'
             rows={2}
+            maxLength={100}
             {...form.register('rules')}
           />
+          <p className='text-muted-foreground mt-1 text-xs'>
+            {Math.max(0, 100 - rulesValue.length)} characters left
+          </p>
+          {form.formState.errors.rules?.message && (
+            <div className='text-destructive mt-2 flex items-center gap-2 text-sm'>
+              <AlertCircle className='h-4 w-4' />
+              {form.formState.errors.rules.message as string}
+            </div>
+          )}
         </div>
 
         <Button

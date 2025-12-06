@@ -15,6 +15,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--normal-border': 'var(--border)',
         } as React.CSSProperties
       }
+      duration={5000}
       {...props}
     />
   )

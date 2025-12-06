@@ -51,15 +51,25 @@ import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 
 const commentSettingsSchema = z.object({
-  about: z.string().min(10, {
-    message: 'Profile description must be at least 10 characters.',
-  }),
+  about: z
+    .string()
+    .min(10, {
+      message: 'Profile description must be at least 10 characters.',
+    })
+    .max(500, {
+      message: 'Profile description must be at most 500 characters.',
+    }),
   length: z.enum(['short', 'medium', 'long']),
   turnOnEmoji: z.boolean(),
   turnOnExclamations: z.boolean(),
   turnOnHashtags: z.boolean(),
   tagAuthor: z.boolean(),
-  rules: z.string().optional(),
+  rules: z
+    .string()
+    .max(150, {
+      message: 'Rules must be at most 150 characters.',
+    })
+    .optional(),
 })
 
 type CommentSettingsValues = z.infer<typeof commentSettingsSchema>
@@ -179,8 +189,10 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
         <FormField
           control={form.control}
           name='about'
-          render={({ field }) => (
-            <FormItem>
+          render={({ field }) => {
+            const remainingChars = Math.max(0, 500 - (field.value?.length ?? 0))
+            return (
+              <FormItem>
               <div className='mb-2 flex items-center gap-2'>
                 <MessageSquare className='text-muted-foreground h-4 w-4' />
                 <FormLabel className='text-foreground font-semibold'>
@@ -209,9 +221,13 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                 <Textarea
                   placeholder="I'm a digital marketer... I help people... I've helped 50+ founders to... After many failures, I learned that..."
                   className='min-h-[80px]'
+                  maxLength={500}
                   {...field}
                 />
               </FormControl>
+                <p className='text-muted-foreground mt-1 text-xs'>
+                  {remainingChars} characters left
+                </p>
               <FormMessage>
                 {form.formState.errors.about && (
                   <div className='text-destructive flex items-center gap-2 text-sm'>
@@ -220,8 +236,9 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                   </div>
                 )}
               </FormMessage>
-            </FormItem>
-          )}
+              </FormItem>
+            )
+          }}
         />
 
         {/* Comment Settings Section */}
@@ -287,9 +304,16 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
             <FormField
               control={form.control}
               name='rules'
-              render={({ field }) => (
-                <UnlockWrapper isUnlocked={shouldDisplayCommentRulesSetting}>
-                  <FormItem>
+              render={({ field }) => {
+                const remainingChars = Math.max(
+                  0,
+                  150 - (field.value?.length ?? 0)
+                )
+                return (
+                  <UnlockWrapper
+                    isUnlocked={shouldDisplayCommentRulesSetting}
+                  >
+                    <FormItem>
                     <div className='mb-2 flex items-center gap-2'>
                       <Hash className='text-muted-foreground h-4 w-4' />
                       <FormLabel className='text-foreground font-semibold'>
@@ -315,10 +339,14 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                     <FormControl>
                       <Textarea
                         placeholder="Write additional rules, e.g., Avoid phrases like 'Great post' or 'Nice work."
+                        maxLength={150}
                         {...field}
                         disabled={!shouldDisplayCommentRulesSetting}
                       />
                     </FormControl>
+                    <p className='text-muted-foreground mt-1 text-xs'>
+                      {remainingChars} characters left
+                    </p>
                     <FormMessage>
                       {form.formState.errors.rules && (
                         <div className='text-destructive flex items-center gap-2 text-sm'>
@@ -327,9 +355,10 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
                         </div>
                       )}
                     </FormMessage>
-                  </FormItem>
-                </UnlockWrapper>
-              )}
+                    </FormItem>
+                  </UnlockWrapper>
+                )
+              }}
             />
           </div>
         </div>
