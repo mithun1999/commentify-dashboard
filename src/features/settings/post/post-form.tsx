@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Link } from '@tanstack/react-router'
 import { planSetting } from '@/config/plan-setting.config'
 import {
   AlertCircle,
@@ -643,22 +644,42 @@ export function PostForm() {
           control={form.control}
           name='autoSchedule'
           render={({ field }) => (
-            <FormItem className='flex max-w-xl flex-row items-center justify-between rounded-lg border p-4'>
-              <div className='space-y-0.5'>
-                <FormLabel className='text-sm font-semibold'>
-                  Post comments automatically
-                </FormLabel>
-                <FormDescription>
-                  Enable to automatically schedule comments once posts are found
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
+            <>
+              <FormItem
+                className={`flex max-w-xl flex-row items-center justify-between rounded-lg border p-4 ${!field.value ? '[margin-block-end:0]' : ''}`}
+              >
+                <div className='space-y-0.5'>
+                  <FormLabel className='text-sm font-semibold'>
+                    Post comments automatically
+                  </FormLabel>
+                  <FormDescription>
+                    Enable to automatically schedule comments once posts are
+                    found
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+              {!field.value && (
+                <p className='text-muted-foreground mt-2 flex gap-2 text-xs sm:text-sm'>
+                  <span className='border-border mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border'>
+                    <Info className='text-muted-foreground h-3 w-3' />
+                  </span>
+                  You&apos;ll find posts waiting for approval on the
+                  <Link
+                    to='/history'
+                    className='text-primary font-medium hover:underline'
+                  >
+                    History
+                  </Link>
+                  page once Commentify starts working.
+                </p>
+              )}
+            </>
           )}
         />
 
