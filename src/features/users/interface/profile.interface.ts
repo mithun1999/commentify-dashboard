@@ -32,6 +32,7 @@ export interface ILinkProfilePayload extends IProfileResponseFromExtension {}
 
 export interface ILinkedInStats {
   followersStats: {
+    totalFollowers: number
     followersGrowth: number
     followersGrowthPercent: number
     followersGrowthSinceStartedUsingThisApp: number

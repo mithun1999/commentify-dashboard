@@ -78,7 +78,8 @@ export default function Dashboard() {
   const followersHas3m = typeof fs?.followersGrowthSinceThreeMonths === 'number'
   const followersHasSinceApp =
     typeof fs?.followersGrowthSinceStartedUsingThisApp === 'number'
-  const followersValue = followersHas3m
+  const followersValue = fs?.totalFollowers
+  const followersGrowthValue = followersHas3m
     ? fs?.followersGrowthSinceThreeMonths
     : followersHasSinceApp
       ? fs?.followersGrowthSinceStartedUsingThisApp
@@ -89,10 +90,10 @@ export default function Dashboard() {
       ? fs?.followersGrowthSinceStartedUsingThisAppPercent
       : fs?.followersGrowthPercent
   const followersSuffix = followersHas3m
-    ? 'in the last 3 months'
+    ? 'since 3 months'
     : followersHasSinceApp
       ? 'since Commentify'
-      : 'in the last 3 months'
+      : 'since 3 months'
 
   // Followers (weekly)
   const weeklyFollowersValue = fs?.weeklyFollowersGrowth
@@ -274,8 +275,7 @@ export default function Dashboard() {
                                   {formatNumber(followersValue)}
                                 </div>
                                 <p className='text-muted-foreground text-xs'>
-                                  {formatPercent(followersPercent)}{' '}
-                                  {followersSuffix}
+                                  {formatNumber(followersGrowthValue)} Followers {followersSuffix} ({formatPercent(followersPercent)})
                                 </p>
                               </CardContent>
                             </Card>
