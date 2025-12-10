@@ -1,6 +1,11 @@
 import { useEffect } from 'react'
 import Cookies from 'js-cookie'
-import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Outlet,
+  useNavigate,
+  useLocation,
+} from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
 import { cn } from '@/lib/utils'
@@ -24,6 +29,7 @@ export const Route = createFileRoute('/_authenticated')({
 
 function RouteComponent() {
   const navigate = useNavigate()
+  const location = useLocation()
   const defaultOpen = Cookies.get('sidebar_state') !== 'false'
 
   const isSignedIn = useAuthStore((state) => state?.session?.user?.id)
@@ -36,6 +42,13 @@ function RouteComponent() {
     isFetched: isProfilesFetched,
   } = useGetAllProfileQuery()
   const activeProfile = useProfileStore((s) => s.activeProfile)
+
+  // Define core functionality pages that require profile connection
+  const isCoreFeaturePage = () => {
+    const pathname = location.pathname
+    const nonCorePages = ['/pricing', '/billing']
+    return !nonCorePages.some((page) => pathname.startsWith(page))
+  }
 
   // Handle onboarding redirection
   useOnboardingRedirect()
@@ -79,7 +92,8 @@ function RouteComponent() {
         >
           {!isLoadingProfiles &&
           isProfilesFetched &&
-          (!profiles || profiles.length === 0) ? (
+          (!profiles || profiles.length === 0) &&
+          isCoreFeaturePage() ? (
             <ConnectProfileCard />
           ) : (
             <Outlet />
