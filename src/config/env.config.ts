@@ -12,7 +12,7 @@ export const envConfig = {
     '517b7dc4-a006-4383-afcc-4c3e3416cd05',
   chromeExtensionId:
     (import.meta.env.VITE_CHROME_EXTENSION_ID as string) ||
-    'efmnkiklpnaekhleodlncoembopfmjca',
+    'jjekanpbdkgohheighmpojgepnemgmlm',
   chromeExtensionIconUrl:
     (import.meta.env.VITE_CHROME_EXTENSION_ICON_URL as string) || 'icon-34.png',
   postHogKey:
