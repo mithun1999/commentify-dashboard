@@ -1,11 +1,19 @@
 import { Link } from '@tanstack/react-router'
+import { IconInfoCircle, IconMessage } from '@tabler/icons-react'
+import { Crisp } from 'crisp-sdk-web'
 import commentifyPreview from '@/assets/images/auth-preview.svg'
 import commentifyLogo from '@/assets/images/logo.svg'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { testimonialPeoples } from '@/components/layout/data/auth-page-data'
 import AuthWrapper from '../auth-wrapper'
 import { SignUpForm } from './components/sign-up-form'
 
 export default function SignUp() {
+  const handleTalkToFounder = () => {
+    Crisp.chat.open()
+  }
+
   return (
     <AuthWrapper>
       <div className='relative container grid h-svh flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0'>
@@ -46,7 +54,7 @@ export default function SignUp() {
             <blockquote className='space-y-2'>
               <p className='text-lg'>
                 &ldquo;Clients started telling me they saw my name everywhere.
-                That’s when I knew commentify was doing its job
+                That's when I knew commentify was doing its job
                 perfectly.&rdquo;
               </p>
               <footer className='text-sm'>Ethan R., CMO at GrowthX</footer>
@@ -55,6 +63,24 @@ export default function SignUp() {
         </div>
         <div className='lg:p-8'>
           <div className='mx-auto flex w-full flex-col justify-center space-y-2 sm:w-[350px]'>
+            <Alert className='mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950'>
+              <IconInfoCircle className='h-4 w-4 text-blue-600 dark:text-blue-400' />
+              <AlertTitle className='text-blue-900 dark:text-blue-100'>
+                Not Accepting New Users
+              </AlertTitle>
+              <AlertDescription className='text-blue-800 dark:text-blue-200'>
+                We're currently not onboarding new users.
+                <Button
+                  variant='link'
+                  className='h-auto gap-1 p-0 text-blue-600 dark:text-blue-400'
+                  onClick={handleTalkToFounder}
+                >
+                  <IconMessage className='h-3 w-3' />
+                  Talk to Founder
+                </Button>
+              </AlertDescription>
+            </Alert>
+
             <div className='mb-5 flex flex-col space-y-2 text-left'>
               <h1 className='text-2xl font-semibold tracking-tight'>
                 Create an account
