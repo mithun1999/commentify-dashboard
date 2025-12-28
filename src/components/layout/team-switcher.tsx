@@ -1,6 +1,7 @@
 // src/components/team-switcher.tsx
 import { useState } from 'react'
 import { LinkedInLogoIcon } from '@radix-ui/react-icons'
+import { envConfig } from '@/config/env.config'
 import { ChevronsUpDown, Plus, Trash2 } from 'lucide-react'
 // import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
@@ -27,6 +28,7 @@ import {
 } from '@/components/ui/tooltip'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { GET_BROWSER_DETAILS, GET_COOKIES } from '@/features/users/constants/browserEvents.constant'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { IProfile } from '@/features/users/interface/profile.interface'
 import {
@@ -50,11 +52,40 @@ export function TeamSwitcher() {
   const canConnectMultipleProfiles =
     user?.subscription?.quantity && user?.subscription?.quantity > 1
 
+  const getProfileDetailsFromExtension = async (): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chromeRef: any =
+        typeof window !== 'undefined' ? (window as any).chrome : undefined
+      const runtime = chromeRef?.runtime
+      const sendMessage = runtime?.sendMessage
+
+      if (typeof sendMessage !== 'function') {
+        reject(new Error('Chrome extension runtime is not available'))
+        return
+      }
+
+      sendMessage(
+        envConfig.chromeExtensionId,
+        { type: GET_BROWSER_DETAILS, url: 'https://www.linkedin.com' },
+        (response: any) => {
+          if (runtime?.lastError) {
+            reject(runtime.lastError.message)
+          } else {
+            resolve(response)
+          }
+        }
+      )
+    })
+  }
+
   const handleLinking = async () => {
-    if (!canConnectMultipleProfiles) return
+    const details = await getProfileDetailsFromExtension()
+    console.log('details', details)
+    /*     if (!canConnectMultipleProfiles) return
     setIsLinking(true)
     await linkProfile()
-    setIsLinking(false)
+    setIsLinking(false) */
   }
 
   const handleSuccessDeleteProfile = () => {
