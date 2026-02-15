@@ -41,6 +41,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
 import { CommentLengthEnum } from '@/features/settings/enum/setting.enum'
 import { ICreateOnboardingCommentDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
@@ -81,6 +82,8 @@ export function CommentSettingsStep() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const { createOnboardingCommentSettingAsync, isCreatingOnboardingComment } =
     useCreateOnboardingCommentQuery()
+  const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
+    useUpdateOnboardingStatus()
 
   const form = useForm<CommentSettingsValues>({
     resolver: zodResolver(commentSettingsSchema),
@@ -435,14 +438,17 @@ export function CommentSettingsStep() {
 
           <OnboardingNavigation
             nextStep='/onboarding/identity'
-            loading={isCreatingOnboardingComment}
+            loading={isCreatingOnboardingComment || isUpdatingOnboardingStatus}
             onNext={async () => {
               const isValid = await form.trigger()
               if (!isValid) return false
 
               const values = form.getValues()
               const result = await onSubmit(values)
-              return Boolean(result)
+              if (!result) return false
+
+              await updateOnboardingStatusAsync({ status: 'in-progress', step: 4 })
+              return true
             }}
             currentStep='comment_settings'
           />

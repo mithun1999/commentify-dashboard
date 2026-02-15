@@ -4,15 +4,18 @@ export const envConfig = {
   appUrl: (import.meta.env.VITE_URL as string) || 'http://localhost:3000',
   openReplayProjectId:
     (import.meta.env.VITE_OPEN_REPLAY_ID as string) || '71jGSol3gtbBFlTgM5qL',
+  extensionDownloadUrl:
+    (import.meta.env.VITE_EXTENSION_DOWNLOAD_URL as string) ||
+    'https://releases.commentify.co/commentify-extension.zip',
   extensionUrl:
     (import.meta.env.VITE_EXTENSION_URL as string) ||
-    'https://chromewebstore.google.com/detail/commentify-automate-linke/efmnkiklpnaekhleodlncoembopfmjca',
+    'https://github.com/commentify/linkedin-scraper-extension#installation',
   crispApiKey:
     (import.meta.env.VITE_CRISP_API_KEY as string) ||
     '517b7dc4-a006-4383-afcc-4c3e3416cd05',
   chromeExtensionId:
     (import.meta.env.VITE_CHROME_EXTENSION_ID as string) ||
-    'efmnkiklpnaekhleodlncoembopfmjca',
+    'hanejlglhkflpoflkdjgmlldkbhbeghh',
   chromeExtensionIconUrl:
     (import.meta.env.VITE_CHROME_EXTENSION_ICON_URL as string) || 'icon-34.png',
   postHogKey:

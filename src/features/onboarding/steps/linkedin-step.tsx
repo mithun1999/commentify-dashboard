@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { envConfig } from '@/config/env.config'
 import { Linkedin, CheckCircle2, Info, Loader2 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
@@ -18,8 +17,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useGetUserQuery } from '@/features/auth/query/user.query'
-import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
+import {
+  useGetUserQuery,
+  useUpdateOnboardingStatus,
+} from '@/features/auth/query/user.query'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
 import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
@@ -30,19 +31,17 @@ import {
 
 export function LinkedInStep() {
   const posthog = usePostHog()
-  const navigate = useNavigate()
   const { updateData, markStepCompleted } = useOnboarding()
-  const { updateOnboardingStatus } = useUpdateOnboardingStatus()
   const { data: user } = useGetUserQuery()
   const { isLoading } = useGetAllProfileQuery()
   const { linkProfile, isLinkingProfile } = useLinkProfile(true)
+  const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
+    useUpdateOnboardingStatus()
   const [isExtensionInstalled, setIsExtensionInstalled] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [extensionProfileData, setExtensionProfileData] =
     useState<IProfileResponseFromExtension | null>(null)
   const hasLinkedRef = useRef(false)
-
-  console.log('extensionProfileData', extensionProfileData)
 
   const checkIfExtensionIsInstalled = async () => {
     const isInstalled = await checkIsExtensionInstalled(
@@ -153,20 +152,6 @@ export function LinkedInStep() {
       setIsLinking(false)
     }
   }
-
-  // Ensure extension is installed; otherwise redirect to step 1 (extension)
-  useEffect(() => {
-    const ensureExtensionInstalled = async () => {
-      const installed = await checkIfExtensionIsInstalled()
-      if (!installed) {
-        // Update onboarding to step 1 and mark in-progress
-        updateOnboardingStatus({ status: 'in-progress', step: 1 })
-        navigate({ to: '/onboarding/extension', replace: true })
-      }
-    }
-    ensureExtensionInstalled()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     // Auto-collect user information when component mounts
@@ -293,6 +278,11 @@ export function LinkedInStep() {
           <OnboardingNavigation
             nextStep='/onboarding/post-settings'
             currentStep='linkedin'
+            loading={isUpdatingOnboardingStatus}
+            onNext={async () => {
+              await updateOnboardingStatusAsync({ status: 'in-progress', step: 2 })
+              return true
+            }}
           />
         )}
       </OnboardingCard>

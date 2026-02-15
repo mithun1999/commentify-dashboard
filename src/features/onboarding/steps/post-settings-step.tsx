@@ -32,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
 import { ICreateOnboardingPostDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
@@ -73,6 +74,8 @@ export function PostSettingsStep() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const { createOnboardingPostSettingAsync, isCreatingOnboardingPost } =
     useCreateOnboardingPostQuery()
+  const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
+    useUpdateOnboardingStatus()
 
   const form = useForm<PostSettingsValues>({
     resolver: zodResolver(postSettingsSchema),
@@ -540,14 +543,17 @@ export function PostSettingsStep() {
 
           <OnboardingNavigation
             nextStep='/onboarding/comment-settings'
-            loading={isCreatingOnboardingPost}
+            loading={isCreatingOnboardingPost || isUpdatingOnboardingStatus}
             onNext={async () => {
               const isValid = await form.trigger()
               if (!isValid) return false
 
               const values = form.getValues()
               const result = await onSubmit(values)
-              return Boolean(result)
+              if (!result) return false
+
+              await updateOnboardingStatusAsync({ status: 'in-progress', step: 3 })
+              return true
             }}
             currentStep='post_settings'
           />
