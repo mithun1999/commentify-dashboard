@@ -1,0 +1,28 @@
+---
+description: Run dev server, apply best UX, and open app in browser when building UI changes
+globs: "**/*.tsx,**/*.jsx,**/*.css"
+alwaysApply: false
+---
+
+# UI changes: UX principles and review workflow
+
+## Best UX principles (always apply)
+
+- **Clarity**: Labels, headings, and actions are clear and unambiguous.
+- **Feedback**: Loading states, success/error toasts, and disabled states reflect what’s happening.
+- **Consistency**: Reuse existing patterns, spacing, and components; match the rest of the app.
+- **Accessibility**: Sufficient color contrast, focus states, and semantic HTML (e.g. buttons for actions, labels for inputs).
+- **Progressive disclosure**: Avoid overwhelming users; hide advanced options or show them when needed.
+- **Error prevention**: Confirm destructive actions; validate inputs with helpful messages.
+
+When building or revising UI, check the change against these and adjust before calling it done.
+
+## Review workflow
+
+1. **Run the dev server** (if not already running) from the dashboard root: `npm run dev`.
+
+2. **Open the app in the browser** using the available browser MCP (e.g. cursor-ide-browser or Playwright): navigate to the dev URL (typically `http://localhost:5173`).
+
+3. **Review the change** (snapshot, layout, behavior) and leave the tab open so the user can review.
+
+Do this after implementing UI changes; do not skip opening the browser.
