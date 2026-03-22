@@ -17,11 +17,12 @@ import { Route as OnboardingIndexImport } from './routes/onboarding/index'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
 import { Route as OnboardingPostSettingsImport } from './routes/onboarding/post-settings'
 import { Route as OnboardingOtherSettingsImport } from './routes/onboarding/other-settings'
-import { Route as OnboardingLinkedinImport } from './routes/onboarding/linkedin'
 import { Route as OnboardingIdentityImport } from './routes/onboarding/identity'
 import { Route as OnboardingExtensionImport } from './routes/onboarding/extension'
 import { Route as OnboardingDemoImport } from './routes/onboarding/demo'
+import { Route as OnboardingConnectAccountImport } from './routes/onboarding/connect-account'
 import { Route as OnboardingCommentSettingsImport } from './routes/onboarding/comment-settings'
+import { Route as OnboardingAgentTypeImport } from './routes/onboarding/agent-type'
 import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
 import { Route as errors503Import } from './routes/(errors)/503'
 import { Route as errors500Import } from './routes/(errors)/500'
@@ -41,6 +42,9 @@ import { Route as AuthenticatedHistoryIndexImport } from './routes/_authenticate
 import { Route as AuthenticatedHelpCenterIndexImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedSettingsPostImport } from './routes/_authenticated/settings/post'
 import { Route as AuthenticatedSettingsCommentsImport } from './routes/_authenticated/settings/comments'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/route'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeSettingsImport } from './routes/_authenticated/agents/$profileId/$agentType/settings'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeQueueImport } from './routes/_authenticated/agents/$profileId/$agentType/queue'
 
 // Create/Update Routes
 
@@ -79,12 +83,6 @@ const OnboardingOtherSettingsRoute = OnboardingOtherSettingsImport.update({
   getParentRoute: () => OnboardingRouteRoute,
 } as any)
 
-const OnboardingLinkedinRoute = OnboardingLinkedinImport.update({
-  id: '/linkedin',
-  path: '/linkedin',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
 const OnboardingIdentityRoute = OnboardingIdentityImport.update({
   id: '/identity',
   path: '/identity',
@@ -103,9 +101,21 @@ const OnboardingDemoRoute = OnboardingDemoImport.update({
   getParentRoute: () => OnboardingRouteRoute,
 } as any)
 
+const OnboardingConnectAccountRoute = OnboardingConnectAccountImport.update({
+  id: '/connect-account',
+  path: '/connect-account',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
 const OnboardingCommentSettingsRoute = OnboardingCommentSettingsImport.update({
   id: '/comment-settings',
   path: '/comment-settings',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OnboardingAgentTypeRoute = OnboardingAgentTypeImport.update({
+  id: '/agent-type',
+  path: '/agent-type',
   getParentRoute: () => OnboardingRouteRoute,
 } as any)
 
@@ -227,6 +237,27 @@ const AuthenticatedSettingsCommentsRoute =
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
 
+const AuthenticatedAgentsProfileIdAgentTypeRouteRoute =
+  AuthenticatedAgentsProfileIdAgentTypeRouteImport.update({
+    id: '/agents/$profileId/$agentType',
+    path: '/agents/$profileId/$agentType',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+
+const AuthenticatedAgentsProfileIdAgentTypeSettingsRoute =
+  AuthenticatedAgentsProfileIdAgentTypeSettingsImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
+  } as any)
+
+const AuthenticatedAgentsProfileIdAgentTypeQueueRoute =
+  AuthenticatedAgentsProfileIdAgentTypeQueueImport.update({
+    id: '/queue',
+    path: '/queue',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
+  } as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -336,11 +367,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBillingImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/onboarding/agent-type': {
+      id: '/onboarding/agent-type'
+      path: '/agent-type'
+      fullPath: '/onboarding/agent-type'
+      preLoaderRoute: typeof OnboardingAgentTypeImport
+      parentRoute: typeof OnboardingRouteImport
+    }
     '/onboarding/comment-settings': {
       id: '/onboarding/comment-settings'
       path: '/comment-settings'
       fullPath: '/onboarding/comment-settings'
       preLoaderRoute: typeof OnboardingCommentSettingsImport
+      parentRoute: typeof OnboardingRouteImport
+    }
+    '/onboarding/connect-account': {
+      id: '/onboarding/connect-account'
+      path: '/connect-account'
+      fullPath: '/onboarding/connect-account'
+      preLoaderRoute: typeof OnboardingConnectAccountImport
       parentRoute: typeof OnboardingRouteImport
     }
     '/onboarding/demo': {
@@ -362,13 +407,6 @@ declare module '@tanstack/react-router' {
       path: '/identity'
       fullPath: '/onboarding/identity'
       preLoaderRoute: typeof OnboardingIdentityImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/linkedin': {
-      id: '/onboarding/linkedin'
-      path: '/linkedin'
-      fullPath: '/onboarding/linkedin'
-      preLoaderRoute: typeof OnboardingLinkedinImport
       parentRoute: typeof OnboardingRouteImport
     }
     '/onboarding/other-settings': {
@@ -441,6 +479,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/agents/$profileId/$agentType': {
+      id: '/_authenticated/agents/$profileId/$agentType'
+      path: '/agents/$profileId/$agentType'
+      fullPath: '/agents/$profileId/$agentType'
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/agents/$profileId/$agentType/queue': {
+      id: '/_authenticated/agents/$profileId/$agentType/queue'
+      path: '/queue'
+      fullPath: '/agents/$profileId/$agentType/queue'
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeQueueImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+    }
+    '/_authenticated/agents/$profileId/$agentType/settings': {
+      id: '/_authenticated/agents/$profileId/$agentType/settings'
+      path: '/settings'
+      fullPath: '/agents/$profileId/$agentType/settings'
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+    }
   }
 }
 
@@ -462,6 +521,24 @@ const AuthenticatedSettingsRouteRouteWithChildren =
     AuthenticatedSettingsRouteRouteChildren,
   )
 
+interface AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren {
+  AuthenticatedAgentsProfileIdAgentTypeQueueRoute: typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
+  AuthenticatedAgentsProfileIdAgentTypeSettingsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
+}
+
+const AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren: AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren =
+  {
+    AuthenticatedAgentsProfileIdAgentTypeQueueRoute:
+      AuthenticatedAgentsProfileIdAgentTypeQueueRoute,
+    AuthenticatedAgentsProfileIdAgentTypeSettingsRoute:
+      AuthenticatedAgentsProfileIdAgentTypeSettingsRoute,
+  }
+
+const AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren =
+  AuthenticatedAgentsProfileIdAgentTypeRouteRoute._addFileChildren(
+    AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
@@ -470,6 +547,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
   AuthenticatedPricingIndexRoute: typeof AuthenticatedPricingIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedAgentsProfileIdAgentTypeRouteRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -480,28 +558,32 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
   AuthenticatedPricingIndexRoute: AuthenticatedPricingIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedAgentsProfileIdAgentTypeRouteRoute:
+    AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface OnboardingRouteRouteChildren {
+  OnboardingAgentTypeRoute: typeof OnboardingAgentTypeRoute
   OnboardingCommentSettingsRoute: typeof OnboardingCommentSettingsRoute
+  OnboardingConnectAccountRoute: typeof OnboardingConnectAccountRoute
   OnboardingDemoRoute: typeof OnboardingDemoRoute
   OnboardingExtensionRoute: typeof OnboardingExtensionRoute
   OnboardingIdentityRoute: typeof OnboardingIdentityRoute
-  OnboardingLinkedinRoute: typeof OnboardingLinkedinRoute
   OnboardingOtherSettingsRoute: typeof OnboardingOtherSettingsRoute
   OnboardingPostSettingsRoute: typeof OnboardingPostSettingsRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
 }
 
 const OnboardingRouteRouteChildren: OnboardingRouteRouteChildren = {
+  OnboardingAgentTypeRoute: OnboardingAgentTypeRoute,
   OnboardingCommentSettingsRoute: OnboardingCommentSettingsRoute,
+  OnboardingConnectAccountRoute: OnboardingConnectAccountRoute,
   OnboardingDemoRoute: OnboardingDemoRoute,
   OnboardingExtensionRoute: OnboardingExtensionRoute,
   OnboardingIdentityRoute: OnboardingIdentityRoute,
-  OnboardingLinkedinRoute: OnboardingLinkedinRoute,
   OnboardingOtherSettingsRoute: OnboardingOtherSettingsRoute,
   OnboardingPostSettingsRoute: OnboardingPostSettingsRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
@@ -527,11 +609,12 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
   '/onboarding/identity': typeof OnboardingIdentityRoute
-  '/onboarding/linkedin': typeof OnboardingLinkedinRoute
   '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
   '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
   '/': typeof AuthenticatedIndexRoute
@@ -542,6 +625,9 @@ export interface FileRoutesByFullPath {
   '/history': typeof AuthenticatedHistoryIndexRoute
   '/pricing': typeof AuthenticatedPricingIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
+  '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
+  '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
 }
 
 export interface FileRoutesByTo {
@@ -558,11 +644,12 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
   '/onboarding/identity': typeof OnboardingIdentityRoute
-  '/onboarding/linkedin': typeof OnboardingLinkedinRoute
   '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
   '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
   '/': typeof AuthenticatedIndexRoute
@@ -573,6 +660,9 @@ export interface FileRoutesByTo {
   '/history': typeof AuthenticatedHistoryIndexRoute
   '/pricing': typeof AuthenticatedPricingIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
+  '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
+  '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
 }
 
 export interface FileRoutesById {
@@ -592,11 +682,12 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
   '/onboarding/demo': typeof OnboardingDemoRoute
   '/onboarding/extension': typeof OnboardingExtensionRoute
   '/onboarding/identity': typeof OnboardingIdentityRoute
-  '/onboarding/linkedin': typeof OnboardingLinkedinRoute
   '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
   '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -607,6 +698,9 @@ export interface FileRoutesById {
   '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
   '/_authenticated/pricing/': typeof AuthenticatedPricingIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
+  '/_authenticated/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
+  '/_authenticated/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
 }
 
 export interface FileRouteTypes {
@@ -627,11 +721,12 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
+    | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
+    | '/onboarding/connect-account'
     | '/onboarding/demo'
     | '/onboarding/extension'
     | '/onboarding/identity'
-    | '/onboarding/linkedin'
     | '/onboarding/other-settings'
     | '/onboarding/post-settings'
     | '/'
@@ -642,6 +737,9 @@ export interface FileRouteTypes {
     | '/history'
     | '/pricing'
     | '/users'
+    | '/agents/$profileId/$agentType'
+    | '/agents/$profileId/$agentType/queue'
+    | '/agents/$profileId/$agentType/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/settings'
@@ -657,11 +755,12 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
+    | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
+    | '/onboarding/connect-account'
     | '/onboarding/demo'
     | '/onboarding/extension'
     | '/onboarding/identity'
-    | '/onboarding/linkedin'
     | '/onboarding/other-settings'
     | '/onboarding/post-settings'
     | '/'
@@ -672,6 +771,9 @@ export interface FileRouteTypes {
     | '/history'
     | '/pricing'
     | '/users'
+    | '/agents/$profileId/$agentType'
+    | '/agents/$profileId/$agentType/queue'
+    | '/agents/$profileId/$agentType/settings'
   id:
     | '__root__'
     | '/_authenticated'
@@ -689,11 +791,12 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/billing'
+    | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
+    | '/onboarding/connect-account'
     | '/onboarding/demo'
     | '/onboarding/extension'
     | '/onboarding/identity'
-    | '/onboarding/linkedin'
     | '/onboarding/other-settings'
     | '/onboarding/post-settings'
     | '/_authenticated/'
@@ -704,6 +807,9 @@ export interface FileRouteTypes {
     | '/_authenticated/history/'
     | '/_authenticated/pricing/'
     | '/_authenticated/users/'
+    | '/_authenticated/agents/$profileId/$agentType'
+    | '/_authenticated/agents/$profileId/$agentType/queue'
+    | '/_authenticated/agents/$profileId/$agentType/settings'
   fileRoutesById: FileRoutesById
 }
 
@@ -773,17 +879,19 @@ export const routeTree = rootRoute
         "/_authenticated/help-center/",
         "/_authenticated/history/",
         "/_authenticated/pricing/",
-        "/_authenticated/users/"
+        "/_authenticated/users/",
+        "/_authenticated/agents/$profileId/$agentType"
       ]
     },
     "/onboarding": {
       "filePath": "onboarding/route.tsx",
       "children": [
+        "/onboarding/agent-type",
         "/onboarding/comment-settings",
+        "/onboarding/connect-account",
         "/onboarding/demo",
         "/onboarding/extension",
         "/onboarding/identity",
-        "/onboarding/linkedin",
         "/onboarding/other-settings",
         "/onboarding/post-settings",
         "/onboarding/"
@@ -834,8 +942,16 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/billing.tsx",
       "parent": "/_authenticated"
     },
+    "/onboarding/agent-type": {
+      "filePath": "onboarding/agent-type.tsx",
+      "parent": "/onboarding"
+    },
     "/onboarding/comment-settings": {
       "filePath": "onboarding/comment-settings.tsx",
+      "parent": "/onboarding"
+    },
+    "/onboarding/connect-account": {
+      "filePath": "onboarding/connect-account.tsx",
       "parent": "/onboarding"
     },
     "/onboarding/demo": {
@@ -848,10 +964,6 @@ export const routeTree = rootRoute
     },
     "/onboarding/identity": {
       "filePath": "onboarding/identity.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/linkedin": {
-      "filePath": "onboarding/linkedin.tsx",
       "parent": "/onboarding"
     },
     "/onboarding/other-settings": {
@@ -893,6 +1005,22 @@ export const routeTree = rootRoute
     "/_authenticated/users/": {
       "filePath": "_authenticated/users/index.tsx",
       "parent": "/_authenticated"
+    },
+    "/_authenticated/agents/$profileId/$agentType": {
+      "filePath": "_authenticated/agents/$profileId/$agentType/route.tsx",
+      "parent": "/_authenticated",
+      "children": [
+        "/_authenticated/agents/$profileId/$agentType/queue",
+        "/_authenticated/agents/$profileId/$agentType/settings"
+      ]
+    },
+    "/_authenticated/agents/$profileId/$agentType/queue": {
+      "filePath": "_authenticated/agents/$profileId/$agentType/queue.tsx",
+      "parent": "/_authenticated/agents/$profileId/$agentType"
+    },
+    "/_authenticated/agents/$profileId/$agentType/settings": {
+      "filePath": "_authenticated/agents/$profileId/$agentType/settings.tsx",
+      "parent": "/_authenticated/agents/$profileId/$agentType"
     }
   }
 }

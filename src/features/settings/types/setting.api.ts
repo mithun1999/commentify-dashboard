@@ -59,3 +59,29 @@ export async function createCommentSetting(
   })
   return data
 }
+
+export async function createOrUpdateTwitterScrapeSetting(payload: {
+  profileId: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any
+}) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/setting/twitter-scrape/${payload.profileId}`,
+    data: payload,
+  })
+  return data
+}
+
+export async function createOrUpdateTwitterCommentSetting(payload: {
+  profileId: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any
+}) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/setting/twitter-comment/${payload.profileId}`,
+    data: payload,
+  })
+  return data
+}

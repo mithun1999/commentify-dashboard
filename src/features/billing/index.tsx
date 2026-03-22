@@ -17,10 +17,14 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { useGetCustomerPortalUrlQuery } from '@/features/subscription/query/subscription.query'
 
 export default function Billing() {
   const { data: user } = useGetUserQuery()
+  const { agents } = useAgents()
+  const maxSlots = user?.subscription?.quantity ?? 1
+  const usedSlots = agents.length
   const { data: portal, isLoading } = useGetCustomerPortalUrlQuery({
     // @ts-expect-error shared hook expects a user, placeholder handled inside
     user,
@@ -100,7 +104,39 @@ export default function Billing() {
           </AlertDescription>
         </Alert>
 
-        <div className='mt-10 grid gap-6 md:grid-cols-2'>
+        <Card className='mt-6'>
+          <CardHeader>
+            <CardTitle>Agent Slots</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-2xl font-bold'>
+                  {usedSlots} of {maxSlots}
+                </p>
+                <p className='text-muted-foreground text-sm'>
+                  agent slots used
+                </p>
+              </div>
+              <div className='bg-muted h-3 w-48 overflow-hidden rounded-full'>
+                <div
+                  className='bg-primary h-full rounded-full transition-all'
+                  style={{
+                    width: `${Math.min((usedSlots / Math.max(maxSlots, 1)) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+            {usedSlots >= maxSlots && (
+              <p className='mt-3 text-sm text-amber-600'>
+                You&apos;ve used all your agent slots. Upgrade your plan or add
+                more slots to create another agent.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className='mt-6 grid gap-6 md:grid-cols-2'>
           <Card>
             <CardHeader>
               <CardTitle>Manage Subscription</CardTitle>

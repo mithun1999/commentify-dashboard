@@ -1,4 +1,5 @@
 import { axiosInstance } from '@/utils/axios.util'
+import type { ITwitterProfileFromExtension } from '@/features/twitter-commenting/utils/extension'
 import { ILinkProfilePayload, ILinkedInStats, IProfile } from '../interface/profile.interface'
 
 export async function getAllProfile() {
@@ -18,6 +19,15 @@ export async function deleteProfile(profileId: string) {
 }
 
 export async function linkProfile(payload: ILinkProfilePayload) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/profile/link`,
+    data: payload,
+  })
+  return data as { profile: IProfile; isExisting: boolean }
+}
+
+export async function linkTwitterProfile(payload: ITwitterProfileFromExtension) {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/profile/link`,

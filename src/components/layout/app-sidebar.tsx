@@ -5,6 +5,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar'
+import { NavAgents } from '@/components/layout/nav-agents'
 import { NavGroup } from '@/components/layout/nav-group'
 import { NavUser } from '@/components/layout/nav-user'
 import { TeamSwitcher } from '@/components/layout/team-switcher'
@@ -21,6 +22,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {sidebarData.navGroups.map((props, index) => (
           <NavGroup key={index} {...props} />
         ))}
+        <NavAgents />
       </SidebarContent>
 
       {sidebarData.bottomGroups.map((props, index) => (

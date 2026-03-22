@@ -9,6 +9,8 @@ import {
 } from '../interface/setting.interface'
 import {
   createCommentSetting,
+  createOrUpdateTwitterCommentSetting,
+  createOrUpdateTwitterScrapeSetting,
   createScrapeSetting,
   updateCommentSetting,
   updateScrapeSetting,
@@ -143,4 +145,50 @@ export const useUpdateCommentSettingQuery = () => {
     updateCommentSetting: mutate,
     isUpdatingCommentSetting: isPending,
   }
+}
+
+export const useTwitterScrapeSettingQuery = () => {
+  const queryClient = useQueryClient()
+  const { mutate, isPending } = useMutation({
+    mutationFn: createOrUpdateTwitterScrapeSetting,
+    onSuccess: () => {
+      showSubmittedData('Scrape settings saved successfully')
+      queryClient.invalidateQueries({
+        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+        refetchType: 'active',
+      })
+    },
+    onError: (error: AxiosError<{ message?: string }>) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while saving scrape settings'
+      )
+    },
+  })
+
+  return { saveTwitterScrapeSetting: mutate, isSavingTwitterScrapeSetting: isPending }
+}
+
+export const useTwitterCommentSettingQuery = () => {
+  const queryClient = useQueryClient()
+  const { mutate, isPending } = useMutation({
+    mutationFn: createOrUpdateTwitterCommentSetting,
+    onSuccess: () => {
+      showSubmittedData('Comment settings saved successfully')
+      queryClient.invalidateQueries({
+        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+        refetchType: 'active',
+      })
+    },
+    onError: (error: AxiosError<{ message?: string }>) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while saving comment settings'
+      )
+    },
+  })
+
+  return { saveTwitterCommentSetting: mutate, isSavingTwitterCommentSetting: isPending }
 }

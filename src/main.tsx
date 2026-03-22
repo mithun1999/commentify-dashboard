@@ -17,7 +17,8 @@ import { ThemeProvider } from './context/theme-context'
 import { signOut } from './features/auth/utils/auth.util'
 // Add this import
 import './index.css'
-// Generated Routes
+import './features/linkedin-commenting/register'
+import './features/twitter-commenting/register'
 import { routeTree } from './routeTree.gen'
 
 Sentry.init({

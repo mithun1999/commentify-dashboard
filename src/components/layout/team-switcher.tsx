@@ -1,6 +1,6 @@
 // src/components/team-switcher.tsx
 import { useState } from 'react'
-import { LinkedInLogoIcon } from '@radix-ui/react-icons'
+import { Link } from '@tanstack/react-router'
 import { ChevronsUpDown, Plus, Trash2 } from 'lucide-react'
 // import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
@@ -82,15 +82,11 @@ export function TeamSwitcher() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton
-            size='lg'
-            onClick={handleLinking}
-            className='gap-2 border'
-          >
-            <LinkedInLogoIcon className='h-5 w-5' />
-            {isLinking || isLinkingProfile
-              ? 'Connecting...'
-              : 'Connect Linkedin Profile'}
+          <SidebarMenuButton size='lg' asChild className='gap-2 border'>
+            <Link to='/'>
+              <Plus className='h-5 w-5' />
+              Add Agent
+            </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -132,7 +128,7 @@ export function TeamSwitcher() {
                       {activeProfile.firstName} {activeProfile.lastName}
                     </span>
                     <span className='truncate text-xs'>
-                      @{activeProfile.publicIdentifier}
+                      @{activeProfile.platform === 'twitter' ? activeProfile.screenName : activeProfile.publicIdentifier}
                     </span>
                   </div>
                 </>
@@ -147,7 +143,7 @@ export function TeamSwitcher() {
             sideOffset={4}
           >
             <DropdownMenuLabel className='text-muted-foreground text-xs'>
-              LinkedIn Profiles
+              Profiles
             </DropdownMenuLabel>
             {(profiles || []).map((profile) => (
               <DropdownMenuItem
@@ -163,7 +159,9 @@ export function TeamSwitcher() {
                 </div>
                 <div className='flex-1'>
                   <div className='font-medium'>
-                    {profile.firstName} {profile.lastName}
+                    {profile.platform === 'twitter' && profile.screenName
+                      ? `@${profile.screenName}`
+                      : `${profile.firstName} ${profile.lastName}`}
                   </div>
                   <div className={`text-xs ${getStatusColor(profile.status)}`}>
                     {profile.status === ProfileStatusEnum.OK

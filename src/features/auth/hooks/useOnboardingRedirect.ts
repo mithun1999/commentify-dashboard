@@ -4,18 +4,20 @@ import { useGetUserQuery } from '../query/user.query'
 
 const STEP_ROUTES: Record<number, string> = {
   0: '/onboarding/extension',
-  1: '/onboarding/linkedin',
-  2: '/onboarding/post-settings',
-  3: '/onboarding/comment-settings',
-  4: '/onboarding/identity',
+  1: '/onboarding/agent-type',
+  2: '/onboarding/connect-account',
+  3: '/onboarding/post-settings',
+  4: '/onboarding/comment-settings',
+  5: '/onboarding/identity',
 }
 
 const ROUTE_STEPS: Record<string, number> = {
   '/onboarding/extension': 0,
-  '/onboarding/linkedin': 1,
-  '/onboarding/post-settings': 2,
-  '/onboarding/comment-settings': 3,
-  '/onboarding/identity': 4,
+  '/onboarding/agent-type': 1,
+  '/onboarding/connect-account': 2,
+  '/onboarding/post-settings': 3,
+  '/onboarding/comment-settings': 4,
+  '/onboarding/identity': 5,
 }
 
 export const useOnboardingRedirect = () => {

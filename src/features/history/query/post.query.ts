@@ -157,6 +157,10 @@ export const useDeletePostComments = (successCb?: () => void) => {
           refetchType: 'active',
         })
       }
+      queryClient.invalidateQueries({
+        queryKey: ['agent-pending-posts'],
+        refetchType: 'active',
+      })
       successCb?.()
       toast.success('Deleted successfully')
     },

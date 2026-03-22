@@ -13,18 +13,18 @@ import {
 
 const STEPS = [
   { path: '/onboarding/extension', label: 'Install Extension' },
-  { path: '/onboarding/linkedin', label: 'Connect LinkedIn' },
-  { path: '/onboarding/post-settings', label: 'Set Post Preferences' },
-  { path: '/onboarding/comment-settings', label: 'Set Comment Style' },
-  { path: '/onboarding/identity', label: 'How did you find us?' },
+  { path: '/onboarding/agent-type', label: 'Choose Agent' },
+  { path: '/onboarding/connect-account', label: 'Connect Account' },
+  { path: '/onboarding/post-settings', label: 'Scrape Settings' },
+  { path: '/onboarding/comment-settings', label: 'Comment Settings' },
 ]
 
 const STAGE_MESSAGES = [
-  'Kick things off by installing the extension 🚀',
-  'Great! Let’s link your LinkedIn profile',
-  'Almost there - set how you want posts handled',
-  'Now choose your comment style & tone',
-  'Final step - how did you hear about us?',
+  'Kick things off by installing the extension',
+  'Pick the platform you want to engage on',
+  'Connect your social account to get started',
+  'Configure what posts your agent should target',
+  'Define your comment style and tone',
 ]
 
 export function OnboardingProgress() {
@@ -42,7 +42,7 @@ export function OnboardingProgress() {
   const currentMessage =
     currentStepIndex >= 0 && currentStepIndex < STAGE_MESSAGES.length
       ? STAGE_MESSAGES[currentStepIndex]
-      : 'Complete your LinkedIn automation setup'
+      : 'Complete your agent setup'
 
   const handleStepClick = (stepPath: string, index: number) => {
     const stepName = stepPath.split('/').pop() || ''

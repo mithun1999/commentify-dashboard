@@ -5,7 +5,7 @@ import {
 
 export interface ISetting {
   _id: string
-  scrapeSetting: {
+  scrapeSetting?: {
     keywordsToTarget: string[]
     skipHiringPosts: boolean
     skipArticlePosts: boolean
@@ -26,7 +26,7 @@ export interface ISetting {
     autoSchedule: boolean
     regionsToTarget?: string[]
   }
-  commentSetting: {
+  commentSetting?: {
     turnOnEmoji: boolean
     turnOnExclamations: boolean
     turnOnHashtags: boolean
@@ -36,6 +36,35 @@ export interface ISetting {
     about?: string
     rules?: string
     length?: CommentLengthEnum
+  }
+  twitterScrapeSetting?: {
+    allOfTheseWords: string[]
+    thisExactPhrase?: string
+    anyOfTheseWords: string[]
+    noneOfTheseWords: string[]
+    theseHashtags: string[]
+    language: string
+    numberOfPostsToScrapePerDay: number
+    autoSchedule: boolean
+    engagementThreshold?: EngagementThresholdEnum
+    _id: string
+    jobTiming?: {
+      hours: number
+      minutes: number
+    }
+  }
+  twitterCommentSetting?: {
+    turnOnEmoji: boolean
+    turnOnExclamations: boolean
+    turnOnHashtags: boolean
+    writeInLowercase: boolean
+    tagAuthor: boolean
+    length?: CommentLengthEnum
+    rules?: string
+    examples?: string
+    ownPrompt?: string
+    callToActionText?: string
+    _id: string
   }
   ownerId: string
   profileId: string

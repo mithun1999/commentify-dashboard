@@ -44,7 +44,7 @@ export function TasksDialogs() {
             onOpenChange={(v) => setOpen(v ? 'delete' : null)}
             isLoading={isDeletingPostComments}
             handleConfirm={() => {
-              const id = (currentRow as unknown as { id?: string })?.id
+              const id = (currentRow as unknown as { _id?: string })?._id
               if (id) {
                 deletePostComments({ ids: [id] })
                 setTimeout(() => setCurrentRow(null), 500)

@@ -31,6 +31,10 @@ interface DataTableProps<TData, TValue> {
   pageCount?: number
   manualPagination?: boolean
   onPaginationChange?: (pageIndex: number, pageSize: number) => void
+  hideToolbar?: boolean
+  rowSelection?: Record<string, boolean>
+  onRowSelectionChange?: (selection: Record<string, boolean>) => void
+  statusOverride?: 'pending' | 'completed'
 }
 
 export function DataTable<TData, TValue>({
@@ -39,9 +43,34 @@ export function DataTable<TData, TValue>({
   pageCount,
   manualPagination,
   onPaginationChange,
+  hideToolbar,
+  rowSelection: controlledRowSelection,
+  onRowSelectionChange,
+  statusOverride,
 }: DataTableProps<TData, TValue>) {
-  const currentStatus = useHistoryStore((s) => s.status)
-  const [rowSelection, setRowSelection] = React.useState({})
+  const storeStatus = useHistoryStore((s) => s.status)
+  const currentStatus = statusOverride ?? storeStatus
+  const [internalRowSelection, setInternalRowSelection] = React.useState({})
+
+  const isControlled = controlledRowSelection !== undefined
+  const rowSelection = isControlled
+    ? controlledRowSelection
+    : internalRowSelection
+  const setRowSelection = React.useCallback(
+    (updaterOrValue: React.SetStateAction<Record<string, boolean>>) => {
+      const next =
+        typeof updaterOrValue === 'function'
+          ? updaterOrValue(isControlled ? controlledRowSelection : internalRowSelection)
+          : updaterOrValue
+      if (isControlled) {
+        onRowSelectionChange?.(next)
+      } else {
+        setInternalRowSelection(next)
+      }
+    },
+    [isControlled, controlledRowSelection, internalRowSelection, onRowSelectionChange]
+  )
+
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
       commentPostedAt: currentStatus === 'completed',
@@ -91,7 +120,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className='space-y-4'>
-      <DataTableToolbar table={table} />
+      {!hideToolbar && <DataTableToolbar table={table} />}
       <div className='rounded-md border'>
         <Table>
           <TableHeader>

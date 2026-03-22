@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import Dashboard from '@/features/dashboard'
+import AgentHub from '@/features/agent-hub'
 
 export const Route = createFileRoute('/_authenticated/')({
-  component: Dashboard,
+  component: AgentHub,
 })

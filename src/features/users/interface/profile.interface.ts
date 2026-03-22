@@ -14,6 +14,9 @@ export interface IProfile {
   status: ProfileStatusEnum
   createdAt: Date
   setting?: ISetting
+  platform?: 'linkedin' | 'twitter'
+  twitterUserId?: string
+  screenName?: string
 }
 
 export interface IProfileResponseFromExtension {

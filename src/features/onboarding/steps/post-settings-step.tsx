@@ -15,7 +15,10 @@ import {
   CircleSlash,
 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
+import { useOnboarding } from '@/stores/onboarding.store'
 import { useProfileStore } from '@/stores/profile.store'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
+import { getAgentType } from '@/features/agent-system/registry'
 import {
   Form,
   FormControl,
@@ -33,14 +36,18 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
-import { ICreateOnboardingPostDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
-import { useCreateOnboardingPostQuery } from '../query/onboarding.query'
+import {
+  useCreateOnboardingPostQuery,
+  useCreateOnboardingTwitterPostQuery,
+} from '../query/onboarding.query'
+
+// ── LinkedIn schema & defaults ───────────────────────────────────────────────
 
 const authorTitlesList = ['Founder', 'CEO', 'CTO', 'CMO', 'VP', 'Director']
 
-const postSettingsSchema = z.object({
+const linkedinSchema = z.object({
   selectedKeywords: z
     .array(z.string())
     .min(1, 'Please select at least one keyword')
@@ -52,9 +59,9 @@ const postSettingsSchema = z.object({
   skipJobUpdatePosts: z.boolean(),
 })
 
-type PostSettingsValues = z.infer<typeof postSettingsSchema>
+type LinkedInValues = z.infer<typeof linkedinSchema>
 
-const defaultValues: PostSettingsValues = {
+const linkedinDefaults: LinkedInValues = {
   selectedKeywords: ['AI', 'SaaS'],
   customKeywords: [],
   authorTitles: [],
@@ -63,7 +70,69 @@ const defaultValues: PostSettingsValues = {
   skipJobUpdatePosts: true,
 }
 
+// ── Twitter schema & defaults ────────────────────────────────────────────────
+
+const twitterSchema = z.object({
+  selectedKeywords: z
+    .array(z.string())
+    .min(1, 'Please select at least one keyword')
+    .max(6, 'Maximum 6 keywords allowed'),
+  customKeywords: z.array(z.string()),
+  selectedHashtags: z.array(z.string()).max(6, 'Maximum 6 hashtags'),
+  customHashtags: z.array(z.string()),
+  tweetsPerDay: z.number().min(1).max(100),
+})
+
+type TwitterValues = z.infer<typeof twitterSchema>
+
+const twitterDefaults: TwitterValues = {
+  selectedKeywords: ['AI', 'SaaS'],
+  customKeywords: [],
+  selectedHashtags: [],
+  customHashtags: [],
+  tweetsPerDay: 20,
+}
+
+// ── Shared constants ─────────────────────────────────────────────────────────
+
+const predefinedKeywords = [
+  'AI',
+  'SaaS',
+  'Startup',
+  'Marketing',
+  'Sales',
+  'Leadership',
+  'Finance',
+  'Operations',
+  'Growth',
+]
+
+const predefinedHashtags = [
+  'buildinpublic',
+  'startup',
+  'AI',
+  'SaaS',
+  'tech',
+  'growthhacking',
+  'indiehacker',
+  'marketing',
+]
+
+// ── Main component ───────────────────────────────────────────────────────────
+
 export function PostSettingsStep() {
+  const { data: onboardingData } = useOnboarding()
+  const selectedSlug = onboardingData.selectedAgentType
+  const agentDef = selectedSlug ? getAgentType(selectedSlug) : null
+  const platform = agentDef?.platform ?? 'linkedin'
+
+  if (platform === 'twitter') return <TwitterPostSettings />
+  return <LinkedInPostSettings />
+}
+
+// ── LinkedIn variant ─────────────────────────────────────────────────────────
+
+function LinkedInPostSettings() {
   const posthog = usePostHog()
   const [showCustomKeywordInput, setShowCustomKeywordInput] = useState(false)
   const [customKeyword, setCustomKeyword] = useState('')
@@ -71,15 +140,21 @@ export function PostSettingsStep() {
   const [customTitle, setCustomTitle] = useState('')
   const [isEngagementExpanded, setIsEngagementExpanded] = useState(false)
 
+  const { data: onboardingData, markStepCompleted } = useOnboarding()
   const activeProfile = useProfileStore((s) => s.activeProfile)
+  const { data: profiles } = useGetAllProfileQuery()
+  const resolvedProfileId =
+    onboardingData.linkedProfileId ??
+    activeProfile?._id ??
+    profiles?.[profiles.length - 1]?._id
   const { createOnboardingPostSettingAsync, isCreatingOnboardingPost } =
     useCreateOnboardingPostQuery()
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
 
-  const form = useForm<PostSettingsValues>({
-    resolver: zodResolver(postSettingsSchema),
-    defaultValues,
+  const form = useForm<LinkedInValues>({
+    resolver: zodResolver(linkedinSchema),
+    defaultValues: linkedinDefaults,
   })
 
   const {
@@ -92,25 +167,10 @@ export function PostSettingsStep() {
   const authorTitles = watch('authorTitles')
   const customTitles = watch('customTitles')
 
-  const predefinedKeywords = [
-    'AI',
-    'SaaS',
-    'Startup',
-    'Marketing',
-    'Sales',
-    'Leadership',
-    'Finance',
-    'Operations',
-    'Growth',
-  ]
-
   const allKeywords = [...predefinedKeywords, ...customKeywords]
   const allTitles = [...authorTitlesList, ...customTitles]
-
-  // Check if "All" is selected (when no specific titles are selected)
   const isAllSelected = authorTitles.length === 0
 
-  // Keyword functions
   const handleKeywordSelect = (keyword: string) => {
     if (selectedKeywords.includes(keyword)) {
       setValue(
@@ -122,83 +182,61 @@ export function PostSettingsStep() {
     }
   }
 
-  const handleKeywordOtherClick = () => {
-    setShowCustomKeywordInput(true)
-  }
-
   const handleCustomKeywordSubmit = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      const trimmedKeyword = customKeyword.trim()
-      if (
-        trimmedKeyword &&
-        !allKeywords.includes(trimmedKeyword) &&
-        selectedKeywords.length < 6
-      ) {
-        const newCustomKeywords = [...customKeywords, trimmedKeyword]
-        setValue('customKeywords', newCustomKeywords)
-        setValue('selectedKeywords', [...selectedKeywords, trimmedKeyword])
+      const trimmed = customKeyword.trim()
+      if (trimmed && !allKeywords.includes(trimmed) && selectedKeywords.length < 6) {
+        setValue('customKeywords', [...customKeywords, trimmed])
+        setValue('selectedKeywords', [...selectedKeywords, trimmed])
       }
       setCustomKeyword('')
       setShowCustomKeywordInput(false)
     }
   }
 
-  // Author Title functions
   const toggleTitle = (title: string) => {
     const isSelected = authorTitles.includes(title)
     if (!isSelected && authorTitles.length >= 3) return
-    const updated = isSelected
-      ? authorTitles.filter((t) => t !== title)
-      : [...authorTitles, title]
-    setValue('authorTitles', updated)
+    setValue(
+      'authorTitles',
+      isSelected ? authorTitles.filter((t) => t !== title) : [...authorTitles, title]
+    )
   }
 
   const toggleAll = () => {
-    // If "All" is currently selected (no titles), do nothing
-    // If specific titles are selected, deselect all of them (which selects "All")
-    if (authorTitles.length > 0) {
-      setValue('authorTitles', [])
-    }
-  }
-
-  const handleTitleOtherClick = () => {
-    if (authorTitles.length >= 3) return
-    setShowCustomTitleInput(true)
+    if (authorTitles.length > 0) setValue('authorTitles', [])
   }
 
   const handleCustomTitleSubmit = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      const trimmedTitle = customTitle.trim()
-      if (trimmedTitle && !allTitles.includes(trimmedTitle)) {
-        const newCustomTitles = [...customTitles, trimmedTitle]
-        setValue('customTitles', newCustomTitles)
-        setValue('authorTitles', [...authorTitles, trimmedTitle])
+      const trimmed = customTitle.trim()
+      if (trimmed && !allTitles.includes(trimmed)) {
+        setValue('customTitles', [...customTitles, trimmed])
+        setValue('authorTitles', [...authorTitles, trimmed])
       }
       setCustomTitle('')
       setShowCustomTitleInput(false)
     }
   }
 
-  const onSubmit = async (data: PostSettingsValues) => {
-    if (!activeProfile?._id) return
+  const onSubmit = async (data: LinkedInValues) => {
+    posthog?.capture('onboarding_post_setting_form_submitted', {
+      platform: 'linkedin',
+      selectedKeywordsCount: data.selectedKeywords.length,
+      authorTitlesCount: data.authorTitles.length,
+    })
 
-    const payload: ICreateOnboardingPostDto = {
-      keywordsToTarget: data.selectedKeywords,
-      authorTitles: data.authorTitles,
-      skipHiringPosts: data.skipHiringPosts,
-      skipJobUpdatePosts: data.skipJobUpdatePosts,
-    }
+    if (!resolvedProfileId) return true
 
     try {
       await createOnboardingPostSettingAsync({
-        profileId: activeProfile._id,
-        data: payload,
-      })
-      posthog?.capture('onboarding_post_setting_form_submitted', {
-        selectedKeywordsCount: data.selectedKeywords.length,
-        authorTitlesCount: data.authorTitles.length,
-        skipHiringPosts: data.skipHiringPosts,
-        skipJobUpdatePosts: data.skipJobUpdatePosts,
+        profileId: resolvedProfileId,
+        data: {
+          keywordsToTarget: data.selectedKeywords,
+          authorTitles: data.authorTitles,
+          skipHiringPosts: data.skipHiringPosts,
+          skipJobUpdatePosts: data.skipJobUpdatePosts,
+        },
       })
       return true
     } catch {
@@ -213,119 +251,26 @@ export function PostSettingsStep() {
           title='Choose posts that matter'
           description="We'll only comment on posts that match your interests."
         >
-          {/* Keywords Section */}
-          <div className='mb-6'>
-            <div className='mb-4 flex items-center gap-x-6'>
-              <div className='flex items-center gap-2'>
-                <Hash className='text-muted-foreground h-4 w-4' />
-                <span className='text-foreground font-semibold'>
-                  Target Keywords (Choose up to 6)
-                </span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                        <Info className='text-muted-foreground h-3 w-3' />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side='right' className='max-w-xs'>
-                      <p>
-                        Select keywords related to your industry or interests to
-                        find relevant posts for automated commenting
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <p className='text-muted-foreground text-sm'>
-                {selectedKeywords.length}/6 keywords selected
-              </p>
-            </div>
-
-            <div className='space-y-3'>
-              <div className='flex flex-wrap gap-3'>
-                {allKeywords.map((keyword) => {
-                  const isSelected = selectedKeywords.includes(keyword)
-                  const isDisabled = !isSelected && selectedKeywords.length >= 6
-
-                  return (
-                    <button
-                      key={keyword}
-                      type='button'
-                      onClick={() => handleKeywordSelect(keyword)}
-                      disabled={isDisabled}
-                      className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-primary/10 border-primary text-primary'
-                          : isDisabled
-                            ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
-                            : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
-                      }`}
-                    >
-                      <span className='text-sm font-medium'>{keyword}</span>
-                      {customKeywords.includes(keyword) && (
-                        <button
-                          type='button'
-                          aria-label={`Remove ${keyword}`}
-                          className='text-muted-foreground/80 hover:text-foreground transition'
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            // Remove from custom list
-                            setValue(
-                              'customKeywords',
-                              customKeywords.filter((k) => k !== keyword)
-                            )
-                            // If selected, also remove from selected keywords
-                            if (selectedKeywords.includes(keyword)) {
-                              setValue(
-                                'selectedKeywords',
-                                selectedKeywords.filter((k) => k !== keyword)
-                              )
-                            }
-                          }}
-                        >
-                          <X className='h-3.5 w-3.5' />
-                        </button>
-                      )}
-                    </button>
-                  )
-                })}
-
-                {!showCustomKeywordInput ? (
-                  <button
-                    type='button'
-                    onClick={handleKeywordOtherClick}
-                    disabled={selectedKeywords.length >= 6}
-                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
-                      selectedKeywords.length >= 6
-                        ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
-                        : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
-                    }`}
-                  >
-                    <span className='flex items-center gap-1 text-sm font-medium'>
-                      <PlusCircle className='h-4 w-4' />
-                      Other
-                    </span>
-                  </button>
-                ) : (
-                  <Input
-                    placeholder='Enter keyword...'
-                    value={customKeyword}
-                    onChange={(e) => setCustomKeyword(e.target.value)}
-                    onKeyPress={handleCustomKeywordSubmit}
-                    onBlur={() => setShowCustomKeywordInput(false)}
-                    autoFocus
-                    className='h-10 w-32'
-                  />
-                )}
-              </div>
-              {errors.selectedKeywords && (
-                <p className='text-destructive text-sm'>
-                  {errors.selectedKeywords.message}
-                </p>
-              )}
-            </div>
-          </div>
+          <KeywordChipSection
+            selectedKeywords={selectedKeywords}
+            allKeywords={allKeywords}
+            customKeywords={customKeywords}
+            onSelect={handleKeywordSelect}
+            showCustomInput={showCustomKeywordInput}
+            onShowCustomInput={() => setShowCustomKeywordInput(true)}
+            customValue={customKeyword}
+            onCustomChange={setCustomKeyword}
+            onCustomSubmit={handleCustomKeywordSubmit}
+            onCustomBlur={() => setShowCustomKeywordInput(false)}
+            onRemoveCustom={(kw) => {
+              setValue('customKeywords', customKeywords.filter((k) => k !== kw))
+              if (selectedKeywords.includes(kw)) {
+                setValue('selectedKeywords', selectedKeywords.filter((k) => k !== kw))
+              }
+            }}
+            error={errors.selectedKeywords?.message}
+            tooltipText='Select keywords related to your industry or interests to find relevant posts for automated commenting'
+          />
 
           {/* Author Titles Section */}
           <div className='mb-6 space-y-2'>
@@ -361,7 +306,6 @@ export function PostSettingsStep() {
 
             <div className='mt-4 space-y-3'>
               <div className='flex flex-wrap gap-3'>
-                {/* All option */}
                 <button
                   type='button'
                   onClick={toggleAll}
@@ -395,17 +339,9 @@ export function PostSettingsStep() {
                           className='text-muted-foreground/80 hover:text-foreground transition'
                           onClick={(e) => {
                             e.stopPropagation()
-                            // Remove from custom titles list
-                            setValue(
-                              'customTitles',
-                              customTitles.filter((t) => t !== title)
-                            )
-                            // If selected, also remove from selected author titles
+                            setValue('customTitles', customTitles.filter((t) => t !== title))
                             if (authorTitles.includes(title)) {
-                              setValue(
-                                'authorTitles',
-                                authorTitles.filter((t) => t !== title)
-                              )
+                              setValue('authorTitles', authorTitles.filter((t) => t !== title))
                             }
                           }}
                         >
@@ -419,7 +355,9 @@ export function PostSettingsStep() {
                 {!showCustomTitleInput ? (
                   <button
                     type='button'
-                    onClick={handleTitleOtherClick}
+                    onClick={() => {
+                      if (authorTitles.length < 3) setShowCustomTitleInput(true)
+                    }}
                     disabled={isAllSelected}
                     className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
                       isAllSelected
@@ -447,7 +385,7 @@ export function PostSettingsStep() {
             </div>
           </div>
 
-          {/* Miscellaneous Section */}
+          {/* Exclusions Section */}
           <div className='mb-6 space-y-2'>
             <div
               className='group flex cursor-pointer items-center justify-between'
@@ -485,7 +423,6 @@ export function PostSettingsStep() {
 
             {isEngagementExpanded && (
               <div className='mt-4 space-y-4'>
-                {/* Skip Options */}
                 <div className='space-y-4'>
                   <FormField
                     control={form.control}
@@ -542,6 +479,7 @@ export function PostSettingsStep() {
           </div>
 
           <OnboardingNavigation
+            prevStep='/onboarding/connect-account'
             nextStep='/onboarding/comment-settings'
             loading={isCreatingOnboardingPost || isUpdatingOnboardingStatus}
             onNext={async () => {
@@ -552,13 +490,416 @@ export function PostSettingsStep() {
               const result = await onSubmit(values)
               if (!result) return false
 
-              await updateOnboardingStatusAsync({ status: 'in-progress', step: 3 })
+              markStepCompleted('post-settings')
+              await updateOnboardingStatusAsync({ status: 'in-progress', step: 4 })
               return true
             }}
-            currentStep='post_settings'
+            currentStep='post-settings'
           />
         </OnboardingCard>
       </form>
     </Form>
+  )
+}
+
+// ── Twitter variant ──────────────────────────────────────────────────────────
+
+function TwitterPostSettings() {
+  const posthog = usePostHog()
+  const [showCustomKeywordInput, setShowCustomKeywordInput] = useState(false)
+  const [customKeyword, setCustomKeyword] = useState('')
+  const [showCustomHashtagInput, setShowCustomHashtagInput] = useState(false)
+  const [customHashtag, setCustomHashtag] = useState('')
+  const [isHashtagsExpanded, setIsHashtagsExpanded] = useState(false)
+
+  const { data: onboardingData, markStepCompleted } = useOnboarding()
+  const activeProfile = useProfileStore((s) => s.activeProfile)
+  const { data: profiles } = useGetAllProfileQuery()
+  const resolvedProfileId =
+    onboardingData.linkedProfileId ??
+    activeProfile?._id ??
+    profiles?.[profiles.length - 1]?._id
+  const { createOnboardingTwitterPostSettingAsync, isCreatingOnboardingTwitterPost } =
+    useCreateOnboardingTwitterPostQuery()
+  const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
+    useUpdateOnboardingStatus()
+
+  const form = useForm<TwitterValues>({
+    resolver: zodResolver(twitterSchema),
+    defaultValues: twitterDefaults,
+  })
+
+  const {
+    watch,
+    setValue,
+    formState: { errors },
+  } = form
+  const selectedKeywords = watch('selectedKeywords')
+  const customKeywords = watch('customKeywords')
+  const selectedHashtags = watch('selectedHashtags')
+  const customHashtags = watch('customHashtags')
+
+  const allKeywords = [...predefinedKeywords, ...customKeywords]
+  const allHashtags = [...predefinedHashtags, ...customHashtags]
+
+  const handleKeywordSelect = (keyword: string) => {
+    if (selectedKeywords.includes(keyword)) {
+      setValue('selectedKeywords', selectedKeywords.filter((k) => k !== keyword))
+    } else if (selectedKeywords.length < 6) {
+      setValue('selectedKeywords', [...selectedKeywords, keyword])
+    }
+  }
+
+  const handleCustomKeywordSubmit = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const trimmed = customKeyword.trim()
+      if (trimmed && !allKeywords.includes(trimmed) && selectedKeywords.length < 6) {
+        setValue('customKeywords', [...customKeywords, trimmed])
+        setValue('selectedKeywords', [...selectedKeywords, trimmed])
+      }
+      setCustomKeyword('')
+      setShowCustomKeywordInput(false)
+    }
+  }
+
+  const handleHashtagSelect = (tag: string) => {
+    if (selectedHashtags.includes(tag)) {
+      setValue('selectedHashtags', selectedHashtags.filter((t) => t !== tag))
+    } else if (selectedHashtags.length < 6) {
+      setValue('selectedHashtags', [...selectedHashtags, tag])
+    }
+  }
+
+  const handleCustomHashtagSubmit = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const trimmed = customHashtag.trim().replace(/^#/, '')
+      if (trimmed && !allHashtags.includes(trimmed) && selectedHashtags.length < 6) {
+        setValue('customHashtags', [...customHashtags, trimmed])
+        setValue('selectedHashtags', [...selectedHashtags, trimmed])
+      }
+      setCustomHashtag('')
+      setShowCustomHashtagInput(false)
+    }
+  }
+
+  const onSubmit = async (data: TwitterValues) => {
+    posthog?.capture('onboarding_post_setting_form_submitted', {
+      platform: 'twitter',
+      selectedKeywordsCount: data.selectedKeywords.length,
+      hashtagsCount: data.selectedHashtags.length,
+      tweetsPerDay: data.tweetsPerDay,
+    })
+
+    if (!resolvedProfileId) return true
+
+    try {
+      await createOnboardingTwitterPostSettingAsync({
+        profileId: resolvedProfileId,
+        data: {
+          anyOfTheseWords: data.selectedKeywords,
+          theseHashtags: data.selectedHashtags,
+          numberOfPostsToScrapePerDay: data.tweetsPerDay,
+        },
+      })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <OnboardingCard
+          title='Choose tweets that matter'
+          description="We'll only reply to tweets matching your interests."
+        >
+          <KeywordChipSection
+            selectedKeywords={selectedKeywords}
+            allKeywords={allKeywords}
+            customKeywords={customKeywords}
+            onSelect={handleKeywordSelect}
+            showCustomInput={showCustomKeywordInput}
+            onShowCustomInput={() => setShowCustomKeywordInput(true)}
+            customValue={customKeyword}
+            onCustomChange={setCustomKeyword}
+            onCustomSubmit={handleCustomKeywordSubmit}
+            onCustomBlur={() => setShowCustomKeywordInput(false)}
+            onRemoveCustom={(kw) => {
+              setValue('customKeywords', customKeywords.filter((k) => k !== kw))
+              if (selectedKeywords.includes(kw)) {
+                setValue('selectedKeywords', selectedKeywords.filter((k) => k !== kw))
+              }
+            }}
+            error={errors.selectedKeywords?.message}
+            tooltipText='Select keywords to find relevant tweets for automated replying'
+          />
+
+          {/* Hashtags – collapsible */}
+          <div className='mb-6 space-y-2'>
+            <div
+              className='group flex cursor-pointer items-center justify-between'
+              onClick={() => setIsHashtagsExpanded(!isHashtagsExpanded)}
+            >
+              <div className='flex items-center gap-x-6'>
+                <div className='flex items-center gap-2'>
+                  <Hash className='text-muted-foreground h-4 w-4' />
+                  <Label className='text-foreground cursor-pointer font-medium'>
+                    Target Hashtags
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                          <Info className='text-muted-foreground h-3 w-3' />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side='right' className='max-w-xs'>
+                        <p>
+                          Pick hashtags to find tweets in specific communities
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                {selectedHashtags.length > 0 && (
+                  <p className='text-muted-foreground text-sm'>
+                    {selectedHashtags.length}/6 selected
+                  </p>
+                )}
+              </div>
+              <div className='text-muted-foreground group-hover:text-foreground flex items-center transition-colors'>
+                {isHashtagsExpanded ? (
+                  <ChevronUp className='h-4 w-4' />
+                ) : (
+                  <ChevronDown className='h-4 w-4' />
+                )}
+              </div>
+            </div>
+
+            {isHashtagsExpanded && (
+              <div className='mt-4 space-y-3'>
+                <div className='flex flex-wrap gap-3'>
+                  {allHashtags.map((tag) => {
+                    const isSelected = selectedHashtags.includes(tag)
+                    const isDisabled = !isSelected && selectedHashtags.length >= 6
+
+                    return (
+                      <button
+                        key={tag}
+                        type='button'
+                        onClick={() => handleHashtagSelect(tag)}
+                        disabled={isDisabled}
+                        className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-primary/10 border-primary text-primary'
+                            : isDisabled
+                              ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                              : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                        }`}
+                      >
+                        <span className='text-sm font-medium'>#{tag}</span>
+                        {customHashtags.includes(tag) && (
+                          <button
+                            type='button'
+                            aria-label={`Remove #${tag}`}
+                            className='text-muted-foreground/80 hover:text-foreground transition'
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setValue('customHashtags', customHashtags.filter((t) => t !== tag))
+                              if (selectedHashtags.includes(tag)) {
+                                setValue('selectedHashtags', selectedHashtags.filter((t) => t !== tag))
+                              }
+                            }}
+                          >
+                            <X className='h-3.5 w-3.5' />
+                          </button>
+                        )}
+                      </button>
+                    )
+                  })}
+
+                  {!showCustomHashtagInput ? (
+                    <button
+                      type='button'
+                      onClick={() => setShowCustomHashtagInput(true)}
+                      disabled={selectedHashtags.length >= 6}
+                      className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                        selectedHashtags.length >= 6
+                          ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                          : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                      }`}
+                    >
+                      <span className='flex items-center gap-1 text-sm font-medium'>
+                        <PlusCircle className='h-4 w-4' />
+                        Other
+                      </span>
+                    </button>
+                  ) : (
+                    <Input
+                      placeholder='#hashtag'
+                      value={customHashtag}
+                      onChange={(e) => setCustomHashtag(e.target.value)}
+                      onKeyPress={handleCustomHashtagSubmit}
+                      onBlur={() => setShowCustomHashtagInput(false)}
+                      autoFocus
+                      className='h-10 w-32'
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <OnboardingNavigation
+            prevStep='/onboarding/connect-account'
+            nextStep='/onboarding/comment-settings'
+            loading={isCreatingOnboardingTwitterPost || isUpdatingOnboardingStatus}
+            onNext={async () => {
+              const isValid = await form.trigger()
+              if (!isValid) return false
+
+              const values = form.getValues()
+              const result = await onSubmit(values)
+              if (!result) return false
+
+              markStepCompleted('post-settings')
+              await updateOnboardingStatusAsync({ status: 'in-progress', step: 4 })
+              return true
+            }}
+            currentStep='post-settings'
+          />
+        </OnboardingCard>
+      </form>
+    </Form>
+  )
+}
+
+// ── Shared keyword chip section ──────────────────────────────────────────────
+
+function KeywordChipSection({
+  selectedKeywords,
+  allKeywords,
+  customKeywords,
+  onSelect,
+  showCustomInput,
+  onShowCustomInput,
+  customValue,
+  onCustomChange,
+  onCustomSubmit,
+  onCustomBlur,
+  onRemoveCustom,
+  error,
+  tooltipText,
+}: {
+  selectedKeywords: string[]
+  allKeywords: string[]
+  customKeywords: string[]
+  onSelect: (kw: string) => void
+  showCustomInput: boolean
+  onShowCustomInput: () => void
+  customValue: string
+  onCustomChange: (v: string) => void
+  onCustomSubmit: (e: React.KeyboardEvent) => void
+  onCustomBlur: () => void
+  onRemoveCustom: (kw: string) => void
+  error?: string
+  tooltipText: string
+}) {
+  return (
+    <div className='mb-6'>
+      <div className='mb-4 flex items-center gap-x-6'>
+        <div className='flex items-center gap-2'>
+          <Hash className='text-muted-foreground h-4 w-4' />
+          <span className='text-foreground font-semibold'>
+            Target Keywords (Choose up to 6)
+          </span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                  <Info className='text-muted-foreground h-3 w-3' />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side='right' className='max-w-xs'>
+                <p>{tooltipText}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <p className='text-muted-foreground text-sm'>
+          {selectedKeywords.length}/6 keywords selected
+        </p>
+      </div>
+
+      <div className='space-y-3'>
+        <div className='flex flex-wrap gap-3'>
+          {allKeywords.map((keyword) => {
+            const isSelected = selectedKeywords.includes(keyword)
+            const isDisabled = !isSelected && selectedKeywords.length >= 6
+
+            return (
+              <button
+                key={keyword}
+                type='button'
+                onClick={() => onSelect(keyword)}
+                disabled={isDisabled}
+                className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                  isSelected
+                    ? 'bg-primary/10 border-primary text-primary'
+                    : isDisabled
+                      ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                      : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                }`}
+              >
+                <span className='text-sm font-medium'>{keyword}</span>
+                {customKeywords.includes(keyword) && (
+                  <button
+                    type='button'
+                    aria-label={`Remove ${keyword}`}
+                    className='text-muted-foreground/80 hover:text-foreground transition'
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRemoveCustom(keyword)
+                    }}
+                  >
+                    <X className='h-3.5 w-3.5' />
+                  </button>
+                )}
+              </button>
+            )
+          })}
+
+          {!showCustomInput ? (
+            <button
+              type='button'
+              onClick={onShowCustomInput}
+              disabled={selectedKeywords.length >= 6}
+              className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                selectedKeywords.length >= 6
+                  ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                  : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+              }`}
+            >
+              <span className='flex items-center gap-1 text-sm font-medium'>
+                <PlusCircle className='h-4 w-4' />
+                Other
+              </span>
+            </button>
+          ) : (
+            <Input
+              placeholder='Enter keyword...'
+              value={customValue}
+              onChange={(e) => onCustomChange(e.target.value)}
+              onKeyPress={onCustomSubmit}
+              onBlur={onCustomBlur}
+              autoFocus
+              className='h-10 w-32'
+            />
+          )}
+        </div>
+        {error && <p className='text-destructive text-sm'>{error}</p>}
+      </div>
+    </div>
   )
 }

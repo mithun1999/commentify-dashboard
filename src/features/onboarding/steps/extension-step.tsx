@@ -205,7 +205,7 @@ export function ExtensionStep() {
 
         {isInstalled && (
           <OnboardingNavigation
-            nextStep='/onboarding/linkedin'
+            nextStep='/onboarding/agent-type'
             loading={isUpdatingOnboardingStatus}
             currentStep='extension'
             onNext={async () => {

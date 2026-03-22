@@ -2,14 +2,21 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { envConfig } from '@/config/env.config'
-import { Linkedin, CheckCircle2, Info, Loader2 } from 'lucide-react'
+import { CheckCircle2, Info, Loader2 } from 'lucide-react'
+import { IconBrandLinkedin, IconBrandX } from '@tabler/icons-react'
 import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { useOnboarding } from '@/stores/onboarding.store'
+import { useProfileStore } from '@/stores/profile.store'
 import {
   checkIsExtensionInstalled,
   getProfileDetailsFromExtension,
 } from '@/lib/utils'
+import { getAgentType } from '@/features/agent-system/registry'
+import {
+  getTwitterProfileDetailsFromExtension,
+  type ITwitterProfileFromExtension,
+} from '@/features/twitter-commenting/utils/extension'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -27,21 +34,62 @@ import { IProfileResponseFromExtension } from '@/features/users/interface/profil
 import {
   useGetAllProfileQuery,
   useLinkProfile,
+  useLinkTwitterProfile,
 } from '@/features/users/query/profile.query'
+
+type ProfileData =
+  | (IProfileResponseFromExtension & { _platform: 'linkedin' })
+  | (ITwitterProfileFromExtension & { _platform: 'twitter' })
+
+const PLATFORM_CONFIG = {
+  linkedin: {
+    title: 'Connect Your LinkedIn Account',
+    description:
+      'We need access to your LinkedIn account to automate comments on your behalf.',
+    tooltip:
+      'We use LinkedIn\u2019s secure API to access only the data needed for automated commenting.',
+    buttonLabel: 'Connect LinkedIn',
+    connectingLabel: 'Connecting...',
+    icon: IconBrandLinkedin,
+    loginUrl: 'https://www.linkedin.com',
+    loginPrompt: 'Please log in to LinkedIn first to continue',
+  },
+  twitter: {
+    title: 'Connect Your X Account',
+    description:
+      'We need access to your X account to automate replies on your behalf.',
+    tooltip:
+      'We securely access only the data needed to post replies on tweets you approve.',
+    buttonLabel: 'Connect X',
+    connectingLabel: 'Connecting...',
+    icon: IconBrandX,
+    loginUrl: 'https://x.com',
+    loginPrompt: 'Please log in to X first to continue',
+  },
+} as const
 
 export function LinkedInStep() {
   const posthog = usePostHog()
-  const { updateData, markStepCompleted } = useOnboarding()
+  const { data: onboardingData, updateData, markStepCompleted } =
+    useOnboarding()
   const { data: user } = useGetUserQuery()
-  const { isLoading } = useGetAllProfileQuery()
+  const activeProfile = useProfileStore((s) => s.activeProfile)
+  const { data: profiles, isLoading } = useGetAllProfileQuery()
   const { linkProfile, isLinkingProfile } = useLinkProfile(true)
+  const { linkTwitterProfile, isLinkingTwitterProfile } = useLinkTwitterProfile(true)
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
   const [isExtensionInstalled, setIsExtensionInstalled] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
-  const [extensionProfileData, setExtensionProfileData] =
-    useState<IProfileResponseFromExtension | null>(null)
+  const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const hasLinkedRef = useRef(false)
+  const hasCollectedRef = useRef(false)
+
+  const selectedSlug = onboardingData.selectedAgentType
+  const agentDef = selectedSlug ? getAgentType(selectedSlug) : null
+  const platform = agentDef?.platform ?? 'linkedin'
+  const config = PLATFORM_CONFIG[platform]
+  const PlatformIcon = config.icon
 
   const checkIfExtensionIsInstalled = async () => {
     const isInstalled = await checkIsExtensionInstalled(
@@ -52,52 +100,106 @@ export function LinkedInStep() {
     return isInstalled
   }
 
-  const onboardingData = user?.metadata?.onboarding
-  const isLinkedInStepCompleted =
-    onboardingData &&
-    (onboardingData.status === 'completed' || onboardingData.step >= 2)
+  const userOnboarding = user?.metadata?.onboarding
+  const isConnectStepCompleted =
+    userOnboarding &&
+    (userOnboarding.status === 'completed' || userOnboarding.step >= 3)
 
-  const collectUserInformation = useCallback(async () => {
-    if (isLinkedInStepCompleted) return
+  const collectLinkedInInfo = useCallback(async () => {
+    try {
+      const details = await getProfileDetailsFromExtension()
+      const hasName = Boolean(details?.firstName && details?.lastName)
+      if (!details || !hasName || !details.publicIdentifier) return null
+      return details
+    } catch {
+      return null
+    }
+  }, [])
+
+  const collectTwitterInfo = useCallback(async () => {
+    try {
+      const details = await getTwitterProfileDetailsFromExtension()
+      if (!details?.authToken) return null
+      return details
+    } catch {
+      return null
+    }
+  }, [])
+
+  const collectUserInformation = useCallback(async ({ silent = false } = {}) => {
+    if (hasCollectedRef.current || isConnectStepCompleted) return
 
     try {
       const isInstalled = await checkIfExtensionIsInstalled()
       if (!isInstalled) return
 
-      const profileDetails = await getProfileDetailsFromExtension()
+      if (platform === 'twitter') {
+        const details = await collectTwitterInfo()
+        if (!details) {
+          if (!silent) {
+            toast.error('Please log in to X.com first, then come back here.', { id: 'twitter-login-needed' })
+          }
+          return
+        }
 
-      const hasName = Boolean(
-        profileDetails?.firstName && profileDetails?.lastName
-      )
-      if (!profileDetails || !hasName) return
-
-      // Check if public identifier is available before proceeding
-      if (!profileDetails?.publicIdentifier) {
-        toast.error('Please log in to LinkedIn first to continue')
-        return
-      }
-
-      setExtensionProfileData(profileDetails)
-      markStepCompleted('linkedin')
-      updateData({
-        isLinkedInConnected: true,
-        userProfile: {
-          name: `${profileDetails.firstName} ${profileDetails.lastName}`,
-          title: `${profileDetails.publicIdentifier}`,
-        },
-      })
-
-      posthog?.capture('onboarding_linkedin_profile_fetched', {
-        publicIdentifier: profileDetails.publicIdentifier,
-      })
-
-      // Automatically link the profile (ensure only once)
-      if (!hasLinkedRef.current) {
+        if (hasLinkedRef.current) return
         hasLinkedRef.current = true
-        linkProfile(profileDetails)
+
+        try {
+          await linkTwitterProfile(details)
+
+          hasCollectedRef.current = true
+          setProfileData({ ...details, _platform: 'twitter' })
+          markStepCompleted('connect-account')
+          updateData({
+            isLinkedInConnected: true,
+            userProfile: {
+              name: details.displayName || `${details.firstName} ${details.lastName}` || 'X User',
+              title: details.screenName ? `@${details.screenName}` : '',
+            },
+          })
+
+          posthog?.capture('onboarding_twitter_profile_fetched', {
+            screenName: details.screenName,
+          })
+        } catch {
+          hasLinkedRef.current = false
+        }
+      } else {
+        const details = await collectLinkedInInfo()
+        if (!details) {
+          if (!silent) {
+            toast.error('Please log in to LinkedIn first, then come back here.', { id: 'linkedin-login-needed' })
+          }
+          return
+        }
+
+        if (hasLinkedRef.current) return
+        hasLinkedRef.current = true
+
+        try {
+          await linkProfile(details)
+
+          hasCollectedRef.current = true
+          setProfileData({ ...details, _platform: 'linkedin' })
+          markStepCompleted('connect-account')
+          updateData({
+            isLinkedInConnected: true,
+            userProfile: {
+              name: `${details.firstName} ${details.lastName}`,
+              title: `${details.publicIdentifier}`,
+            },
+          })
+
+          posthog?.capture('onboarding_linkedin_profile_fetched', {
+            publicIdentifier: details.publicIdentifier,
+          })
+        } catch {
+          hasLinkedRef.current = false
+        }
       }
     } catch (error) {
-      console.error('Could not auto-collect profile data:', error)
+      if (silent) return
       const msg = error instanceof Error ? error.message : ''
       if (msg.includes('Chrome extension runtime is not available')) {
         toast.error(
@@ -106,72 +208,76 @@ export function LinkedInStep() {
         )
       } else {
         toast.error(
-          'Could not collect your LinkedIn profile data. Please try again.',
-          {
-            id: 'collect-failed',
-          }
+          `Could not collect your ${platform === 'twitter' ? 'X' : 'LinkedIn'} profile data. Please try again.`,
+          { id: 'collect-failed' }
         )
       }
     }
-  }, [
-    user?.metadata?.onboarding,
-    updateData,
-    markStepCompleted,
-    linkProfile,
-    posthog,
-  ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnectStepCompleted, platform, collectLinkedInInfo, collectTwitterInfo])
 
   const handleLinking = async () => {
     setIsLinking(true)
     try {
-      // If we have profile data, use it. Otherwise, linkProfile will fetch it.
-      if (extensionProfileData) {
-        posthog?.capture('onboarding_linkedin_connect_clicked', {
-          hasExtensionProfileData: true,
-        })
+      posthog?.capture(`onboarding_${platform}_connect_clicked`, {
+        hasProfileData: Boolean(profileData),
+      })
 
-        if (!hasLinkedRef.current) {
-          hasLinkedRef.current = true
-          await linkProfile(extensionProfileData)
-          posthog?.capture('onboarding_linkedin_link_success')
+      if (hasLinkedRef.current) return
+      hasLinkedRef.current = true
+
+      if (profileData) {
+        if (profileData._platform === 'linkedin') {
+          await linkProfile(profileData)
+        } else {
+          await linkTwitterProfile(profileData)
         }
+      } else if (platform === 'linkedin') {
+        await linkProfile()
       } else {
-        posthog?.capture('onboarding_linkedin_connect_clicked', {
-          hasExtensionProfileData: false,
-        })
-
-        if (!hasLinkedRef.current) {
-          hasLinkedRef.current = true
-          await linkProfile()
-          posthog?.capture('onboarding_linkedin_link_success')
+        const details = await getTwitterProfileDetailsFromExtension()
+        if (!details?.authToken) {
+          toast.error(config.loginPrompt)
+          window.open(config.loginUrl, '_blank')
+          hasLinkedRef.current = false
+          return
         }
+        await linkTwitterProfile(details)
+        setProfileData({ ...details, _platform: 'twitter' })
+        markStepCompleted('connect-account')
+        updateData({
+          isLinkedInConnected: true,
+          userProfile: {
+            name: details.displayName || `${details.firstName} ${details.lastName}` || 'X User',
+            title: details.screenName ? `@${details.screenName}` : '',
+          },
+        })
       }
+
+      posthog?.capture(`onboarding_${platform}_link_success`)
     } catch (error) {
       console.error('Error linking profile:', error)
+      hasLinkedRef.current = false
     } finally {
       setIsLinking(false)
     }
   }
 
   useEffect(() => {
-    // Auto-collect user information when component mounts
-    collectUserInformation()
+    if (profileData || isConnectStepCompleted) return
 
-    // If profile data is already collected or linkedin step is completed, don't set up listeners
-    const onboardingData = user?.metadata?.onboarding
-    const isLinkedInStepCompleted =
-      onboardingData &&
-      (onboardingData.status === 'completed' || onboardingData.step >= 2)
-    if (extensionProfileData || isLinkedInStepCompleted) return
+    collectUserInformation({ silent: true })
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && !hasCollectedRef.current) {
         collectUserInformation()
       }
     }
 
     const handlePageShow = () => {
-      collectUserInformation()
+      if (!hasCollectedRef.current) {
+        collectUserInformation()
+      }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -181,14 +287,40 @@ export function LinkedInStep() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('pageshow', handlePageShow)
     }
-  }, [collectUserInformation, extensionProfileData, user?.metadata?.onboarding])
+  }, [collectUserInformation, profileData, isConnectStepCompleted])
+
+  const hasProfileInfo = profileData || (isConnectStepCompleted && onboardingData.userProfile)
+
+  const displayName =
+    profileData?._platform === 'twitter'
+      ? profileData.displayName ||
+        `${profileData.firstName} ${profileData.lastName}`
+      : profileData
+        ? `${profileData.firstName} ${profileData.lastName}`
+        : onboardingData.userProfile?.name ?? ''
+
+  const displayHandle =
+    profileData?._platform === 'twitter'
+      ? (profileData.screenName ? `@${profileData.screenName}` : '')
+      : profileData?._platform === 'linkedin'
+        ? `@${profileData.publicIdentifier}`
+        : onboardingData.userProfile?.title ?? ''
+
+  const displayInitials =
+    profileData?._platform === 'twitter'
+      ? (profileData.displayName?.charAt(0) ??
+        profileData.firstName?.charAt(0) ??
+        '')
+      : profileData
+        ? `${profileData.firstName?.charAt(0) ?? ''}${profileData.lastName?.charAt(0) ?? ''}`
+        : onboardingData.userProfile?.name?.charAt(0) ?? ''
 
   if (isLoading) {
     return (
       <div className='space-y-8'>
         <OnboardingCard
-          title='Connecting to LinkedIn'
-          description='Fetching your LinkedIn profile information...'
+          title={`Connecting to ${platform === 'twitter' ? 'X' : 'LinkedIn'}`}
+          description={`Fetching your ${platform === 'twitter' ? 'X' : 'LinkedIn'} profile information...`}
         >
           <div className='flex flex-col items-center space-y-6 py-4'>
             <div className='text-muted-foreground flex items-center gap-2'>
@@ -206,7 +338,7 @@ export function LinkedInStep() {
       <OnboardingCard
         title={
           <div className='flex items-center gap-2'>
-            Connect Your LinkedIn Account
+            {config.title}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -215,43 +347,38 @@ export function LinkedInStep() {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side='right' className='max-w-xs'>
-                  <p>
-                    We use LinkedIn's secure API to access only
-                    <br />
-                    the data needed for automated commenting
-                  </p>
+                  <p>{config.tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         }
-        description='We need access to your LinkedIn account to automate comments on your behalf.'
+        description={config.description}
       >
         <div className='flex flex-col items-center space-y-6 py-4'>
           <div className='w-full max-w-md space-y-6'>
-            {/* Show extension profile data if available */}
-            {extensionProfileData && (
+            {hasProfileInfo && (
               <div className='flex w-full flex-col items-center space-y-4'>
                 <div className='flex items-center gap-2 text-green-500 dark:text-green-400'>
                   <CheckCircle2 className='h-5 w-5' />
-                  <span className='font-medium'>Profile data fetched!</span>
+                  <span className='font-medium'>
+                    {isConnectStepCompleted && !profileData
+                      ? 'Account connected'
+                      : 'Profile data fetched!'}
+                  </span>
                 </div>
 
                 <div className='flex w-full flex-col gap-4 rounded-lg p-4'>
                   <div className='flex items-center gap-4 rounded border p-3'>
                     <div className='relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800'>
                       <span className='text-muted-foreground'>
-                        {extensionProfileData.firstName?.charAt(0)}
-                        {extensionProfileData.lastName?.charAt(0)}
+                        {displayInitials}
                       </span>
                     </div>
                     <div>
-                      <h3 className='font-medium'>
-                        {extensionProfileData.firstName}{' '}
-                        {extensionProfileData.lastName}
-                      </h3>
+                      <h3 className='font-medium'>{displayName}</h3>
                       <p className='text-muted-foreground text-sm font-medium'>
-                        @{extensionProfileData.publicIdentifier}
+                        {displayHandle}
                       </p>
                     </div>
                   </div>
@@ -259,28 +386,44 @@ export function LinkedInStep() {
               </div>
             )}
 
-            {!extensionProfileData && isExtensionInstalled && (
+            {!hasProfileInfo && isExtensionInstalled && (
               <Button
                 className='relative w-full overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
                 onClick={handleLinking}
-                disabled={isLinking || isLinkingProfile}
+                disabled={isLinking || isLinkingProfile || isLinkingTwitterProfile}
               >
-                <Linkedin className='mr-2 h-4 w-4' />
-                {isLinking || isLinkingProfile
-                  ? 'Connecting...'
-                  : 'Connect LinkedIn'}
+                {isLinking || isLinkingProfile || isLinkingTwitterProfile ? (
+                  <>
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    {config.connectingLabel}
+                  </>
+                ) : (
+                  <>
+                    <PlatformIcon className='mr-2 h-4 w-4' />
+                    {config.buttonLabel}
+                  </>
+                )}
               </Button>
             )}
           </div>
         </div>
 
-        {extensionProfileData && (
+        {hasProfileInfo && (
           <OnboardingNavigation
             nextStep='/onboarding/post-settings'
-            currentStep='linkedin'
+            currentStep='connect-account'
             loading={isUpdatingOnboardingStatus}
             onNext={async () => {
-              await updateOnboardingStatusAsync({ status: 'in-progress', step: 2 })
+              const resolvedId = activeProfile?._id ?? profiles?.[profiles.length - 1]?._id
+              if (resolvedId) {
+                updateData({ linkedProfileId: resolvedId })
+              }
+              if (!isConnectStepCompleted) {
+                await updateOnboardingStatusAsync({
+                  status: 'in-progress',
+                  step: 3,
+                })
+              }
               return true
             }}
           />

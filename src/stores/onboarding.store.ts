@@ -1,14 +1,16 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export interface OnboardingData {
   isExtensionInstalled: boolean
   isLinkedInConnected: boolean
+  selectedAgentType: string | null
+  linkedProfileId: string | null
   userProfile: {
     name: string
     title: string
     avatar?: string
   } | null
-  // Post settings
   scrapeSetting: {
     keywordsToTarget: string[]
     commentsPerDay: number
@@ -28,6 +30,8 @@ export interface OnboardingData {
 const defaultOnboardingData: OnboardingData = {
   isExtensionInstalled: false,
   isLinkedInConnected: false,
+  selectedAgentType: null,
+  linkedProfileId: null,
   userProfile: null,
   scrapeSetting: {
     keywordsToTarget: [],
@@ -54,25 +58,33 @@ interface OnboardingStoreState {
   isStepCompleted: (step: string) => boolean
 }
 
-export const useOnboardingStore = create<OnboardingStoreState>((set, get) => ({
-  data: defaultOnboardingData,
-  completedSteps: [],
-  updateData: (newData) =>
-    set((state) => ({
-      data: {
-        ...state.data,
-        ...newData,
+export const useOnboardingStore = create<OnboardingStoreState>()(
+  persist(
+    (set, get) => ({
+      data: defaultOnboardingData,
+      completedSteps: [],
+      updateData: (newData) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            ...newData,
+          },
+        })),
+      resetData: () => set({ data: defaultOnboardingData, completedSteps: [] }),
+      markStepCompleted: (step: string) => {
+        const { completedSteps } = get()
+        if (!completedSteps.includes(step)) {
+          set({ completedSteps: [...completedSteps, step] })
+        }
       },
-    })),
-  resetData: () => set({ data: defaultOnboardingData, completedSteps: [] }),
-  markStepCompleted: (step: string) => {
-    const { completedSteps } = get()
-    if (!completedSteps.includes(step)) {
-      set({ completedSteps: [...completedSteps, step] })
+      isStepCompleted: (step: string) => get().completedSteps.includes(step),
+    }),
+    {
+      name: 'commentify-onboarding',
+      version: 1,
     }
-  },
-  isStepCompleted: (step: string) => get().completedSteps.includes(step),
-}))
+  )
+)
 
 export function useOnboarding() {
   const data = useOnboardingStore((s) => s.data)

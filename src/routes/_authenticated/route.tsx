@@ -43,11 +43,12 @@ function RouteComponent() {
   } = useGetAllProfileQuery()
   const activeProfile = useProfileStore((s) => s.activeProfile)
 
-  // Define core functionality pages that require profile connection
   const isCoreFeaturePage = () => {
     const pathname = location.pathname
-    const nonCorePages = ['/pricing', '/billing']
-    return !nonCorePages.some((page) => pathname.startsWith(page))
+    const nonCorePages = ['/pricing', '/billing', '/agents', '/']
+    return !nonCorePages.some((page) =>
+      page === '/' ? pathname === '/' : pathname.startsWith(page)
+    )
   }
 
   // Handle onboarding redirection

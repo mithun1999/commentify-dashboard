@@ -14,12 +14,14 @@ import {
   getAllProfile,
   getLinkedInStats,
   linkProfile,
+  linkTwitterProfile,
 } from '../api/profile.api'
 import {
   ILinkedInStats,
   IProfile,
   IProfileResponseFromExtension,
 } from '../interface/profile.interface'
+import type { ITwitterProfileFromExtension } from '@/features/twitter-commenting/utils/extension'
 
 export enum ProfileQueryEnum {
   GET_ALL_PROFILE = 'get-all-profile',
@@ -77,7 +79,7 @@ export const useLinkProfile = (isOnboardingStep: boolean = false) => {
   const queryClient = useQueryClient()
   const { setActiveProfile } = useProfileStore()
 
-  const { mutate, isPending } = useMutation({
+  const { mutateAsync, isPending } = useMutation({
     mutationFn: linkProfile,
     onSuccess: (response) => {
       if (response?.profile) {
@@ -98,7 +100,9 @@ export const useLinkProfile = (isOnboardingStep: boolean = false) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       toast.error(
-        error?.message || 'Something went wrong while linking profile'
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while linking profile'
       )
     },
   })
@@ -106,52 +110,86 @@ export const useLinkProfile = (isOnboardingStep: boolean = false) => {
   const linkProfileWithValidation = async (
     profileData?: IProfileResponseFromExtension
   ) => {
-    try {
-      // If profile data is provided, use it directly (for onboarding flow)
-      if (profileData) {
-        // Validate public identifier
-        if (!profileData.publicIdentifier) {
-          toast.error('Please log in to LinkedIn first to continue')
-          window.open('https://www.linkedin.com', '_blank')
-          return
-        }
-        mutate(profileData)
-        return
-      }
-
-      // Otherwise, fetch from extension (for connect/reconnect flows)
-      // First check if extension is installed
-      const isExtensionInstalled = await checkIsExtensionInstalled(
-        envConfig.chromeExtensionId,
-        envConfig.chromeExtensionIconUrl
-      )
-
-      if (!isExtensionInstalled) {
-        toast.error('Commentify extension is not installed', {
-          description: 'Please install the Chrome extension to continue.',
-        })
-        window.open(envConfig.extensionUrl, '_blank')
-        return
-      }
-
-      // Then get profile details
-      const profileDetails = await getProfileDetailsFromExtension()
-
-      // Finally check if public identifier is available
-      if (!profileDetails.publicIdentifier) {
+    if (profileData) {
+      if (!profileData.publicIdentifier) {
         toast.error('Please log in to LinkedIn first to continue')
         window.open('https://www.linkedin.com', '_blank')
         return
       }
-
-      mutate(profileDetails)
-    } catch (error) {
-      console.error('Error linking profile:', error)
-      toast.error('Failed to link profile. Please try again.')
+      return mutateAsync(profileData)
     }
+
+    const isExtensionInstalled = await checkIsExtensionInstalled(
+      envConfig.chromeExtensionId,
+      envConfig.chromeExtensionIconUrl
+    )
+
+    if (!isExtensionInstalled) {
+      toast.error('Commentify extension is not installed', {
+        description: 'Please install the Chrome extension to continue.',
+      })
+      window.open(envConfig.extensionUrl, '_blank')
+      return
+    }
+
+    const profileDetails = await getProfileDetailsFromExtension()
+
+    if (!profileDetails.publicIdentifier) {
+      toast.error('Please log in to LinkedIn first to continue')
+      window.open('https://www.linkedin.com', '_blank')
+      return
+    }
+
+    return mutateAsync(profileDetails)
   }
 
   return { linkProfile: linkProfileWithValidation, isLinkingProfile: isPending }
+}
+
+export const useLinkTwitterProfile = (isOnboardingStep: boolean = false) => {
+  const queryClient = useQueryClient()
+  const { setActiveProfile } = useProfileStore()
+
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: linkTwitterProfile,
+    onSuccess: (response) => {
+      if (response?.profile) {
+        setActiveProfile(response.profile)
+        if (isOnboardingStep) {
+          updateOnboardingStatus({
+            status: 'in-progress',
+            step: 2,
+          })
+        }
+        if (!isOnboardingStep) {
+          queryClient.invalidateQueries({
+            queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+          })
+        }
+      }
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while linking X profile'
+      )
+    },
+  })
+
+  const linkTwitterProfileWithValidation = async (
+    profileData: ITwitterProfileFromExtension
+  ) => {
+    if (!profileData.screenName) {
+      toast.error('Please log in to X.com first to continue')
+      window.open('https://x.com', '_blank')
+      return
+    }
+    return mutateAsync(profileData)
+  }
+
+  return { linkTwitterProfile: linkTwitterProfileWithValidation, isLinkingTwitterProfile: isPending }
 }
 
 export const useGetLinkedInStats = () => {

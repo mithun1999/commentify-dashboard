@@ -1,12 +1,8 @@
 import {
-  IconCash,
-  IconChecklist,
-  IconLayoutDashboard,
-  IconNotification,
-  IconPackages,
-  IconSettings,
-  IconTool,
   IconBubbleText,
+  IconCash,
+  IconHome,
+  IconPackages,
 } from '@tabler/icons-react'
 import { type SidebarData } from '../types'
 
@@ -21,30 +17,9 @@ export const sidebarData: SidebarData = {
     {
       items: [
         {
-          title: 'Stats',
+          title: 'Agent Hub',
           url: '/',
-          icon: IconLayoutDashboard,
-        },
-        {
-          title: 'History',
-          url: '/history',
-          icon: IconChecklist,
-        },
-        {
-          title: 'Settings',
-          icon: IconSettings,
-          items: [
-            {
-              title: 'Post Settings',
-              url: '/settings/post',
-              icon: IconTool,
-            },
-            {
-              title: 'Comments Settings',
-              url: '/settings/comments',
-              icon: IconNotification,
-            },
-          ],
+          icon: IconHome,
         },
       ],
     },
@@ -63,8 +38,8 @@ export const sidebarData: SidebarData = {
           icon: IconPackages,
         },
         {
-          title: 'Pricing',
-          url: '/pricing',
+          title: 'Billing',
+          url: '/billing',
           icon: IconCash,
         },
       ],

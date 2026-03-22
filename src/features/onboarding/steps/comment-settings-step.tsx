@@ -15,7 +15,9 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
+import { useOnboarding } from '@/stores/onboarding.store'
 import { useProfileStore } from '@/stores/profile.store'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import {
   Form,
   FormControl,
@@ -79,7 +81,10 @@ export function CommentSettingsStep() {
   const [isCommentSettingsExpanded, setIsCommentSettingsExpanded] =
     useState(false)
 
+  const { data: onboardingData, markStepCompleted } = useOnboarding()
   const activeProfile = useProfileStore((s) => s.activeProfile)
+  const { data: profiles } = useGetAllProfileQuery()
+  const resolvedProfileId = onboardingData.linkedProfileId ?? activeProfile?._id ?? profiles?.[profiles.length - 1]?._id
   const { createOnboardingCommentSettingAsync, isCreatingOnboardingComment } =
     useCreateOnboardingCommentQuery()
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
@@ -94,7 +99,14 @@ export function CommentSettingsStep() {
   // Form values are now handled by FormField components
 
   const onSubmit = async (data: CommentSettingsValues) => {
-    if (!activeProfile?._id) return
+    posthog?.capture('onboarding_comment_setting_form_submitted', {
+      commentStyle: data.commentStyle,
+      commentsPerDay: data.commentsPerDay,
+      useEmojis: data.useEmojis,
+      useExclamations: data.useExclamations,
+    })
+
+    if (!resolvedProfileId) return true
 
     const payload: ICreateOnboardingCommentDto = {
       aboutProfile: data.aboutProfile,
@@ -106,14 +118,8 @@ export function CommentSettingsStep() {
 
     try {
       await createOnboardingCommentSettingAsync({
-        profileId: activeProfile._id,
+        profileId: resolvedProfileId,
         data: payload,
-      })
-      posthog?.capture('onboarding_comment_setting_form_submitted', {
-        commentStyle: data.commentStyle,
-        commentsPerDay: data.commentsPerDay,
-        useEmojis: data.useEmojis,
-        useExclamations: data.useExclamations,
       })
       return true
     } catch {
@@ -437,6 +443,7 @@ export function CommentSettingsStep() {
           </div>
 
           <OnboardingNavigation
+            prevStep='/onboarding/post-settings'
             nextStep='/onboarding/identity'
             loading={isCreatingOnboardingComment || isUpdatingOnboardingStatus}
             onNext={async () => {
@@ -447,10 +454,11 @@ export function CommentSettingsStep() {
               const result = await onSubmit(values)
               if (!result) return false
 
-              await updateOnboardingStatusAsync({ status: 'in-progress', step: 4 })
+              markStepCompleted('comment-settings')
+              await updateOnboardingStatusAsync({ status: 'in-progress', step: 5 })
               return true
             }}
-            currentStep='comment_settings'
+            currentStep='comment-settings'
           />
         </OnboardingCard>
       </form>

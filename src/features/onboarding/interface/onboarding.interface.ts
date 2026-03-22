@@ -15,6 +15,12 @@ export interface ICreateOnboardingPostDto {
   skipJobUpdatePosts: boolean
 }
 
+export interface ICreateOnboardingTwitterPostDto {
+  anyOfTheseWords: string[]
+  theseHashtags: string[]
+  numberOfPostsToScrapePerDay: number
+}
+
 export interface IOnboardingCommentPayload {
   profileId: string
   data: ICreateOnboardingCommentDto
@@ -23,4 +29,9 @@ export interface IOnboardingCommentPayload {
 export interface IOnboardingPostPayload {
   profileId: string
   data: ICreateOnboardingPostDto
+}
+
+export interface IOnboardingTwitterPostPayload {
+  profileId: string
+  data: ICreateOnboardingTwitterPostDto
 }

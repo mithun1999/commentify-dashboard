@@ -1,5 +1,6 @@
 import logoBlack from '@/assets/images/logo-black.svg'
 import logoWhite from '@/assets/images/logo.svg'
+import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 
 export function OnboardingHeader() {
@@ -12,6 +13,7 @@ export function OnboardingHeader() {
         </div>
         <div className='flex items-center gap-4'>
           <ThemeSwitch />
+          <ProfileDropdown />
         </div>
       </div>
     </header>

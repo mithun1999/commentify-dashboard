@@ -7,10 +7,12 @@ import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 import {
   createOnboardingCommentSetting,
   createOnboardingPostSetting,
+  createOnboardingTwitterPostSetting,
 } from '../api/onboarding.api'
 import {
   IOnboardingCommentPayload,
   IOnboardingPostPayload,
+  IOnboardingTwitterPostPayload,
 } from '../interface/onboarding.interface'
 
 export const useCreateOnboardingPostQuery = () => {
@@ -81,5 +83,39 @@ export const useCreateOnboardingCommentQuery = () => {
     createOnboardingCommentSetting: mutate,
     createOnboardingCommentSettingAsync: mutateAsync,
     isCreatingOnboardingComment: isPending,
+  }
+}
+
+export const useCreateOnboardingTwitterPostQuery = () => {
+  const queryClient = useQueryClient()
+  const { mutateAsync, isPending } = useMutation<
+    unknown,
+    AxiosError<{ message?: string }>,
+    IOnboardingTwitterPostPayload
+  >({
+    mutationFn: createOnboardingTwitterPostSetting,
+    onSuccess: () => {
+      showSubmittedData('Scrape settings saved successfully')
+      queryClient.invalidateQueries({
+        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+        refetchType: 'active',
+      })
+      updateOnboardingStatus({
+        status: 'in-progress',
+        step: 3,
+      })
+    },
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while saving scrape settings'
+      )
+    },
+  })
+
+  return {
+    createOnboardingTwitterPostSettingAsync: mutateAsync,
+    isCreatingOnboardingTwitterPost: isPending,
   }
 }

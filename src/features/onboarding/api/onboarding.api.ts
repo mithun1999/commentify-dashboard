@@ -2,6 +2,7 @@ import { axiosInstance } from '@/utils/axios.util'
 import {
   IOnboardingCommentPayload,
   IOnboardingPostPayload,
+  IOnboardingTwitterPostPayload,
 } from '../interface/onboarding.interface'
 
 export async function createOnboardingPostSetting(
@@ -10,6 +11,17 @@ export async function createOnboardingPostSetting(
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/setting/onboarding/post/${payload.profileId}`,
+    data: payload.data,
+  })
+  return data
+}
+
+export async function createOnboardingTwitterPostSetting(
+  payload: IOnboardingTwitterPostPayload
+) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/setting/twitter-scrape/${payload.profileId}`,
     data: payload.data,
   })
   return data

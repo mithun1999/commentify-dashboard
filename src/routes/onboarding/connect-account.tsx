@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LinkedInStep } from '@/features/onboarding/steps/linkedin-step'
 
-export const Route = createFileRoute('/onboarding/linkedin')({
+export const Route = createFileRoute('/onboarding/connect-account')({
   component: () => <LinkedInStep />,
 })
