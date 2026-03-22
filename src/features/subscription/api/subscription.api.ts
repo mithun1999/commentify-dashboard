@@ -7,6 +7,7 @@ import {
 export async function upgradeDowngradeSubscription(payload: {
   productId: string
   provider?: 'lemon_squeezy' | 'dodo_payments'
+  quantity?: number
 }) {
   const { data } = await axiosInstance({
     method: 'PATCH',

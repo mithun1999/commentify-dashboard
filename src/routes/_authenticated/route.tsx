@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Cookies from 'js-cookie'
 import {
   createFileRoute,
@@ -17,8 +17,10 @@ import ConnectProfileCard from '@/components/connect-profile-card'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
 import SkipToMain from '@/components/skip-to-main'
+import { TrialBanner } from '@/components/trial-banner'
 import useInitiatePosthog from '@/features/auth/hooks/useInitiatePosthog'
 import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedirect'
+import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import GeneralError from '@/features/errors/general-error'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
@@ -31,6 +33,7 @@ function RouteComponent() {
   const navigate = useNavigate()
   const location = useLocation()
   const defaultOpen = Cookies.get('sidebar_state') !== 'false'
+  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false)
 
   const isSignedIn = useAuthStore((state) => state?.session?.user?.id)
   const isSessionLoaded = useAuthStore((state) => state?.isSessionLoaded)
@@ -91,6 +94,19 @@ function RouteComponent() {
             'has-[main.fixed-main]:group-data-[scroll-locked=1]/body:h-svh'
           )}
         >
+          {user &&
+            !trialBannerDismissed &&
+            (user.status === UserSubscriptionStatus.IN_TRIAL ||
+              user.status === UserSubscriptionStatus.TRIAL_EXPIRED) && (
+              <TrialBanner
+                user={user}
+                onDismiss={
+                  user.status === UserSubscriptionStatus.IN_TRIAL
+                    ? () => setTrialBannerDismissed(true)
+                    : undefined
+                }
+              />
+            )}
           {!isLoadingProfiles &&
           isProfilesFetched &&
           (!profiles || profiles.length === 0) &&

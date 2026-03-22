@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { paymentConfig } from '@/config/payment.config'
 import { Loader2 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
@@ -12,6 +12,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { PaymentProvider } from '../subscription/interfaces/subscription.interface'
 import {
   useCreateCheckoutUrl,
@@ -26,14 +27,21 @@ import { getCurrencySymbol } from './utils/prices.util'
 export default function Pricing() {
   const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
+  const { agents } = useAgents()
   const { data: plans, isLoading: isFetchingPlans } = useGetPlans()
   const { updateSubscriptionPlan, isUpdatingSubscriptionPlan } =
     useUpdateSubscriptionPlan()
+
+  const minQuantity = Math.max(agents.length, 1)
+  const hasActiveSubscription = user?.status === UserSubscriptionStatus.ACTIVE
+  const currentSubscriptionQuantity = user?.subscription?.quantity ?? 1
+  const currentPlanPrice = user?.subscribedProduct?.defaultPrice ?? 0
 
   const popularPlans = ['premium']
   const [subscriptionType, setSubscriptionType] = useState<
     'monthly' | 'yearly'
   >('monthly')
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
 
   const handleOpenLsModal = (url: string) => {
     try {
@@ -86,6 +94,22 @@ export default function Pricing() {
       .filter((p) => p.status === 'active')
   }, [plans, subscriptionType])
 
+  const defaultQuantity = hasActiveSubscription
+    ? currentSubscriptionQuantity
+    : minQuantity
+
+  const getQuantity = useCallback(
+    (productId: string) => quantities[productId] ?? defaultQuantity,
+    [quantities, defaultQuantity]
+  )
+
+  const handleQuantityChange = useCallback(
+    (productId: string, value: number) => {
+      setQuantities((prev) => ({ ...prev, [productId]: value }))
+    },
+    []
+  )
+
   const handleUpdatingSubscription = () => {
     posthog?.capture('subscription_toggle_clicked', {
       to: subscriptionType === 'monthly' ? 'yearly' : 'monthly',
@@ -98,9 +122,7 @@ export default function Pricing() {
   }
 
   const isCurrentPlan = (data: IDisplayProduct): boolean => {
-    // Check if this plan is the user's current active subscription
     if (user?.status === UserSubscriptionStatus.ACTIVE) {
-      // Compare with subscribedProductId to check if this is the active plan
       return user?.subscribedProductId === data._id
     }
     return false
@@ -110,10 +132,12 @@ export default function Pricing() {
     productId,
     planName,
     chargeType,
+    quantity,
   }: {
     productId: string
     planName: string
     chargeType: string
+    quantity: number
   }) => {
     posthog?.capture('select_plan_clicked', {
       productId,
@@ -121,14 +145,16 @@ export default function Pricing() {
       hasActiveSubscription: Boolean(user?.subscription),
       planName,
       chargeType,
+      quantity,
     })
     if (user?.status === UserSubscriptionStatus.ACTIVE) {
-      updateSubscriptionPlan({ productId })
+      updateSubscriptionPlan({ productId, quantity })
     } else {
       createCheckoutUrl({
         productId,
         provider: paymentConfig.defaultPaymentProvider as PaymentProvider,
         embed: false,
+        quantity,
       })
     }
   }
@@ -189,6 +215,7 @@ export default function Pricing() {
           <div className='flex flex-col items-center justify-center space-y-4 py-10 md:flex-row md:items-start md:space-y-0 md:space-x-10'>
             {updatedPlans?.map((data, idx) => {
               const isCurrent = isCurrentPlan(data)
+              const qty = getQuantity(data._id)
               return (
                 <PricingCell
                   key={idx}
@@ -197,17 +224,23 @@ export default function Pricing() {
                       productId: data._id,
                       planName: data.name,
                       chargeType: subscriptionType,
+                      quantity: qty,
                     })
                   }
                   disabled={
-                    isCreatingCheckoutUrl ||
-                    isUpdatingSubscriptionPlan ||
-                    isCurrent
+                    isCreatingCheckoutUrl || isUpdatingSubscriptionPlan
                   }
                   isSubmitLoading={
                     isCreatingCheckoutUrl || isUpdatingSubscriptionPlan
                   }
                   isCurrentPlan={isCurrent}
+                  quantity={qty}
+                  minQuantity={minQuantity}
+                  onQuantityChange={(v) => handleQuantityChange(data._id, v)}
+                  currencySymbol={getCurrencySymbol(data.currency)}
+                  hasActiveSubscription={hasActiveSubscription}
+                  currentSubscriptionQuantity={currentSubscriptionQuantity}
+                  currentPlanPrice={currentPlanPrice}
                   {...data}
                 />
               )

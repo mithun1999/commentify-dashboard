@@ -106,7 +106,7 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
               <FormItem>
                 <FormLabel>First Name</FormLabel>
                 <FormControl>
-                  <Input placeholder='John' {...field} disabled />
+                  <Input placeholder='John' {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -119,7 +119,7 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
               <FormItem>
                 <FormLabel>Last Name</FormLabel>
                 <FormControl>
-                  <Input placeholder='Doe' {...field} disabled />
+                  <Input placeholder='Doe' {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -133,7 +133,7 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder='name@example.com' {...field} disabled />
+                <Input placeholder='name@example.com' {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -146,7 +146,7 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <PasswordInput placeholder='********' {...field} disabled />
+                <PasswordInput placeholder='********' {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -159,13 +159,13 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Confirm Password</FormLabel>
               <FormControl>
-                <PasswordInput placeholder='********' {...field} disabled />
+                <PasswordInput placeholder='********' {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button className='mt-2' type='submit' disabled={true}>
+        <Button className='mt-2' type='submit'>
           Create Account
         </Button>
 
@@ -184,7 +184,6 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
           <Button
             variant='outline'
             type='button'
-            disabled={true}
             onClick={handleGoogleSignIn}
           >
             <IconBrandGoogle className='mr-2 h-4 w-4' /> Google

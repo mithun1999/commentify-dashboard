@@ -22,6 +22,7 @@ export interface IUser {
   subscribedProductId: string
   status: UserSubscriptionStatus
   subscription?: ISubscription | null
+  trialEndsAt?: string | null
   metadata: {
     onboarding: {
       status: 'not-started' | 'in-progress' | 'completed'

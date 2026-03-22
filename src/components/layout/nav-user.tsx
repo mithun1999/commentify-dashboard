@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
-import { ChevronsUpDown, LogOut, Sparkles, Settings, CreditCard } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Sparkles, CreditCard, Settings } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -20,18 +20,32 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { signOut } from '@/features/auth/utils/auth.util'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
+
+function getUpgradeInfo(planSku?: string) {
+  const plan = (planSku ?? '').toLowerCase()
+  if (plan.includes('premium')) return null
+  if (plan.includes('pro')) return { label: 'Upgrade to Premium', to: '/pricing' as const }
+  return { label: 'Upgrade to Pro', to: '/pricing' as const }
+}
 
 export function NavUser() {
   const posthog = usePostHog()
   const { isMobile } = useSidebar()
   const router = useRouter()
   const session = useAuthStore((state) => state.session)
+  const { data: appUser } = useGetUserQuery()
   const [user, setUser] = useState<{
     name: string
     email: string
     avatar?: string
   } | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const upgradeInfo = useMemo(
+    () => getUpgradeInfo(appUser?.subscribedProduct?.sku),
+    [appUser?.subscribedProduct?.sku]
+  )
 
   useEffect(() => {
     if (session?.user) {
@@ -123,18 +137,23 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
 
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem asChild>
-              <Link
-                to='/pricing'
-                className='w-full'
-                onClick={() => posthog?.capture('upgrade_plan_navbar_clicked')}
-              >
-                <Sparkles className='mr-2 h-4 w-4' />
-                Upgrade to Pro
-              </Link>
-            </DropdownMenuItem>
+            {upgradeInfo && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link
+                    to={upgradeInfo.to}
+                    className='w-full'
+                    onClick={() =>
+                      posthog?.capture('upgrade_plan_navbar_clicked')
+                    }
+                  >
+                    <Sparkles className='mr-2 h-4 w-4' />
+                    {upgradeInfo.label}
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
 
             <DropdownMenuSeparator />
 
