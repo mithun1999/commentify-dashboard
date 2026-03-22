@@ -40,7 +40,7 @@ export function TeamSwitcher() {
   const { data: profiles, isLoading } = useGetAllProfileQuery()
   const { data: user } = useGetUserQuery()
   const [isLinking, setIsLinking] = useState(false)
-  const { isLinkingProfile, linkProfile } = useLinkProfile()
+  const { linkProfile } = useLinkProfile()
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [profileToDelete, setProfileToDelete] = useState<IProfile | null>(null)
 
