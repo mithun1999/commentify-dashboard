@@ -9,7 +9,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 
 type ProfileViewerGrowthEntry = {
   period: string
@@ -18,12 +17,11 @@ type ProfileViewerGrowthEntry = {
   profileViewersGrowthPercent?: number
 }
 
-export function ProfileOverview() {
-  const { data: linkedInStats } = useGetLinkedInStats()
+interface ProfileOverviewProps {
+  growth: ProfileViewerGrowthEntry[]
+}
 
-  const growth = (linkedInStats?.profileViewerStats?.growth ??
-    []) as ProfileViewerGrowthEntry[]
-
+export function ProfileOverview({ growth }: ProfileOverviewProps) {
   const hasValidData = Array.isArray(growth) && growth.length > 0
   if (!hasValidData) {
     return (

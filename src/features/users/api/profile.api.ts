@@ -43,3 +43,11 @@ export async function getLinkedInStats(profileId: string) {
   })
   return data as ILinkedInStats
 }
+
+export async function getPostStats(profileId: string) {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/post/stats/${profileId}`,
+  })
+  return data as { pending: number; scheduled: number; completed: number }
+}

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { IconDotsVertical, IconSettings, IconRefresh } from '@tabler/icons-react'
+import { IconDotsVertical, IconSettings, IconRefresh, IconMessageCheck } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { getAgentType } from '@/features/agent-system/registry'
 import type { DerivedAgent } from '@/features/agent-system/types/agent.types'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { useGetPostStats } from '@/features/users/query/profile.query'
 
 function statusConfig(status: ProfileStatusEnum) {
   switch (status) {
@@ -37,16 +38,18 @@ interface AgentCardProps {
 
 export function AgentCard({ agent }: AgentCardProps) {
   const typeDef = getAgentType(agent.type)
+  const { data: postStats } = useGetPostStats(agent.profileId)
   if (!typeDef) return null
 
   const Icon = typeDef.icon
   const status = statusConfig(agent.status)
-  const queueUrl = `/agents/${agent.profileId}/${agent.type}/queue`
+  const statsUrl = `/agents/${agent.profileId}/${agent.type}/stats`
   const settingsUrl = `/agents/${agent.profileId}/${agent.type}/settings`
+  const completedCount = postStats?.completed ?? 0
 
   return (
     <Card className='group relative transition-shadow hover:shadow-md'>
-      <Link to={queueUrl as string} className='absolute inset-0 z-0' />
+      <Link to={statsUrl as string} className='absolute inset-0 z-0' />
       <CardHeader className='flex flex-row items-start justify-between gap-2 pb-3'>
         <div className='flex items-center gap-3'>
           <div className='bg-muted flex size-10 items-center justify-center rounded-lg'>
@@ -88,13 +91,21 @@ export function AgentCard({ agent }: AgentCardProps) {
         </DropdownMenu>
       </CardHeader>
       <CardContent className='pt-0'>
-        <div className='flex items-center gap-2'>
-          <span
-            className={cn('inline-block size-2 rounded-full', status.dot)}
-          />
-          <Badge variant={status.variant} className='text-xs'>
-            {status.label}
-          </Badge>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <span
+              className={cn('inline-block size-2 rounded-full', status.dot)}
+            />
+            <Badge variant={status.variant} className='text-xs'>
+              {status.label}
+            </Badge>
+          </div>
+          {postStats && (
+            <div className='text-muted-foreground flex items-center gap-1 text-xs'>
+              <IconMessageCheck className='size-3.5' />
+              <span>{completedCount.toLocaleString()} posted</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

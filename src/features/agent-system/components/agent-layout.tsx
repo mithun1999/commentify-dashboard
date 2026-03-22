@@ -66,7 +66,11 @@ export function AgentLayout({ children }: { children: ReactNode }) {
 
   const Icon = agentTypeDef.icon
   const basePath = `/agents/${agent.profileId}/${agent.type}`
-  const isSettingsActive = location.pathname.endsWith('/settings')
+  const activeTab = location.pathname.endsWith('/settings')
+    ? 'settings'
+    : location.pathname.endsWith('/stats')
+      ? 'stats'
+      : 'queue'
 
   return (
     <>
@@ -96,8 +100,11 @@ export function AgentLayout({ children }: { children: ReactNode }) {
         </div>
       </Header>
       <Main>
-        <Tabs value={isSettingsActive ? 'settings' : 'queue'} className='mb-6'>
+        <Tabs value={activeTab} className='mb-6'>
           <TabsList>
+            <TabsTrigger value='stats' asChild>
+              <Link to={`${basePath}/stats` as string}>Stats</Link>
+            </TabsTrigger>
             <TabsTrigger value='queue' asChild>
               <Link to={`${basePath}/queue` as string}>Queue</Link>
             </TabsTrigger>

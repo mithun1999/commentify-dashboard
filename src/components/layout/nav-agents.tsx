@@ -39,7 +39,7 @@ export function NavAgents() {
           const typeDef = getAgentType(agent.type)
           if (!typeDef) return null
           const Icon = typeDef.icon
-          const agentUrl = `/agents/${agent.profileId}/${agent.type}/queue`
+          const agentUrl = `/agents/${agent.profileId}/${agent.type}/stats`
           const isActive = href.startsWith(
             `/agents/${agent.profileId}/${agent.type}`
           )

@@ -13,6 +13,7 @@ import {
   deleteProfile,
   getAllProfile,
   getLinkedInStats,
+  getPostStats,
   linkProfile,
   linkTwitterProfile,
 } from '../api/profile.api'
@@ -192,21 +193,30 @@ export const useLinkTwitterProfile = (isOnboardingStep: boolean = false) => {
   return { linkTwitterProfile: linkTwitterProfileWithValidation, isLinkingTwitterProfile: isPending }
 }
 
-export const useGetLinkedInStats = () => {
+export const useGetLinkedInStats = (profileId?: string) => {
   const activeProfile = useProfileStore((s) => s.activeProfile)
+  const resolvedId = profileId ?? activeProfile?._id
   const ONE_HOUR_MS = 60 * 60 * 1000
 
   const { data, isLoading } = useQuery<ILinkedInStats | null>({
-    queryKey: [ProfileQueryEnum.GET_LINKEDIN_STATS, activeProfile?._id],
-    enabled: Boolean(activeProfile?._id),
+    queryKey: [ProfileQueryEnum.GET_LINKEDIN_STATS, resolvedId],
+    enabled: Boolean(resolvedId),
     staleTime: ONE_HOUR_MS,
     gcTime: ONE_HOUR_MS,
     queryFn: async () => {
-      if (!activeProfile?._id) return null
-      const data = await getLinkedInStats(activeProfile._id)
-      return data
+      if (!resolvedId) return null
+      return getLinkedInStats(resolvedId)
     },
   })
 
   return { data, isLoading }
+}
+
+export const useGetPostStats = (profileId?: string) => {
+  return useQuery({
+    queryKey: ['post-stats', profileId],
+    enabled: Boolean(profileId),
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => getPostStats(profileId!),
+  })
 }

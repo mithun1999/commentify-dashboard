@@ -411,7 +411,7 @@ export default function Dashboard() {
                           <CardTitle>Followers Growth</CardTitle>
                         </CardHeader>
                         <CardContent className='pl-2'>
-                          <Overview />
+                          <Overview growth={linkedInStats.followersStats.growth ?? []} />
                         </CardContent>
                       </Card>
                     )}
@@ -422,7 +422,7 @@ export default function Dashboard() {
                           <CardTitle>Profile Viewers Growth</CardTitle>
                         </CardHeader>
                         <CardContent className='pl-2'>
-                          <ProfileOverview />
+                          <ProfileOverview growth={(linkedInStats.profileViewerStats.growth ?? []) as { period: string; profileViewersGrowth?: number; profileViewersCount?: number; profileViewersGrowthPercent?: number }[]} />
                         </CardContent>
                       </Card>
                     )}

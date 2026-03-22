@@ -43,6 +43,7 @@ import { Route as AuthenticatedHelpCenterIndexImport } from './routes/_authentic
 import { Route as AuthenticatedSettingsPostImport } from './routes/_authenticated/settings/post'
 import { Route as AuthenticatedSettingsCommentsImport } from './routes/_authenticated/settings/comments'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/route'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeStatsImport } from './routes/_authenticated/agents/$profileId/$agentType/stats'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeSettingsImport } from './routes/_authenticated/agents/$profileId/$agentType/settings'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeQueueImport } from './routes/_authenticated/agents/$profileId/$agentType/queue'
 
@@ -242,6 +243,13 @@ const AuthenticatedAgentsProfileIdAgentTypeRouteRoute =
     id: '/agents/$profileId/$agentType',
     path: '/agents/$profileId/$agentType',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+
+const AuthenticatedAgentsProfileIdAgentTypeStatsRoute =
+  AuthenticatedAgentsProfileIdAgentTypeStatsImport.update({
+    id: '/stats',
+    path: '/stats',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
   } as any)
 
 const AuthenticatedAgentsProfileIdAgentTypeSettingsRoute =
@@ -500,6 +508,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsImport
       parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
     }
+    '/_authenticated/agents/$profileId/$agentType/stats': {
+      id: '/_authenticated/agents/$profileId/$agentType/stats'
+      path: '/stats'
+      fullPath: '/agents/$profileId/$agentType/stats'
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeStatsImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+    }
   }
 }
 
@@ -524,6 +539,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren {
   AuthenticatedAgentsProfileIdAgentTypeQueueRoute: typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   AuthenticatedAgentsProfileIdAgentTypeSettingsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
+  AuthenticatedAgentsProfileIdAgentTypeStatsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
 }
 
 const AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren: AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren =
@@ -532,6 +548,8 @@ const AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren: AuthenticatedAgen
       AuthenticatedAgentsProfileIdAgentTypeQueueRoute,
     AuthenticatedAgentsProfileIdAgentTypeSettingsRoute:
       AuthenticatedAgentsProfileIdAgentTypeSettingsRoute,
+    AuthenticatedAgentsProfileIdAgentTypeStatsRoute:
+      AuthenticatedAgentsProfileIdAgentTypeStatsRoute,
   }
 
 const AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren =
@@ -628,6 +646,7 @@ export interface FileRoutesByFullPath {
   '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
+  '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
 }
 
 export interface FileRoutesByTo {
@@ -663,6 +682,7 @@ export interface FileRoutesByTo {
   '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
+  '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
 }
 
 export interface FileRoutesById {
@@ -701,6 +721,7 @@ export interface FileRoutesById {
   '/_authenticated/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/_authenticated/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/_authenticated/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
+  '/_authenticated/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
 }
 
 export interface FileRouteTypes {
@@ -740,6 +761,7 @@ export interface FileRouteTypes {
     | '/agents/$profileId/$agentType'
     | '/agents/$profileId/$agentType/queue'
     | '/agents/$profileId/$agentType/settings'
+    | '/agents/$profileId/$agentType/stats'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/settings'
@@ -774,6 +796,7 @@ export interface FileRouteTypes {
     | '/agents/$profileId/$agentType'
     | '/agents/$profileId/$agentType/queue'
     | '/agents/$profileId/$agentType/settings'
+    | '/agents/$profileId/$agentType/stats'
   id:
     | '__root__'
     | '/_authenticated'
@@ -810,6 +833,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agents/$profileId/$agentType'
     | '/_authenticated/agents/$profileId/$agentType/queue'
     | '/_authenticated/agents/$profileId/$agentType/settings'
+    | '/_authenticated/agents/$profileId/$agentType/stats'
   fileRoutesById: FileRoutesById
 }
 
@@ -1011,7 +1035,8 @@ export const routeTree = rootRoute
       "parent": "/_authenticated",
       "children": [
         "/_authenticated/agents/$profileId/$agentType/queue",
-        "/_authenticated/agents/$profileId/$agentType/settings"
+        "/_authenticated/agents/$profileId/$agentType/settings",
+        "/_authenticated/agents/$profileId/$agentType/stats"
       ]
     },
     "/_authenticated/agents/$profileId/$agentType/queue": {
@@ -1020,6 +1045,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/agents/$profileId/$agentType/settings": {
       "filePath": "_authenticated/agents/$profileId/$agentType/settings.tsx",
+      "parent": "/_authenticated/agents/$profileId/$agentType"
+    },
+    "/_authenticated/agents/$profileId/$agentType/stats": {
+      "filePath": "_authenticated/agents/$profileId/$agentType/stats.tsx",
       "parent": "/_authenticated/agents/$profileId/$agentType"
     }
   }

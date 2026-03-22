@@ -63,7 +63,7 @@ export function TrialBanner({
 
   return (
     <div
-      className={`relative flex items-center justify-center gap-3 px-4 py-2 text-sm text-white ${bgClass}`}
+      className={`relative flex items-center justify-center gap-3 px-4 py-2 text-sm text-white ${bgClass} rounded-md`}
     >
       <Clock className='h-4 w-4 shrink-0' />
       <span className='font-medium'>
@@ -72,7 +72,7 @@ export function TrialBanner({
           : daysLeft === 1
             ? '1 day left in your free trial'
             : `${daysLeft} days left in your free trial`}
-        {' — '}
+        {' - '}
         Upgrade to keep your agents running.
       </span>
       <Button

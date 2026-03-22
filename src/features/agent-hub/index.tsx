@@ -13,6 +13,7 @@ import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { AgentCard } from './components/agent-card'
 import { AddAgentCard } from './components/add-agent-card'
 import { AddAgentDialog } from './components/add-agent-dialog'
+import { ComingSoonCards } from './components/coming-soon-card'
 import { EmptyState } from './components/empty-state'
 
 export default function AgentHub() {
@@ -67,6 +68,7 @@ export default function AgentHub() {
               <AgentCard key={agent.id} agent={agent} />
             ))}
             <AddAgentCard onClick={() => setAddDialogOpen(true)} />
+            <ComingSoonCards />
           </div>
         )}
       </Main>

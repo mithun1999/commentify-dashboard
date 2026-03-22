@@ -9,14 +9,17 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { useGetLinkedInStats } from '@/features/users/query/profile.query'
 
-export function Overview() {
-  const { data: linkedInStats } = useGetLinkedInStats()
+interface OverviewProps {
+  growth: {
+    followersCount: number
+    followersGrowth: number
+    followersGrowthPercent: number
+    period: string
+  }[]
+}
 
-  const growth = linkedInStats?.followersStats?.growth ?? []
-
-  // ✅ Handle API error or empty data gracefully
+export function Overview({ growth }: OverviewProps) {
   const hasValidData = Array.isArray(growth) && growth.length > 0
   if (!hasValidData) {
     return (
