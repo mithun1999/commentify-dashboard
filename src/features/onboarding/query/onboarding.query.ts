@@ -2,7 +2,6 @@ import { AxiosError } from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { showSubmittedData } from '@/utils/show-submitted-data'
-import { updateOnboardingStatus } from '@/features/auth/api/user.api'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 import {
   createOnboardingCommentSetting,
@@ -28,10 +27,6 @@ export const useCreateOnboardingPostQuery = () => {
       queryClient.invalidateQueries({
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
         refetchType: 'active',
-      })
-      updateOnboardingStatus({
-        status: 'in-progress',
-        step: 3,
       })
     },
     onError: (error) => {
@@ -65,10 +60,6 @@ export const useCreateOnboardingCommentQuery = () => {
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
         refetchType: 'active',
       })
-      updateOnboardingStatus({
-        status: 'in-progress',
-        step: 4,
-      })
     },
     onError: (error) => {
       toast.error(
@@ -99,10 +90,6 @@ export const useCreateOnboardingTwitterPostQuery = () => {
       queryClient.invalidateQueries({
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
         refetchType: 'active',
-      })
-      updateOnboardingStatus({
-        status: 'in-progress',
-        step: 3,
       })
     },
     onError: (error) => {

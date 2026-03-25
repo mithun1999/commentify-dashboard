@@ -27,6 +27,7 @@ export interface IUser {
     onboarding: {
       status: 'not-started' | 'in-progress' | 'completed'
       step: number
+      selectedAgentType?: string
     }
     heardFrom?: string
   }

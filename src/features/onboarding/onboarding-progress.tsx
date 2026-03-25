@@ -3,6 +3,7 @@
 import { useNavigate, useLocation } from '@tanstack/react-router'
 import { CheckIcon } from 'lucide-react'
 import { useOnboarding } from '@/stores/onboarding.store'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
@@ -31,6 +32,8 @@ export function OnboardingProgress() {
   const navigate = useNavigate()
   const location = useLocation()
   const { completedSteps } = useOnboarding()
+  const { data: user } = useGetUserQuery()
+  const backendStep = user?.metadata?.onboarding?.step ?? 0
 
   const pathname = location.pathname
   const currentStepIndex = STEPS.findIndex((step) =>
@@ -46,7 +49,8 @@ export function OnboardingProgress() {
 
   const handleStepClick = (stepPath: string, index: number) => {
     const stepName = stepPath.split('/').pop() || ''
-    if (completedSteps.includes(stepName) || index <= currentStepIndex + 1) {
+    const isLocallyAllowed = completedSteps.includes(stepName) || index <= currentStepIndex + 1
+    if (isLocallyAllowed && index <= backendStep) {
       navigate({ to: stepPath })
     }
   }
@@ -82,7 +86,7 @@ export function OnboardingProgress() {
             const isActive = index === currentStepIndex
             const isCompleted =
               index < currentStepIndex || completedSteps.includes(stepName)
-            const isClickable = isCompleted || index < currentStepIndex + 1
+            const isClickable = (isCompleted || index < currentStepIndex + 1) && index <= backendStep
 
             return (
               <TooltipProvider key={step.path}>

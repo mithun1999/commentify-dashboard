@@ -55,6 +55,7 @@ interface OnboardingStoreState {
   updateData: (newData: Partial<OnboardingData>) => void
   resetData: () => void
   markStepCompleted: (step: string) => void
+  removeCompletedStep: (step: string) => void
   isStepCompleted: (step: string) => boolean
 }
 
@@ -77,6 +78,10 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
           set({ completedSteps: [...completedSteps, step] })
         }
       },
+      removeCompletedStep: (step: string) => {
+        const { completedSteps } = get()
+        set({ completedSteps: completedSteps.filter((s) => s !== step) })
+      },
       isStepCompleted: (step: string) => get().completedSteps.includes(step),
     }),
     {
@@ -92,6 +97,7 @@ export function useOnboarding() {
   const resetData = useOnboardingStore((s) => s.resetData)
   const completedSteps = useOnboardingStore((s) => s.completedSteps)
   const markStepCompleted = useOnboardingStore((s) => s.markStepCompleted)
+  const removeCompletedStep = useOnboardingStore((s) => s.removeCompletedStep)
   const isStepCompleted = useOnboardingStore((s) => s.isStepCompleted)
 
   return {
@@ -100,6 +106,7 @@ export function useOnboarding() {
     resetData,
     completedSteps,
     markStepCompleted,
+    removeCompletedStep,
     isStepCompleted,
   }
 }

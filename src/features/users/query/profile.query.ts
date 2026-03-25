@@ -8,7 +8,6 @@ import {
   checkIsExtensionInstalled,
   getProfileDetailsFromExtension,
 } from '@/utils/utils'
-import { updateOnboardingStatus } from '@/features/auth/api/user.api'
 import {
   deleteProfile,
   getAllProfile,
@@ -85,12 +84,6 @@ export const useLinkProfile = (isOnboardingStep: boolean = false) => {
     onSuccess: (response) => {
       if (response?.profile) {
         setActiveProfile(response.profile)
-        if (isOnboardingStep) {
-          updateOnboardingStatus({
-            status: 'in-progress',
-            step: 2,
-          })
-        }
         if (!isOnboardingStep) {
           queryClient.invalidateQueries({
             queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
@@ -156,12 +149,6 @@ export const useLinkTwitterProfile = (isOnboardingStep: boolean = false) => {
     onSuccess: (response) => {
       if (response?.profile) {
         setActiveProfile(response.profile)
-        if (isOnboardingStep) {
-          updateOnboardingStatus({
-            status: 'in-progress',
-            step: 2,
-          })
-        }
         if (!isOnboardingStep) {
           queryClient.invalidateQueries({
             queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],

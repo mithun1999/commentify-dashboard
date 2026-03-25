@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 import {
   Hash,
   Info,
@@ -35,7 +36,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
+import {
+  useGetUserQuery,
+  useUpdateOnboardingStatus,
+} from '@/features/auth/query/user.query'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import {
@@ -122,7 +126,10 @@ const predefinedHashtags = [
 
 export function PostSettingsStep() {
   const { data: onboardingData } = useOnboarding()
+  const { data: user } = useGetUserQuery()
   const selectedSlug = onboardingData.selectedAgentType
+    ?? user?.metadata?.onboarding?.selectedAgentType
+    ?? null
   const agentDef = selectedSlug ? getAgentType(selectedSlug) : null
   const platform = agentDef?.platform ?? 'linkedin'
 
@@ -226,7 +233,10 @@ function LinkedInPostSettings() {
       authorTitlesCount: data.authorTitles.length,
     })
 
-    if (!resolvedProfileId) return true
+    if (!resolvedProfileId) {
+      toast.error('No connected profile found. Please go back and connect your account first.')
+      return false
+    }
 
     try {
       await createOnboardingPostSettingAsync({
@@ -590,7 +600,10 @@ function TwitterPostSettings() {
       tweetsPerDay: data.tweetsPerDay,
     })
 
-    if (!resolvedProfileId) return true
+    if (!resolvedProfileId) {
+      toast.error('No connected profile found. Please go back and connect your account first.')
+      return false
+    }
 
     try {
       await createOnboardingTwitterPostSettingAsync({

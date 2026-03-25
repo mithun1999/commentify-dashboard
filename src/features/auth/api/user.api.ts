@@ -17,6 +17,7 @@ export async function updateOnboardingStatus(data: {
   status: 'not-started' | 'in-progress' | 'completed'
   step: number
   heardFrom?: string
+  selectedAgentType?: string
 }) {
   const { data: response } = await axiosInstance({
     method: 'PATCH',

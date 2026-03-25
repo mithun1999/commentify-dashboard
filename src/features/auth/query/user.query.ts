@@ -34,6 +34,7 @@ export const useUpdateOnboardingStatus = () => {
       status: 'not-started' | 'in-progress' | 'completed'
       step: number
       heardFrom?: string
+      selectedAgentType?: string
     }
   >({
     mutationFn: updateOnboardingStatus,

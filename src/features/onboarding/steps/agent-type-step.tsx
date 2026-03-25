@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -13,8 +14,11 @@ import {
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
+import { useExtensionGuard } from '../hooks/useExtensionGuard'
 
 export function AgentTypeStep() {
+  const { isChecking } = useExtensionGuard()
+
   const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
   const { updateData, markStepCompleted } = useOnboarding()
@@ -22,6 +26,24 @@ export function AgentTypeStep() {
     useUpdateOnboardingStatus()
   const [selected, setSelected] = useState<AgentTypeDefinition | null>(null)
   const agentTypes = getAllAgentTypes()
+
+  if (isChecking) {
+    return (
+      <div className='space-y-8'>
+        <OnboardingCard
+          title='Choose your agent type'
+          description='Verifying extension installation...'
+        >
+          <div className='flex flex-col items-center space-y-6 py-4'>
+            <div className='text-muted-foreground flex items-center gap-2'>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              <span>Checking extension...</span>
+            </div>
+          </div>
+        </OnboardingCard>
+      </div>
+    )
+  }
 
   const isEligible = (type: AgentTypeDefinition) => {
     if (type.access === 'open') return true
@@ -119,6 +141,13 @@ export function AgentTypeStep() {
                 await updateOnboardingStatusAsync({
                   status: 'in-progress',
                   step: 2,
+                  selectedAgentType: selected.slug,
+                })
+              } else {
+                await updateOnboardingStatusAsync({
+                  status: 'in-progress',
+                  step: currentStep,
+                  selectedAgentType: selected.slug,
                 })
               }
               return true

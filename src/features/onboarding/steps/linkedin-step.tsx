@@ -30,6 +30,7 @@ import {
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
+import { useExtensionGuard } from '@/features/onboarding/hooks/useExtensionGuard'
 import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
 import {
   useGetAllProfileQuery,
@@ -69,6 +70,7 @@ const PLATFORM_CONFIG = {
 } as const
 
 export function LinkedInStep() {
+  const { isChecking: isExtensionGuardChecking } = useExtensionGuard()
   const posthog = usePostHog()
   const { data: onboardingData, updateData, markStepCompleted } =
     useOnboarding()
@@ -86,6 +88,8 @@ export function LinkedInStep() {
   const hasCollectedRef = useRef(false)
 
   const selectedSlug = onboardingData.selectedAgentType
+    ?? user?.metadata?.onboarding?.selectedAgentType
+    ?? null
   const agentDef = selectedSlug ? getAgentType(selectedSlug) : null
   const platform = agentDef?.platform ?? 'linkedin'
   const config = PLATFORM_CONFIG[platform]
@@ -289,6 +293,10 @@ export function LinkedInStep() {
     }
   }, [collectUserInformation, profileData, isConnectStepCompleted])
 
+  useEffect(() => {
+    checkIfExtensionIsInstalled()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const hasProfileInfo = profileData || (isConnectStepCompleted && onboardingData.userProfile)
 
   const displayName =
@@ -315,7 +323,7 @@ export function LinkedInStep() {
         ? `${profileData.firstName?.charAt(0) ?? ''}${profileData.lastName?.charAt(0) ?? ''}`
         : onboardingData.userProfile?.name?.charAt(0) ?? ''
 
-  if (isLoading) {
+  if (isLoading || isExtensionGuardChecking) {
     return (
       <div className='space-y-8'>
         <OnboardingCard
@@ -325,7 +333,7 @@ export function LinkedInStep() {
           <div className='flex flex-col items-center space-y-6 py-4'>
             <div className='text-muted-foreground flex items-center gap-2'>
               <Loader2 className='h-4 w-4 animate-spin' />
-              <span>Loading your profile...</span>
+              <span>{isExtensionGuardChecking ? 'Checking extension...' : 'Loading your profile...'}</span>
             </div>
           </div>
         </OnboardingCard>
@@ -386,24 +394,37 @@ export function LinkedInStep() {
               </div>
             )}
 
-            {!hasProfileInfo && isExtensionInstalled && (
-              <Button
-                className='relative w-full overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
-                onClick={handleLinking}
-                disabled={isLinking || isLinkingProfile || isLinkingTwitterProfile}
-              >
-                {isLinking || isLinkingProfile || isLinkingTwitterProfile ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    {config.connectingLabel}
-                  </>
-                ) : (
-                  <>
-                    <PlatformIcon className='mr-2 h-4 w-4' />
-                    {config.buttonLabel}
-                  </>
-                )}
-              </Button>
+            {!hasProfileInfo && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className='w-full'>
+                      <Button
+                        className='relative w-full overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95'
+                        onClick={handleLinking}
+                        disabled={!isExtensionInstalled || isLinking || isLinkingProfile || isLinkingTwitterProfile}
+                      >
+                        {isLinking || isLinkingProfile || isLinkingTwitterProfile ? (
+                          <>
+                            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                            {config.connectingLabel}
+                          </>
+                        ) : (
+                          <>
+                            <PlatformIcon className='mr-2 h-4 w-4' />
+                            {config.buttonLabel}
+                          </>
+                        )}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!isExtensionInstalled && (
+                    <TooltipContent>
+                      <p>Please install the Commentify extension first</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>

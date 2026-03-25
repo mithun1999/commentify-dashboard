@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 import {
   MessageSquare,
   Settings,
@@ -106,7 +107,10 @@ export function CommentSettingsStep() {
       useExclamations: data.useExclamations,
     })
 
-    if (!resolvedProfileId) return true
+    if (!resolvedProfileId) {
+      toast.error('No connected profile found. Please go back and connect your account first.')
+      return false
+    }
 
     const payload: ICreateOnboardingCommentDto = {
       aboutProfile: data.aboutProfile,
