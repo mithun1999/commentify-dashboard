@@ -47,6 +47,7 @@ export interface ISetting {
     numberOfPostsToScrapePerDay: number
     autoSchedule: boolean
     engagementThreshold?: EngagementThresholdEnum
+    skipCompanyPosts?: boolean
     _id: string
     jobTiming?: {
       hours: number

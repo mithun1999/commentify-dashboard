@@ -59,6 +59,7 @@ const schema = z.object({
   language: z.string(),
   numberOfPostsToScrapePerDay: z.number().min(1).max(100),
   autoSchedule: z.boolean(),
+  skipCompanyPosts: z.boolean(),
   engagementThreshold: z.enum(['strict', 'moderate', 'disabled']),
   startHour: z.enum([
     '01', '02', '03', '04', '05', '06',
@@ -107,6 +108,7 @@ export function TwitterScrapeSettings({ profileId }: { profileId: string }) {
       language: 'en',
       numberOfPostsToScrapePerDay: 20,
       autoSchedule: true,
+      skipCompanyPosts: true,
       engagementThreshold: 'disabled',
       startHour: '09',
       startMinute: '00',
@@ -151,6 +153,7 @@ export function TwitterScrapeSettings({ profileId }: { profileId: string }) {
       language: existing.language ?? 'en',
       numberOfPostsToScrapePerDay: existing.numberOfPostsToScrapePerDay ?? 20,
       autoSchedule: existing.autoSchedule ?? true,
+      skipCompanyPosts: existing.skipCompanyPosts ?? true,
       engagementThreshold: existing.engagementThreshold ?? 'disabled',
       startHour: paddedHour,
       startMinute: minute,
@@ -201,6 +204,7 @@ export function TwitterScrapeSettings({ profileId }: { profileId: string }) {
       language: values.language,
       numberOfPostsToScrapePerDay: values.numberOfPostsToScrapePerDay,
       autoSchedule: values.autoSchedule,
+      skipCompanyPosts: values.skipCompanyPosts,
       engagementThreshold: values.engagementThreshold,
       jobTiming: { hours, minutes },
       profileId,
@@ -585,6 +589,30 @@ export function TwitterScrapeSettings({ profileId }: { profileId: string }) {
                 </FormLabel>
                 <FormDescription>
                   Enable to automatically schedule replies once tweets are found
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        {/* Skip Company Posts */}
+        <FormField
+          control={form.control}
+          name='skipCompanyPosts'
+          render={({ field }) => (
+            <FormItem className='flex max-w-xl flex-row items-center justify-between rounded-lg border p-4'>
+              <div className='space-y-0.5'>
+                <FormLabel className='text-sm font-semibold'>
+                  Skip company &amp; brand posts
+                </FormLabel>
+                <FormDescription>
+                  Only reply to individual people, not company accounts or product announcements
                 </FormDescription>
               </div>
               <FormControl>
