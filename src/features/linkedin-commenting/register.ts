@@ -16,7 +16,7 @@ AGENT_TYPES['linkedin-commenting'] = {
   access: 'invite-only',
   badge: 'Invite Only',
   isEligible: (user) => {
-    const plan = user.subscribedProduct?.name?.toLowerCase()
+    const plan = user.subscribedProduct?.name?.toLowerCase()?.split(' ')[0]
     return plan === 'pro' || plan === 'premium'
   },
   scrapeSettingsComponent: LinkedInScrapeSettings,
