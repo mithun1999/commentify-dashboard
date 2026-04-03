@@ -1,10 +1,22 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export interface OnboardingSalesSetting {
+  websiteUrl: string
+  productDescription: string
+  painPoints: string[]
+  valuePropositions: string[]
+  pitchIntensity: 'subtle' | 'moderate' | 'direct'
+  matchMode: 'strict' | 'flexible'
+  competitorNames: string[]
+  suggestedJobTitles: string[]
+}
+
 export interface OnboardingData {
   isExtensionInstalled: boolean
   isLinkedInConnected: boolean
   selectedAgentType: string | null
+  selectedAgentMode: 'branding' | 'sales' | null
   linkedProfileId: string | null
   userProfile: {
     name: string
@@ -25,12 +37,14 @@ export interface OnboardingData {
     useExclamations: boolean
     commentLength: string
   }
+  salesSetting: OnboardingSalesSetting
 }
 
 const defaultOnboardingData: OnboardingData = {
   isExtensionInstalled: false,
   isLinkedInConnected: false,
   selectedAgentType: null,
+  selectedAgentMode: null,
   linkedProfileId: null,
   userProfile: null,
   scrapeSetting: {
@@ -46,6 +60,16 @@ const defaultOnboardingData: OnboardingData = {
     useEmojis: true,
     useExclamations: true,
     commentLength: 'medium',
+  },
+  salesSetting: {
+    websiteUrl: '',
+    productDescription: '',
+    painPoints: [],
+    valuePropositions: [],
+    pitchIntensity: 'moderate',
+    matchMode: 'flexible',
+    competitorNames: [],
+    suggestedJobTitles: [],
   },
 }
 
@@ -86,7 +110,21 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
     }),
     {
       name: 'commentify-onboarding',
-      version: 1,
+      version: 2,
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as OnboardingStoreState
+        if (version === 1) {
+          return {
+            ...state,
+            data: {
+              ...state.data,
+              selectedAgentMode: null,
+              salesSetting: defaultOnboardingData.salesSetting,
+            },
+          }
+        }
+        return state
+      },
     }
   )
 )

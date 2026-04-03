@@ -3,8 +3,24 @@ import {
   EngagementThresholdEnum,
 } from '../enum/setting.enum'
 
+export type AgentMode = 'branding' | 'sales'
+export type PitchIntensity = 'subtle' | 'moderate' | 'direct'
+export type MatchMode = 'strict' | 'flexible'
+
+export interface ISalesSetting {
+  websiteUrl: string
+  productDescription: string
+  painPoints: string[]
+  valuePropositions: string[]
+  pitchIntensity: PitchIntensity
+  matchMode: MatchMode
+  competitorNames: string[]
+}
+
 export interface ISetting {
   _id: string
+  agentMode?: AgentMode
+  salesSetting?: ISalesSetting
   scrapeSetting?: {
     keywordsToTarget: string[]
     skipHiringPosts: boolean

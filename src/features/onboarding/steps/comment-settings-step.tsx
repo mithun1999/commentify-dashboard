@@ -76,6 +76,17 @@ const defaultValues: CommentSettingsValues = {
 }
 
 export function CommentSettingsStep() {
+  const { data: onboardingData } = useOnboarding()
+
+  if (onboardingData.selectedAgentMode === 'sales') {
+    const { SalesStrategyStep } = require('@/features/linkedin-sales/components/sales-strategy-step')
+    return <SalesStrategyStep />
+  }
+
+  return <BrandingCommentSettingsStep />
+}
+
+function BrandingCommentSettingsStep() {
   const posthog = usePostHog()
   const [isStylePreferencesExpanded, setIsStylePreferencesExpanded] =
     useState(false)

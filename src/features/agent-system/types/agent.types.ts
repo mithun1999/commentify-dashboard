@@ -22,6 +22,8 @@ export interface AgentTypeDefinition {
   queueItemComponent: ComponentType<{ postId: string }>
 }
 
+export type AgentMode = 'branding' | 'sales'
+
 export interface DerivedAgent {
   id: string
   type: string
@@ -29,5 +31,6 @@ export interface DerivedAgent {
   profileName: string
   profileAvatar?: string
   platform: Platform
+  agentMode: AgentMode
   status: ProfileStatusEnum
 }

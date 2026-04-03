@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Megaphone, Target } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,29 @@ import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useExtensionGuard } from '../hooks/useExtensionGuard'
 
+type AgentMode = 'branding' | 'sales'
+
+const LINKEDIN_MODES: {
+  value: AgentMode
+  label: string
+  description: string
+  icon: typeof Megaphone
+}[] = [
+  {
+    value: 'branding',
+    label: 'Personal Branding',
+    description: 'Grow your network by commenting on relevant posts',
+    icon: Megaphone,
+  },
+  {
+    value: 'sales',
+    label: 'Sales',
+    description:
+      'Find high-intent posts and pitch your product naturally',
+    icon: Target,
+  },
+]
+
 export function AgentTypeStep() {
   const { isChecking } = useExtensionGuard()
 
@@ -25,6 +48,7 @@ export function AgentTypeStep() {
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
   const [selected, setSelected] = useState<AgentTypeDefinition | null>(null)
+  const [selectedMode, setSelectedMode] = useState<AgentMode | null>(null)
   const agentTypes = getAllAgentTypes()
 
   if (isChecking) {
@@ -51,6 +75,9 @@ export function AgentTypeStep() {
     return type.isEligible(user)
   }
 
+  const showModeSelector = selected?.platform === 'linkedin'
+  const canProceed = selected && (!showModeSelector || selectedMode)
+
   return (
     <div className='space-y-8'>
       <OnboardingCard
@@ -64,66 +91,121 @@ export function AgentTypeStep() {
             const isSelected = selected?.slug === type.slug
 
             return (
-              <button
-                key={type.slug}
-                type='button'
-                disabled={!eligible}
-                onClick={() => setSelected(type)}
-                className={cn(
-                  'flex items-start gap-4 rounded-xl border p-5 text-left transition-all',
-                  isSelected &&
-                    'ring-primary border-primary bg-primary/5 ring-2',
-                  eligible
-                    ? 'hover:bg-muted/50 cursor-pointer'
-                    : 'cursor-not-allowed opacity-60'
-                )}
-              >
-                <div
+              <div key={type.slug}>
+                <button
+                  type='button'
+                  disabled={!eligible}
+                  onClick={() => {
+                    setSelected(type)
+                    if (type.platform !== 'linkedin') {
+                      setSelectedMode(null)
+                    }
+                  }}
                   className={cn(
-                    'flex size-12 shrink-0 items-center justify-center rounded-xl transition-colors',
-                    isSelected ? 'bg-primary/10' : 'bg-muted'
+                    'flex w-full items-start gap-4 rounded-xl border p-5 text-left transition-all',
+                    isSelected &&
+                      'ring-primary border-primary bg-primary/5 ring-2',
+                    eligible
+                      ? 'hover:bg-muted/50 cursor-pointer'
+                      : 'cursor-not-allowed opacity-60'
                   )}
                 >
-                  <Icon className='size-6' />
-                </div>
-                <div className='min-w-0 flex-1'>
-                  <div className='flex items-center gap-2'>
-                    <span className='font-semibold'>{type.name}</span>
-                    {type.badge && (
-                      <Badge variant='secondary' className='text-xs'>
-                        {type.badge}
-                      </Badge>
+                  <div
+                    className={cn(
+                      'flex size-12 shrink-0 items-center justify-center rounded-xl transition-colors',
+                      isSelected ? 'bg-primary/10' : 'bg-muted'
                     )}
-                    {type.access === 'open' && (
-                      <Badge
-                        variant='outline'
-                        className='border-green-500/30 text-xs text-green-600'
-                      >
-                        Recommended
-                      </Badge>
+                  >
+                    <Icon className='size-6' />
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex items-center gap-2'>
+                      <span className='font-semibold'>{type.name}</span>
+                      {type.badge && (
+                        <Badge variant='secondary' className='text-xs'>
+                          {type.badge}
+                        </Badge>
+                      )}
+                      {type.access === 'open' && (
+                        <Badge
+                          variant='outline'
+                          className='border-green-500/30 text-xs text-green-600'
+                        >
+                          Recommended
+                        </Badge>
+                      )}
+                    </div>
+                    <p className='text-muted-foreground mt-1 text-sm'>
+                      {type.description}
+                    </p>
+                    {!eligible && (
+                      <p className='mt-2 text-xs text-amber-600'>
+                        Available by invitation for paid customers.
+                      </p>
                     )}
                   </div>
-                  <p className='text-muted-foreground mt-1 text-sm'>
-                    {type.description}
-                  </p>
-                  {!eligible && (
-                    <p className='mt-2 text-xs text-amber-600'>
-                      Available by invitation for paid customers.
+                </button>
+
+                {isSelected && type.platform === 'linkedin' && (
+                  <div className='mt-3 ml-16 grid gap-2'>
+                    <p className='text-muted-foreground text-xs font-medium uppercase tracking-wide'>
+                      What's your goal?
                     </p>
-                  )}
-                </div>
-              </button>
+                    {LINKEDIN_MODES.map((mode) => {
+                      const ModeIcon = mode.icon
+                      const isModeSelected = selectedMode === mode.value
+                      return (
+                        <button
+                          key={mode.value}
+                          type='button'
+                          onClick={() => setSelectedMode(mode.value)}
+                          className={cn(
+                            'flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all',
+                            isModeSelected
+                              ? 'ring-primary border-primary bg-primary/5 ring-1'
+                              : 'hover:bg-muted/50 border-border'
+                          )}
+                        >
+                          <ModeIcon
+                            className={cn(
+                              'size-4 shrink-0',
+                              isModeSelected
+                                ? 'text-primary'
+                                : 'text-muted-foreground'
+                            )}
+                          />
+                          <div>
+                            <span
+                              className={cn(
+                                'text-sm font-medium',
+                                isModeSelected && 'text-primary'
+                              )}
+                            >
+                              {mode.label}
+                            </span>
+                            <p className='text-muted-foreground text-xs'>
+                              {mode.description}
+                            </p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
 
-        {!selected && (
+        {!canProceed && (
           <p className='text-muted-foreground mt-6 text-center text-sm'>
-            Select an agent type to continue.
+            {selected && showModeSelector
+              ? 'Select a mode to continue.'
+              : 'Select an agent type to continue.'}
           </p>
         )}
 
-        {selected && (
+        {canProceed && (
           <OnboardingNavigation
             prevStep='/onboarding/extension'
             nextStep='/onboarding/connect-account'
@@ -133,8 +215,15 @@ export function AgentTypeStep() {
             onNext={async () => {
               posthog?.capture('onboarding_agent_type_selected', {
                 agentType: selected.slug,
+                agentMode: selectedMode ?? 'branding',
               })
-              updateData({ selectedAgentType: selected.slug })
+              updateData({
+                selectedAgentType: selected.slug,
+                selectedAgentMode:
+                  selected.platform === 'linkedin'
+                    ? (selectedMode ?? 'branding')
+                    : 'branding',
+              })
               markStepCompleted('agent-type')
               const currentStep = user?.metadata?.onboarding?.step ?? 0
               if (currentStep < 2) {

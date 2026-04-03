@@ -132,7 +132,12 @@ export function PostSettingsStep() {
     ?? null
   const agentDef = selectedSlug ? getAgentType(selectedSlug) : null
   const platform = agentDef?.platform ?? 'linkedin'
+  const agentMode = onboardingData.selectedAgentMode
 
+  if (platform === 'linkedin' && agentMode === 'sales') {
+    const { SalesProductSetupStep } = require('@/features/linkedin-sales/components/sales-product-setup-step')
+    return <SalesProductSetupStep />
+  }
   if (platform === 'twitter') return <TwitterPostSettings />
   return <LinkedInPostSettings />
 }

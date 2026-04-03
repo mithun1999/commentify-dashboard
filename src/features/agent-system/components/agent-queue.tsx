@@ -71,12 +71,16 @@ export function AgentQueue() {
   }, [status, pendingData, completedData])
 
   const columns = useMemo(() => {
+    if (agent?.agentMode === 'sales') {
+      const { getSalesPostColumns } = require('@/features/linkedin-sales/components/sales-queue-columns')
+      return getSalesPostColumns(status)
+    }
     if (agentTypeDef?.queueColumns?.length) {
       return agentTypeDef.queueColumns
     }
     const { getPostColumns } = require('@/features/history/components/columns')
     return getPostColumns(status)
-  }, [agentTypeDef, status])
+  }, [agent?.agentMode, agentTypeDef, status])
 
   const getSelectedRows = useCallback((): IPost[] => {
     const selectedIndices = Object.keys(rowSelection).filter(

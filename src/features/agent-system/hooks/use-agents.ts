@@ -1,10 +1,14 @@
 import { useMemo } from 'react'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import type { IProfile } from '@/features/users/interface/profile.interface'
-import type { DerivedAgent, Platform } from '../types/agent.types'
+import type { AgentMode, DerivedAgent, Platform } from '../types/agent.types'
 
 export function inferPlatform(profile: IProfile): Platform {
   return profile.platform === 'twitter' ? 'twitter' : 'linkedin'
+}
+
+export function inferAgentMode(profile: IProfile): AgentMode {
+  return (profile.setting?.agentMode as AgentMode) || 'branding'
 }
 
 function agentTypeForPlatform(platform: Platform): string {
@@ -14,6 +18,7 @@ function agentTypeForPlatform(platform: Platform): string {
 export function deriveAgentFromProfile(profile: IProfile): DerivedAgent {
   const platform = inferPlatform(profile)
   const agentType = agentTypeForPlatform(platform)
+  const agentMode = inferAgentMode(profile)
 
   return {
     id: `${profile._id}-${agentType}`,
@@ -24,6 +29,7 @@ export function deriveAgentFromProfile(profile: IProfile): DerivedAgent {
         ? `@${profile.screenName}`
         : `${profile.firstName} ${profile.lastName}`,
     platform,
+    agentMode,
     status: profile.status,
   }
 }

@@ -56,9 +56,24 @@ export function AgentCard({ agent }: AgentCardProps) {
             <Icon className='size-5' />
           </div>
           <div className='min-w-0'>
-            <p className='text-sm font-semibold leading-tight'>
-              {typeDef.name}
-            </p>
+            <div className='flex items-center gap-1.5'>
+              <p className='text-sm font-semibold leading-tight'>
+                {typeDef.name}
+              </p>
+              {agent.platform === 'linkedin' && (
+                <Badge
+                  variant='outline'
+                  className={cn(
+                    'text-[10px] leading-tight',
+                    agent.agentMode === 'sales'
+                      ? 'border-orange-500/30 text-orange-600'
+                      : 'border-blue-500/30 text-blue-600'
+                  )}
+                >
+                  {agent.agentMode === 'sales' ? 'Sales' : 'Branding'}
+                </Badge>
+              )}
+            </div>
             <p className='text-muted-foreground truncate text-xs'>
               {agent.profileName}
             </p>
