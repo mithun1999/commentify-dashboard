@@ -31,6 +31,7 @@ import {
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
 import { useExtensionGuard } from '@/features/onboarding/hooks/useExtensionGuard'
+import { useTrackStepView } from '@/features/onboarding/hooks/useTrackStepView'
 import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
 import {
   useGetAllProfileQuery,
@@ -70,6 +71,7 @@ const PLATFORM_CONFIG = {
 } as const
 
 export function LinkedInStep() {
+  useTrackStepView('connect-account')
   const { isChecking: isExtensionGuardChecking } = useExtensionGuard()
   const posthog = usePostHog()
   const { data: onboardingData, updateData, markStepCompleted } =

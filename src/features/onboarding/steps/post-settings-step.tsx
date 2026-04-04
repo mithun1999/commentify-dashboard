@@ -42,6 +42,7 @@ import {
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
+import { useTrackStepView } from '../hooks/useTrackStepView'
 import {
   useCreateOnboardingPostQuery,
   useCreateOnboardingTwitterPostQuery,
@@ -131,6 +132,7 @@ const LazySalesProductSetupStep = lazy(() =>
 )
 
 export function PostSettingsStep() {
+  useTrackStepView('post-settings')
   const { data: onboardingData } = useOnboarding()
   const { data: user } = useGetUserQuery()
   const selectedSlug = onboardingData.selectedAgentType

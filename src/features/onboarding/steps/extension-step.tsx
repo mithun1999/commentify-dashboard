@@ -36,6 +36,7 @@ import {
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
+import { useTrackStepView } from '../hooks/useTrackStepView'
 
 const INSTALL_STEPS = [
   {
@@ -69,6 +70,7 @@ const INSTALL_STEPS = [
 ]
 
 export function ExtensionStep() {
+  useTrackStepView('extension')
   const posthog = usePostHog()
   const [isChecking, setIsChecking] = useState(false)
   const [showGuide, setShowGuide] = useState(false)

@@ -49,6 +49,7 @@ import { CommentLengthEnum } from '@/features/settings/enum/setting.enum'
 import { ICreateOnboardingCommentDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
+import { useTrackStepView } from '../hooks/useTrackStepView'
 import { useCreateOnboardingCommentQuery } from '../query/onboarding.query'
 
 const LazySalesStrategyStep = lazy(() =>
@@ -82,6 +83,7 @@ const defaultValues: CommentSettingsValues = {
 }
 
 export function CommentSettingsStep() {
+  useTrackStepView('comment-settings')
   const { data: onboardingData } = useOnboarding()
 
   if (onboardingData.selectedAgentMode === 'sales') {

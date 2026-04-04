@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
 import { IconBrandGoogle } from '@tabler/icons-react'
+import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,7 @@ const formSchema = z
 export function SignUpForm({ className, ...props }: SignUpFormProps) {
   const [, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const posthog = usePostHog()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -57,16 +59,22 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsLoading(true)
+    posthog?.capture('signup_submitted', { method: 'email' })
     try {
       const user = await signUpWithPassword(data)
 
       if (user) {
+        posthog?.capture('signup_success', { method: 'email' })
         toast.success('Account created successfully')
         setTimeout(() => {
           navigate({ to: '/onboarding/extension' })
         }, 500)
       }
     } catch (error) {
+      posthog?.capture('signup_failed', {
+        method: 'email',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
       if (error instanceof Error) {
         toast.error(error.message)
       } else {
@@ -80,8 +88,13 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true)
+      posthog?.capture('signup_submitted', { method: 'google' })
       await signInWithGoogle()
     } catch (err) {
+      posthog?.capture('signup_failed', {
+        method: 'google',
+        error: err instanceof Error ? err.message : 'Unknown error',
+      })
       toast.error('Google sign-in failed')
       if (err instanceof Error) {
         toast.error(err.message)

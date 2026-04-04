@@ -23,6 +23,7 @@ import { getCurrencySymbol } from '@/features/pricing/utils/prices.util'
 import { useOnboarding } from '@/stores/onboarding.store'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
+import { useTrackStepView } from '../hooks/useTrackStepView'
 
 const activateTrialRoute = getRouteApi('/onboarding/activate-trial')
 
@@ -98,6 +99,7 @@ function useCheckoutReturn() {
   const { status, subscription_id } = activateTrialRoute.useSearch()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startTimeRef = useRef<number>(0)
@@ -114,11 +116,22 @@ function useCheckoutReturn() {
   const [timedOut, setTimedOut] = useState(false)
 
   useEffect(() => {
+    if (hasCheckoutParams && posthog) {
+      posthog.capture('onboarding_checkout_returned', {
+        status,
+        subscription_id,
+        is_failed: isFailed,
+      })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (checkoutState !== 'processing') return
     if (verifyCalledRef.current) return
 
     if (user?.status !== UserSubscriptionStatus.PENDING) {
       setCheckoutState('success')
+      posthog?.capture('onboarding_trial_activated', { source: 'immediate' })
       setTimeout(() => navigate({ to: '/' }), 1500)
       return
     }
@@ -129,8 +142,9 @@ function useCheckoutReturn() {
       if (subscription_id) {
         try {
           await verifyCheckout(subscription_id)
+          posthog?.capture('onboarding_checkout_verify_success', { subscription_id })
         } catch {
-          // Verify failed (e.g. subscription not yet ready) — fall through to polling
+          posthog?.capture('onboarding_checkout_verify_failed', { subscription_id })
         }
         await queryClient.invalidateQueries({ queryKey: [UserQueryEnum.GET_USER] })
       }
@@ -151,17 +165,22 @@ function useCheckoutReturn() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [checkoutState, user?.status, navigate, queryClient, subscription_id])
+  }, [checkoutState, user?.status, navigate, queryClient, subscription_id, posthog])
 
   useEffect(() => {
     if (checkoutState === 'processing' && user?.status && user.status !== UserSubscriptionStatus.PENDING) {
       setCheckoutState('success')
       if (pollRef.current) clearInterval(pollRef.current)
+      posthog?.capture('onboarding_trial_activated', {
+        source: 'polling',
+        elapsed_ms: Date.now() - startTimeRef.current,
+      })
       setTimeout(() => navigate({ to: '/' }), 1500)
     }
-  }, [user?.status, checkoutState, navigate])
+  }, [user?.status, checkoutState, navigate, posthog])
 
   const retryCheckout = () => {
+    posthog?.capture('onboarding_checkout_retry_clicked')
     navigate({
       to: '/onboarding/activate-trial',
       search: {},
@@ -175,6 +194,7 @@ function useCheckoutReturn() {
 }
 
 export function ActivateTrialStep() {
+  useTrackStepView('activate-trial')
   const posthog = usePostHog()
   const navigate = useNavigate()
   const { data: user } = useGetUserQuery()
@@ -224,11 +244,13 @@ export function ActivateTrialStep() {
 
   const handlePlanSelect = (product: IDisplayProduct) => {
     const quantity = getQuantity(product._id)
-    posthog?.capture('onboarding_trial_plan_selected', {
-      productId: product._id,
-      planName: product.name,
-      subscriptionType,
+    posthog?.capture('onboarding_checkout_started', {
+      product_id: product._id,
+      plan_name: product.name,
+      subscription_type: subscriptionType,
       quantity,
+      price: product.defaultDisplayPrice,
+      currency: product.currency,
     })
     createCheckoutUrl({
       productId: product._id,

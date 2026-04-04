@@ -15,6 +15,7 @@ import {
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useExtensionGuard } from '../hooks/useExtensionGuard'
+import { useTrackStepView } from '../hooks/useTrackStepView'
 
 type AgentMode = 'branding' | 'sales'
 
@@ -40,6 +41,7 @@ const LINKEDIN_MODES: {
 ]
 
 export function AgentTypeStep() {
+  useTrackStepView('agent-type')
   const { isChecking } = useExtensionGuard()
 
   const posthog = usePostHog()

@@ -21,8 +21,10 @@ import {
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
+import { useTrackStepView } from '../hooks/useTrackStepView'
 
 export function IdentityStep() {
+  useTrackStepView('identity')
   const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
