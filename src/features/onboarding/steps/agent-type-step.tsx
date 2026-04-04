@@ -126,7 +126,7 @@ export function AgentTypeStep() {
                           {type.badge}
                         </Badge>
                       )}
-                      {type.access === 'open' && (
+                      {type.recommended && (
                         <Badge
                           variant='outline'
                           className='border-green-500/30 text-xs text-green-600'
@@ -205,44 +205,47 @@ export function AgentTypeStep() {
           </p>
         )}
 
-        {canProceed && (
-          <OnboardingNavigation
-            prevStep='/onboarding/extension'
-            nextStep='/onboarding/connect-account'
-            nextLabel='Continue'
-            loading={isUpdatingOnboardingStatus}
-            currentStep='agent-type'
-            onNext={async () => {
-              posthog?.capture('onboarding_agent_type_selected', {
-                agentType: selected.slug,
-                agentMode: selectedMode ?? 'branding',
-              })
-              updateData({
-                selectedAgentType: selected.slug,
-                selectedAgentMode:
-                  selected.platform === 'linkedin'
-                    ? (selectedMode ?? 'branding')
-                    : 'branding',
-              })
-              markStepCompleted('agent-type')
-              const currentStep = user?.metadata?.onboarding?.step ?? 0
-              if (currentStep < 2) {
-                await updateOnboardingStatusAsync({
-                  status: 'in-progress',
-                  step: 2,
-                  selectedAgentType: selected.slug,
-                })
-              } else {
-                await updateOnboardingStatusAsync({
-                  status: 'in-progress',
-                  step: currentStep,
-                  selectedAgentType: selected.slug,
-                })
-              }
-              return true
-            }}
-          />
-        )}
+        <OnboardingNavigation
+          prevStep='/onboarding/extension'
+          nextStep={canProceed ? '/onboarding/connect-account' : undefined}
+          nextLabel='Continue'
+          loading={isUpdatingOnboardingStatus}
+          currentStep='agent-type'
+          onNext={
+            canProceed
+              ? async () => {
+                  posthog?.capture('onboarding_agent_type_selected', {
+                    agentType: selected!.slug,
+                    agentMode: selectedMode ?? 'branding',
+                  })
+                  updateData({
+                    selectedAgentType: selected!.slug,
+                    selectedAgentMode:
+                      selected!.platform === 'linkedin'
+                        ? (selectedMode ?? 'branding')
+                        : 'branding',
+                  })
+                  markStepCompleted('agent-type')
+                  const currentStep =
+                    user?.metadata?.onboarding?.step ?? 0
+                  if (currentStep < 2) {
+                    await updateOnboardingStatusAsync({
+                      status: 'in-progress',
+                      step: 2,
+                      selectedAgentType: selected!.slug,
+                    })
+                  } else {
+                    await updateOnboardingStatusAsync({
+                      status: 'in-progress',
+                      step: currentStep,
+                      selectedAgentType: selected!.slug,
+                    })
+                  }
+                  return true
+                }
+              : undefined
+          }
+        />
       </OnboardingCard>
     </div>
   )

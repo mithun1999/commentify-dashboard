@@ -30,7 +30,7 @@ function RouteComponent() {
   // Avoid rendering or redirecting until auth and user are settled
   if (!isSessionLoaded || (!isFetched && isLoading)) return <MainLoader />
 
-  // If onboarding is already completed, go home before mounting layout to avoid flicker
+  // If onboarding is already completed, go home
   if (isFetched && user?.metadata?.onboarding?.status === 'completed') {
     navigate({ to: '/', replace: true })
     return null

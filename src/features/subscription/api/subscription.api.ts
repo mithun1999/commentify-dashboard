@@ -33,6 +33,14 @@ export async function createCheckoutUrl(payload: {
   return data as { url: string; expiryAt: string }
 }
 
+export async function verifyCheckout(subscriptionId: string) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/subscription/verify/${subscriptionId}`,
+  })
+  return data as { success: boolean }
+}
+
 export async function getCustomerPortalUrl() {
   const { data } = await axiosInstance({
     method: 'GET',

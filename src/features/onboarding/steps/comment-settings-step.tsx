@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -51,6 +51,12 @@ import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useCreateOnboardingCommentQuery } from '../query/onboarding.query'
 
+const LazySalesStrategyStep = lazy(() =>
+  import('@/features/linkedin-sales/components/sales-strategy-step').then(
+    (m) => ({ default: m.SalesStrategyStep })
+  )
+)
+
 const commentSettingsSchema = z.object({
   aboutProfile: z
     .string()
@@ -79,8 +85,11 @@ export function CommentSettingsStep() {
   const { data: onboardingData } = useOnboarding()
 
   if (onboardingData.selectedAgentMode === 'sales') {
-    const { SalesStrategyStep } = require('@/features/linkedin-sales/components/sales-strategy-step')
-    return <SalesStrategyStep />
+    return (
+      <Suspense fallback={<div className='flex items-center justify-center py-12'>Loading...</div>}>
+        <LazySalesStrategyStep />
+      </Suspense>
+    )
   }
 
   return <BrandingCommentSettingsStep />

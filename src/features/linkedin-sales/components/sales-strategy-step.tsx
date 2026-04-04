@@ -612,7 +612,7 @@ export function SalesStrategyStep() {
                         <FormItem>
                           <div className='border-border flex items-center justify-between rounded-lg border p-3'>
                             <FormLabel className='text-sm font-medium'>
-                              Exclamations
+                              Use Exclamations
                             </FormLabel>
                             <FormControl>
                               <Switch

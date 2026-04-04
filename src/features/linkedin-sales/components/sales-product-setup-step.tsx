@@ -86,12 +86,21 @@ export function SalesProductSetupStep() {
   const painPoints = watch('painPoints')
   const valuePropositions = watch('valuePropositions')
 
+  const normalizeUrl = (url: string) => {
+    const trimmed = url.trim()
+    if (!trimmed) return ''
+    if (/^https?:\/\//i.test(trimmed)) return trimmed
+    return `https://${trimmed}`
+  }
+
   const handleExtract = async () => {
     if (!urlInput.trim()) return
     try {
-      const result = await extractAsync(urlInput.trim())
+      const normalized = normalizeUrl(urlInput)
+      setUrlInput(normalized)
+      const result = await extractAsync(normalized)
       if (result) {
-        setValue('websiteUrl', urlInput.trim())
+        setValue('websiteUrl', normalized)
         if (result.productDescription) {
           setValue('productDescription', result.productDescription)
         }
@@ -104,7 +113,7 @@ export function SalesProductSetupStep() {
         updateData({
           salesSetting: {
             ...onboardingData.salesSetting,
-            websiteUrl: urlInput.trim(),
+            websiteUrl: normalized,
             productDescription: result.productDescription || '',
             painPoints: result.painPoints?.slice(0, 6) || [],
             valuePropositions: result.valuePropositions?.slice(0, 5) || [],
@@ -409,6 +418,11 @@ export function SalesProductSetupStep() {
             nextStep='/onboarding/comment-settings'
             loading={isUpdatingOnboardingStatus}
             onNext={async () => {
+              const currentUrl = form.getValues('websiteUrl')
+              if (currentUrl) {
+                form.setValue('websiteUrl', normalizeUrl(currentUrl))
+              }
+
               const isValid = await form.trigger()
               if (!isValid) return false
 

@@ -69,6 +69,20 @@ function RouteComponent() {
     }
   }, [isSessionLoaded, isSignedIn, navigate])
 
+  const isPending = user?.status === UserSubscriptionStatus.PENDING
+  const isOnboardingCompleted =
+    user?.metadata?.onboarding?.status === 'completed'
+  const allowedPendingPaths = ['/pricing', '/billing']
+  const isOnAllowedPath = allowedPendingPaths.some((p) =>
+    location.pathname.startsWith(p)
+  )
+
+  useEffect(() => {
+    if (isPending && isOnboardingCompleted && !isOnAllowedPath) {
+      navigate({ to: '/pricing' })
+    }
+  }, [isPending, isOnboardingCompleted, isOnAllowedPath, navigate])
+
   if (
     !isSessionLoaded ||
     (!isFetched && isLoading) ||
@@ -96,7 +110,8 @@ function RouteComponent() {
         >
           {user &&
             !trialBannerDismissed &&
-            (user.status === UserSubscriptionStatus.IN_TRIAL ||
+            (user.status === UserSubscriptionStatus.PENDING ||
+              user.status === UserSubscriptionStatus.IN_TRIAL ||
               user.status === UserSubscriptionStatus.TRIAL_EXPIRED) && (
               <TrialBanner
                 user={user}

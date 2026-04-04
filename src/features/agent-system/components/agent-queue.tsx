@@ -14,6 +14,8 @@ import { useCurrentAgent } from '../hooks/use-current-agent'
 import { useHistoryStore } from '@/features/history/store/history.store'
 import { Button } from '@/components/ui/button'
 import type { IPost } from '@/features/history/interface/post.interface'
+import { getSalesPostColumns } from '@/features/linkedin-sales/components/sales-queue-columns'
+import { getPostColumns } from '@/features/history/components/columns'
 
 export function AgentQueue() {
   const { agent, agentTypeDef } = useCurrentAgent()
@@ -72,13 +74,11 @@ export function AgentQueue() {
 
   const columns = useMemo(() => {
     if (agent?.agentMode === 'sales') {
-      const { getSalesPostColumns } = require('@/features/linkedin-sales/components/sales-queue-columns')
       return getSalesPostColumns(status)
     }
     if (agentTypeDef?.queueColumns?.length) {
       return agentTypeDef.queueColumns
     }
-    const { getPostColumns } = require('@/features/history/components/columns')
     return getPostColumns(status)
   }, [agent?.agentMode, agentTypeDef, status])
 

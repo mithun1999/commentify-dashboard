@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -124,6 +124,12 @@ const predefinedHashtags = [
 
 // ── Main component ───────────────────────────────────────────────────────────
 
+const LazySalesProductSetupStep = lazy(() =>
+  import('@/features/linkedin-sales/components/sales-product-setup-step').then(
+    (m) => ({ default: m.SalesProductSetupStep })
+  )
+)
+
 export function PostSettingsStep() {
   const { data: onboardingData } = useOnboarding()
   const { data: user } = useGetUserQuery()
@@ -135,8 +141,11 @@ export function PostSettingsStep() {
   const agentMode = onboardingData.selectedAgentMode
 
   if (platform === 'linkedin' && agentMode === 'sales') {
-    const { SalesProductSetupStep } = require('@/features/linkedin-sales/components/sales-product-setup-step')
-    return <SalesProductSetupStep />
+    return (
+      <Suspense fallback={<div className='flex items-center justify-center py-12'>Loading...</div>}>
+        <LazySalesProductSetupStep />
+      </Suspense>
+    )
   }
   if (platform === 'twitter') return <TwitterPostSettings />
   return <LinkedInPostSettings />

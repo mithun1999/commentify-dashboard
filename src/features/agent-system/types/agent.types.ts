@@ -14,6 +14,7 @@ export interface AgentTypeDefinition {
   platform: Platform
   access: AccessLevel
   badge?: string
+  recommended?: boolean
   isEligible?: (user: IUser) => boolean
   scrapeSettingsComponent: ComponentType<{ profileId: string }>
   commentSettingsComponent: ComponentType<{ profileId: string }>

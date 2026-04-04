@@ -178,7 +178,7 @@ export function TwitterCommentSettings({ profileId }: { profileId: string }) {
               ['turnOnEmoji', 'Emoji', 'Include emoji in replies'],
               [
                 'turnOnExclamations',
-                'Exclamations',
+                'Use Exclamations',
                 'Use exclamation marks in replies',
               ],
               ['turnOnHashtags', 'Hashtags', 'Include relevant hashtags'],

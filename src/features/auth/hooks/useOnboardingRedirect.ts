@@ -9,6 +9,7 @@ const STEP_ROUTES: Record<number, string> = {
   3: '/onboarding/post-settings',
   4: '/onboarding/comment-settings',
   5: '/onboarding/identity',
+  6: '/onboarding/activate-trial',
 }
 
 const ROUTE_STEPS: Record<string, number> = {
@@ -18,6 +19,7 @@ const ROUTE_STEPS: Record<string, number> = {
   '/onboarding/post-settings': 3,
   '/onboarding/comment-settings': 4,
   '/onboarding/identity': 5,
+  '/onboarding/activate-trial': 6,
 }
 
 export const useOnboardingRedirect = () => {

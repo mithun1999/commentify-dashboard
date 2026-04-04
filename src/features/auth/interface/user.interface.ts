@@ -2,6 +2,7 @@ import { IProduct } from '@/features/pricing/interfaces/price.interface'
 import { ISubscription } from '@/features/subscription/interfaces/subscription.interface'
 
 export enum UserSubscriptionStatus {
+  PENDING = 'pending',
   IN_TRIAL = 'in-trial',
   TRIAL_EXPIRED = 'trial-expired',
   ACTIVE = 'active',

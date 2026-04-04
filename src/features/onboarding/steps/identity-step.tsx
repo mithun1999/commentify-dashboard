@@ -14,14 +14,20 @@ import {
 // import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
+import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
+import {
+  useGetUserQuery,
+  useUpdateOnboardingStatus,
+} from '@/features/auth/query/user.query'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 
 export function IdentityStep() {
   const posthog = usePostHog()
+  const { data: user } = useGetUserQuery()
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
+  const isPending = user?.status === UserSubscriptionStatus.PENDING
 
   const identitySchema = z.object({
     heardFrom: z.string().min(1, 'Please select how you heard about us'),
@@ -51,8 +57,8 @@ export function IdentityStep() {
         heardFrom: heardFromValue,
       })
       await updateOnboardingStatusAsync({
-        status: 'completed',
-        step: 5,
+        status: isPending ? 'in-progress' : 'completed',
+        step: isPending ? 6 : 5,
         heardFrom: heardFromValue,
       })
       return true
@@ -135,8 +141,8 @@ export function IdentityStep() {
             </div>
 
             <OnboardingNavigation
-              nextStep='/'
-              nextLabel='Finish'
+              nextStep={isPending ? '/onboarding/activate-trial' : '/'}
+              nextLabel={isPending ? 'Continue' : 'Finish'}
               loading={isUpdatingOnboardingStatus}
               onNext={handleSubmitAndNext}
               currentStep='identity'

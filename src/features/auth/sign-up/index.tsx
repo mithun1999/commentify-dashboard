@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { useFeatureFlagEnabled } from 'posthog-js/react'
 import commentifyPreview from '@/assets/images/auth-preview.svg'
 import commentifyLogo from '@/assets/images/logo.svg'
 import { testimonialPeoples } from '@/components/layout/data/auth-page-data'
@@ -6,6 +7,7 @@ import AuthWrapper from '../auth-wrapper'
 import { SignUpForm } from './components/sign-up-form'
 
 export default function SignUp() {
+  const cardRequired = useFeatureFlagEnabled('card-required-for-trial')
   return (
     <AuthWrapper>
       <div className='relative container grid h-svh flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0'>
@@ -60,7 +62,9 @@ export default function SignUp() {
                 Create an account
               </h1>
               <p className='text-muted-foreground text-sm'>
-                Start your free trial — no credit card required.
+                {cardRequired
+                  ? 'Create your account to get started.'
+                  : 'Start your free trial - no credit card required.'}
               </p>
               <p className='text-muted-foreground text-sm'>
                 Already have an account?{' '}

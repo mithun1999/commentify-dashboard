@@ -23,6 +23,7 @@ import { Route as OnboardingDemoImport } from './routes/onboarding/demo'
 import { Route as OnboardingConnectAccountImport } from './routes/onboarding/connect-account'
 import { Route as OnboardingCommentSettingsImport } from './routes/onboarding/comment-settings'
 import { Route as OnboardingAgentTypeImport } from './routes/onboarding/agent-type'
+import { Route as OnboardingActivateTrialImport } from './routes/onboarding/activate-trial'
 import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
 import { Route as errors503Import } from './routes/(errors)/503'
 import { Route as errors500Import } from './routes/(errors)/500'
@@ -117,6 +118,12 @@ const OnboardingCommentSettingsRoute = OnboardingCommentSettingsImport.update({
 const OnboardingAgentTypeRoute = OnboardingAgentTypeImport.update({
   id: '/agent-type',
   path: '/agent-type',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OnboardingActivateTrialRoute = OnboardingActivateTrialImport.update({
+  id: '/activate-trial',
+  path: '/activate-trial',
   getParentRoute: () => OnboardingRouteRoute,
 } as any)
 
@@ -375,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBillingImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/onboarding/activate-trial': {
+      id: '/onboarding/activate-trial'
+      path: '/activate-trial'
+      fullPath: '/onboarding/activate-trial'
+      preLoaderRoute: typeof OnboardingActivateTrialImport
+      parentRoute: typeof OnboardingRouteImport
+    }
     '/onboarding/agent-type': {
       id: '/onboarding/agent-type'
       path: '/agent-type'
@@ -584,6 +598,7 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface OnboardingRouteRouteChildren {
+  OnboardingActivateTrialRoute: typeof OnboardingActivateTrialRoute
   OnboardingAgentTypeRoute: typeof OnboardingAgentTypeRoute
   OnboardingCommentSettingsRoute: typeof OnboardingCommentSettingsRoute
   OnboardingConnectAccountRoute: typeof OnboardingConnectAccountRoute
@@ -596,6 +611,7 @@ interface OnboardingRouteRouteChildren {
 }
 
 const OnboardingRouteRouteChildren: OnboardingRouteRouteChildren = {
+  OnboardingActivateTrialRoute: OnboardingActivateTrialRoute,
   OnboardingAgentTypeRoute: OnboardingAgentTypeRoute,
   OnboardingCommentSettingsRoute: OnboardingCommentSettingsRoute,
   OnboardingConnectAccountRoute: OnboardingConnectAccountRoute,
@@ -627,6 +643,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
@@ -663,6 +680,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
@@ -702,6 +720,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
   '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
@@ -742,6 +761,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
+    | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
     | '/onboarding/connect-account'
@@ -777,6 +797,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
+    | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
     | '/onboarding/connect-account'
@@ -814,6 +835,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/billing'
+    | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
     | '/onboarding/connect-account'
@@ -910,6 +932,7 @@ export const routeTree = rootRoute
     "/onboarding": {
       "filePath": "onboarding/route.tsx",
       "children": [
+        "/onboarding/activate-trial",
         "/onboarding/agent-type",
         "/onboarding/comment-settings",
         "/onboarding/connect-account",
@@ -965,6 +988,10 @@ export const routeTree = rootRoute
     "/_authenticated/billing": {
       "filePath": "_authenticated/billing.tsx",
       "parent": "/_authenticated"
+    },
+    "/onboarding/activate-trial": {
+      "filePath": "onboarding/activate-trial.tsx",
+      "parent": "/onboarding"
     },
     "/onboarding/agent-type": {
       "filePath": "onboarding/agent-type.tsx",

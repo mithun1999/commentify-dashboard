@@ -29,6 +29,34 @@ export function TrialBanner({
     [user.trialEndsAt]
   )
 
+  if (user.status === UserSubscriptionStatus.PENDING) {
+    return (
+      <div className='relative flex items-center justify-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm text-white'>
+        <Sparkles className='h-4 w-4 shrink-0' />
+        <span className='font-medium'>
+          Add a payment method to start your free trial and activate your
+          agents.
+        </span>
+        <Button
+          size='sm'
+          variant='secondary'
+          className='h-7 gap-1.5 bg-white/90 text-gray-900 hover:bg-white'
+          asChild
+        >
+          <Link
+            to='/pricing'
+            onClick={() =>
+              posthog?.capture('trial_banner_activate_clicked')
+            }
+          >
+            <Sparkles className='h-3.5 w-3.5' />
+            Start Free Trial
+          </Link>
+        </Button>
+      </div>
+    )
+  }
+
   if (user.status === UserSubscriptionStatus.TRIAL_EXPIRED) {
     return (
       <div className='relative flex items-center justify-center gap-3 bg-red-600 px-4 py-2.5 text-sm text-white'>
@@ -72,8 +100,9 @@ export function TrialBanner({
           : daysLeft === 1
             ? '1 day left in your free trial'
             : `${daysLeft} days left in your free trial`}
-        {' - '}
-        Upgrade to keep your agents running.
+        {user.subscription
+          ? ` — you'll be charged on ${new Date(user.trialEndsAt!).toLocaleDateString()}.`
+          : ' — Upgrade to keep your agents running.'}
       </span>
       <Button
         size='sm'

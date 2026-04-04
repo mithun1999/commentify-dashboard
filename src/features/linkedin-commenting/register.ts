@@ -13,12 +13,8 @@ AGENT_TYPES['linkedin-commenting'] = {
     'Automatically find and comment on relevant LinkedIn posts to grow your network and visibility.',
   icon: IconBrandLinkedin,
   platform: 'linkedin',
-  access: 'invite-only',
-  badge: 'Invite Only',
-  isEligible: (user) => {
-    const plan = user.subscribedProduct?.name?.toLowerCase()?.split(' ')[0]
-    return plan === 'pro' || plan === 'premium'
-  },
+  access: 'open',
+  recommended: true,
   scrapeSettingsComponent: LinkedInScrapeSettings,
   commentSettingsComponent: LinkedInCommentSettings,
   queueColumns: getPostColumns('pending'),
