@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -43,6 +43,10 @@ import { cn } from '@/lib/utils'
 import { useProfileStore } from '@/stores/profile.store'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import { useCreateSalesSetting, useExtractFromWebsite } from '../query/sales.query'
+import {
+  MonitoredProfiles,
+  type MonitoredProfilesHandle,
+} from '@/features/linkedin-commenting/components/monitored-profiles'
 
 const PITCH_OPTIONS = [
   {
@@ -82,6 +86,7 @@ const salesSettingsSchema = z.object({
 type SalesSettingsValues = z.infer<typeof salesSettingsSchema>
 
 export function SalesSettingsForm({ profileId }: { profileId: string }) {
+  const monitoredRef = useRef<MonitoredProfilesHandle>(null)
   const { data: profiles } = useGetAllProfileQuery()
   const setActiveProfile = useProfileStore((s) => s.setActiveProfile)
   const { createSalesSettingAsync, isCreatingSalesSetting } = useCreateSalesSetting()
@@ -155,6 +160,8 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
           suggestedJobTitles: data.suggestedJobTitles,
         },
       })
+
+      monitoredRef.current?.save()
 
       const invalidKws = (result as { _invalidKeywords?: string[] })?._invalidKeywords
       if (invalidKws?.length) {
@@ -320,6 +327,8 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
             ))}
           </div>
         </div>
+
+        <MonitoredProfiles ref={monitoredRef} profileId={profileId} />
 
         {/* Target Job Titles */}
         <TagSection

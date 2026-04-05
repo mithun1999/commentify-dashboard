@@ -20,6 +20,7 @@ export interface ISalesSetting {
 export interface ISetting {
   _id: string
   agentMode?: AgentMode
+  monitoredProfiles?: string[]
   salesSetting?: ISalesSetting
   scrapeSetting?: {
     keywordsToTarget: string[]

@@ -24,7 +24,7 @@ function RootComponent() {
     <>
       <NavigationProgress />
       <Outlet />
-      <Toaster duration={50000} />
+      <Toaster />
       {import.meta.env.MODE === 'development' && (
         <>
           <ReactQueryDevtools buttonPosition='bottom-right' />

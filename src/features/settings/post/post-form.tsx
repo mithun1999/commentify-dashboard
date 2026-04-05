@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -64,6 +64,10 @@ import {
 import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { UnlockWrapper } from '../components/UnlockWrapper'
+import {
+  MonitoredProfiles,
+  type MonitoredProfilesHandle,
+} from '@/features/linkedin-commenting/components/monitored-profiles'
 
 const notificationsFormSchema = z.object({
   keywords: z.array(z.string()).max(6),
@@ -115,6 +119,7 @@ const predefinedKeywords = [
 ]
 
 export function PostForm() {
+  const monitoredRef = useRef<MonitoredProfilesHandle>(null)
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
@@ -280,6 +285,8 @@ export function PostForm() {
       authorTitlesToTarget: values.authorTitles,
       rules: values.rules,
     }
+
+    monitoredRef.current?.save()
 
     const hasExisting = Boolean(activeProfile?.setting?.scrapeSetting?._id)
     if (hasExisting) {
@@ -494,6 +501,10 @@ export function PostForm() {
             </div>
           </div>
         </div>
+
+        {activeProfile?._id && (
+          <MonitoredProfiles ref={monitoredRef} profileId={activeProfile._id} />
+        )}
 
         {/* Posts Per Day */}
         <div className='mb-8 flex flex-wrap gap-x-15 gap-y-8'>

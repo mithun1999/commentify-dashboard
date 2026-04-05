@@ -60,6 +60,18 @@ export async function createCommentSetting(
   return data
 }
 
+export async function updateMonitoredProfiles(payload: {
+  profileId: string
+  monitoredProfiles: string[]
+}) {
+  const { data } = await axiosInstance({
+    method: 'PATCH',
+    url: `/setting/monitored-profiles/${payload.profileId}`,
+    data: { monitoredProfiles: payload.monitoredProfiles },
+  })
+  return data
+}
+
 export async function createOrUpdateTwitterScrapeSetting(payload: {
   profileId: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -43,4 +43,9 @@ export const planSetting: Record<
     pro: false,
     premium: true,
   },
+  monitoredProfiles: {
+    starter: 0,
+    pro: 10,
+    premium: 30,
+  },
 }

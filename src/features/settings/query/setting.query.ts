@@ -13,6 +13,7 @@ import {
   createOrUpdateTwitterScrapeSetting,
   createScrapeSetting,
   updateCommentSetting,
+  updateMonitoredProfiles,
   updateScrapeSetting,
 } from '../types/setting.api'
 
@@ -144,6 +145,36 @@ export const useUpdateCommentSettingQuery = () => {
   return {
     updateCommentSetting: mutate,
     isUpdatingCommentSetting: isPending,
+  }
+}
+
+export const useUpdateMonitoredProfilesQuery = () => {
+  const queryClient = useQueryClient()
+  const { mutate, isPending } = useMutation<
+    unknown,
+    AxiosError<{ message?: string }>,
+    { profileId: string; monitoredProfiles: string[] }
+  >({
+    mutationFn: updateMonitoredProfiles,
+    onSuccess: () => {
+      showSubmittedData('Monitored profiles saved successfully')
+      queryClient.invalidateQueries({
+        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+        refetchType: 'active',
+      })
+    },
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while saving monitored profiles'
+      )
+    },
+  })
+
+  return {
+    updateMonitoredProfiles: mutate,
+    isUpdatingMonitoredProfiles: isPending,
   }
 }
 
