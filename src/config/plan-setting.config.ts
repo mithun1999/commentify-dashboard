@@ -13,6 +13,11 @@ export const planSetting: Record<
     pro: 50,
     premium: 100,
   },
+  salesMentionsPerDay: {
+    starter: 15,
+    pro: 30,
+    premium: 50,
+  },
   tagAuthor: {
     starter: false,
     pro: true,

@@ -20,6 +20,7 @@ import {
   HandshakeIcon,
   Megaphone,
   Info,
+  Hash,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,8 +41,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { planSetting } from '@/config/plan-setting.config'
 import { useProfileStore } from '@/stores/profile.store'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { useCreateSalesSetting, useExtractFromWebsite } from '../query/sales.query'
 import {
   MonitoredProfiles,
@@ -69,28 +72,36 @@ const PITCH_OPTIONS = [
   },
 ]
 
-const salesSettingsSchema = z.object({
-  websiteUrl: z.string().url('Please enter a valid URL').or(z.literal('')),
-  productDescription: z
-    .string()
-    .min(10, 'Product description must be at least 10 characters')
-    .max(500, 'Max 500 characters'),
-  painPoints: z.array(z.string()).min(1, 'Add at least one pain point'),
-  valuePropositions: z.array(z.string()).min(1, 'Add at least one value proposition'),
-  pitchIntensity: z.enum(['subtle', 'moderate', 'direct']),
-  matchMode: z.enum(['strict', 'flexible']),
-  suggestedJobTitles: z.array(z.string()).max(6),
-  competitorNames: z.array(z.string()),
-})
+function createSalesSettingsSchema(maxMentionsPerDay: number) {
+  return z.object({
+    websiteUrl: z.string().url('Please enter a valid URL').or(z.literal('')),
+    productDescription: z
+      .string()
+      .min(10, 'Product description must be at least 10 characters')
+      .max(500, 'Max 500 characters'),
+    painPoints: z.array(z.string()).min(1, 'Add at least one pain point'),
+    valuePropositions: z.array(z.string()).min(1, 'Add at least one value proposition'),
+    pitchIntensity: z.enum(['subtle', 'moderate', 'direct']),
+    numberOfPostsToScrapePerDay: z.number().min(1).max(maxMentionsPerDay, `Max ${maxMentionsPerDay} for your plan`),
+    matchMode: z.enum(['strict', 'flexible']),
+    suggestedJobTitles: z.array(z.string()).max(6),
+    competitorNames: z.array(z.string()),
+  })
+}
 
-type SalesSettingsValues = z.infer<typeof salesSettingsSchema>
+type SalesSettingsValues = z.infer<ReturnType<typeof createSalesSettingsSchema>>
 
 export function SalesSettingsForm({ profileId }: { profileId: string }) {
   const monitoredRef = useRef<MonitoredProfilesHandle>(null)
   const { data: profiles } = useGetAllProfileQuery()
+  const { data: user } = useGetUserQuery()
   const setActiveProfile = useProfileStore((s) => s.setActiveProfile)
   const { createSalesSettingAsync, isCreatingSalesSetting } = useCreateSalesSetting()
   const { extractAsync, isExtracting } = useExtractFromWebsite()
+
+  const basePlanName = user?.subscribedProduct?.sku?.split('_')[0]?.toLowerCase()
+  const userPlan = (basePlanName as 'starter' | 'pro' | 'premium') ?? 'starter'
+  const maxMentionsPerDay = (planSetting['salesMentionsPerDay']?.[userPlan] as number) ?? 15
 
   const profile = profiles?.find((p) => p._id === profileId)
   const existingSalesSetting = profile?.setting?.salesSetting
@@ -106,13 +117,14 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
   const [competitorInput, setCompetitorInput] = useState('')
 
   const form = useForm<SalesSettingsValues>({
-    resolver: zodResolver(salesSettingsSchema),
+    resolver: zodResolver(createSalesSettingsSchema(maxMentionsPerDay)),
     defaultValues: {
       websiteUrl: existingSalesSetting?.websiteUrl ?? '',
       productDescription: existingSalesSetting?.productDescription ?? '',
       painPoints: existingSalesSetting?.painPoints ?? [],
       valuePropositions: existingSalesSetting?.valuePropositions ?? [],
       pitchIntensity: existingSalesSetting?.pitchIntensity ?? 'moderate',
+      numberOfPostsToScrapePerDay: profile?.setting?.scrapeSetting?.numberOfPostsToScrapePerDay ?? 20,
       matchMode: existingSalesSetting?.matchMode ?? 'flexible',
       suggestedJobTitles:
         (profile?.setting?.scrapeSetting?.authorTitlesToTarget as string[]) ?? [],
@@ -158,6 +170,7 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
           matchMode: data.matchMode,
           competitorNames: data.competitorNames,
           suggestedJobTitles: data.suggestedJobTitles,
+          numberOfPostsToScrapePerDay: data.numberOfPostsToScrapePerDay,
         },
       })
 
@@ -301,6 +314,49 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
             })}
           </div>
         </div>
+
+        {/* Mentions Per Day */}
+        <FormField
+          control={form.control}
+          name='numberOfPostsToScrapePerDay'
+          render={({ field }) => (
+            <FormItem>
+              <div className='flex items-center gap-2'>
+                <Hash className='text-muted-foreground h-4 w-4' />
+                <FormLabel className='font-medium'>Mentions Per Day</FormLabel>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                        <Info className='text-muted-foreground h-3 w-3' />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side='right' className='max-w-xs'>
+                      <p>Number of posts your agent will engage with daily. This controls how many product mentions are made per day.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <FormControl>
+                <Input
+                  type='number'
+                  min={1}
+                  max={maxMentionsPerDay}
+                  className='w-32'
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
+              </FormControl>
+              <p className='text-muted-foreground mt-2 flex items-center gap-2 text-sm'>
+                <span className='border-border flex h-4 w-4 items-center justify-center rounded-full border'>
+                  <Info className='text-muted-foreground h-3 w-3' />
+                </span>
+                Max. {maxMentionsPerDay} mentions per day
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Match Mode */}
         <div className='space-y-3'>

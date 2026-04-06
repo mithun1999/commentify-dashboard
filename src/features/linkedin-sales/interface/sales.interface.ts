@@ -2,6 +2,7 @@ import type { ISalesSetting } from '@/features/settings/interface/setting.interf
 
 export interface ISalesSettingPayload extends Partial<ISalesSetting> {
   suggestedJobTitles?: string[]
+  numberOfPostsToScrapePerDay?: number
 }
 
 export interface ICreateSalesSettingPayload {
