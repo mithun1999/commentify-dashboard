@@ -9,7 +9,8 @@ import {
   ToggleRight,
   RefreshCw,
   Loader2,
-  ExternalLink,
+  Copy,
+  Check,
   MessageCircle,
   Upload,
 } from 'lucide-react'
@@ -44,7 +45,7 @@ const INSTALL_STEPS: {
   icon: typeof Download
   title: string
   description: string
-  action?: { label: string; url?: string; onClick?: () => void }
+  action?: { label: string; copyText: string; copiedLabel: string }
 }[] = [
   {
     icon: Download,
@@ -53,10 +54,10 @@ const INSTALL_STEPS: {
       'Download the extension ZIP below. Your browser may auto-extract it. If not, right-click the ZIP and choose "Extract All".',
   },
   {
-    icon: ExternalLink,
+    icon: Copy,
     title: 'Open the Extensions page',
-    description: 'Click below to open Chrome\'s extensions page.',
-    action: { label: 'Open chrome://extensions', url: 'chrome://extensions' },
+    description: 'Copy the address below and paste it into your browser\'s address bar.',
+    action: { label: 'Copy chrome://extensions', copyText: 'chrome://extensions', copiedLabel: 'Copied!' },
   },
   {
     icon: ToggleRight,
@@ -89,6 +90,7 @@ export function ExtensionStep() {
     useUpdateOnboardingStatus()
   const isInstalled = data.isExtensionInstalled
   const hasCheckedOnMount = useRef(false)
+  const [copiedAction, setCopiedAction] = useState<string | null>(null)
 
   const checkExtensionInstallation = async () => {
     try {
@@ -254,14 +256,24 @@ export function ExtensionStep() {
                   </p>
                   {step.action && (
                     <button
-                      onClick={() => {
-                        if (step.action?.url) window.open(step.action.url, '_blank')
-                        step.action?.onClick?.()
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(step.action!.copyText)
+                        setCopiedAction(step.action!.copyText)
+                        setTimeout(() => setCopiedAction(null), 2000)
                       }}
                       className='text-primary hover:text-primary/80 mt-1 inline-flex items-center gap-1 text-xs font-medium underline transition-colors'
                     >
-                      <ExternalLink className='h-3 w-3' />
-                      {step.action.label}
+                      {copiedAction === step.action.copyText ? (
+                        <>
+                          <Check className='h-3 w-3' />
+                          {step.action.copiedLabel}
+                        </>
+                      ) : (
+                        <>
+                          <Copy className='h-3 w-3' />
+                          {step.action.label}
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
