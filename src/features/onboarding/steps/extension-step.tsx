@@ -6,12 +6,14 @@ import {
   Download,
   CheckCircle2,
   Info,
-  FolderOpen,
-  Puzzle,
   ToggleRight,
   RefreshCw,
   Loader2,
+  ExternalLink,
+  MessageCircle,
+  Upload,
 } from 'lucide-react'
+import { Crisp } from 'crisp-sdk-web'
 import { usePostHog } from 'posthog-js/react'
 import extensionImage from '@/assets/images/install-extension.png'
 import { useOnboarding } from '@/stores/onboarding.store'
@@ -38,34 +40,41 @@ import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 
-const INSTALL_STEPS = [
+const INSTALL_STEPS: {
+  icon: typeof Download
+  title: string
+  description: string
+  action?: { label: string; url?: string; onClick?: () => void }
+}[] = [
   {
     icon: Download,
-    title: 'Download the extension',
-    description: 'Click the button below to download the extension as a ZIP file.',
-  },
-  {
-    icon: FolderOpen,
-    title: 'Unzip the file',
-    description: 'Extract the downloaded ZIP file to a folder on your computer.',
-  },
-  {
-    icon: Puzzle,
-    title: 'Open Chrome Extensions',
+    title: 'Download & extract',
     description:
-      'Go to chrome://extensions in your browser and enable "Developer mode" in the top right.',
+      'Download the extension ZIP below. Your browser may auto-extract it. If not, right-click the ZIP and choose "Extract All".',
   },
   {
-    icon: FolderOpen,
-    title: 'Load the extension',
-    description:
-      'Click "Load unpacked" and select the extracted folder.',
+    icon: ExternalLink,
+    title: 'Open the Extensions page',
+    description: 'Click below to open Chrome\'s extensions page.',
+    action: { label: 'Open chrome://extensions', url: 'chrome://extensions' },
   },
   {
     icon: ToggleRight,
-    title: 'Done!',
+    title: 'Turn on Developer mode',
     description:
-      'The extension is now installed. Come back here and click "Check installation".',
+      'In the top-right corner of the extensions page, flip the "Developer mode" toggle ON.',
+  },
+  {
+    icon: Upload,
+    title: 'Load the extension',
+    description:
+      'Click the "Load unpacked" button that appeared, then select the folder you extracted in step 1.',
+  },
+  {
+    icon: CheckCircle2,
+    title: "You're all set!",
+    description:
+      'Come back to this page and click "Check installation" below.',
   },
 ]
 
@@ -236,13 +245,25 @@ export function ExtensionStep() {
                 <div className='bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold'>
                   {index + 1}
                 </div>
-                <div className='space-y-0.5 pt-0.5'>
+                <div className='space-y-1 pt-0.5'>
                   <p className='text-sm font-medium leading-tight'>
                     {step.title}
                   </p>
                   <p className='text-muted-foreground text-sm'>
                     {step.description}
                   </p>
+                  {step.action && (
+                    <button
+                      onClick={() => {
+                        if (step.action?.url) window.open(step.action.url, '_blank')
+                        step.action?.onClick?.()
+                      }}
+                      className='text-primary hover:text-primary/80 mt-1 inline-flex items-center gap-1 text-xs font-medium underline transition-colors'
+                    >
+                      <ExternalLink className='h-3 w-3' />
+                      {step.action.label}
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
@@ -264,6 +285,15 @@ export function ExtensionStep() {
                 <RefreshCw className='h-3.5 w-3.5' />
               )}
               {isChecking ? 'Checking...' : 'Check installation'}
+            </button>
+            <button
+              onClick={() => {
+                try { Crisp.chat.open() } catch { /* Crisp not initialized in dev */ }
+              }}
+              className='text-muted-foreground hover:text-foreground mt-1 inline-flex items-center justify-center gap-1.5 text-xs transition-colors'
+            >
+              <MessageCircle className='h-3.5 w-3.5' />
+              Need help? Chat with us
             </button>
           </div>
         </DialogContent>
