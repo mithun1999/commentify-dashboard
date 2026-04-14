@@ -1,4 +1,3 @@
-import { envConfig } from '@/config/env.config'
 import { getActiveExtensionId } from '@/lib/extension'
 
 const GET_TWITTER_PROFILE_DETAILS = 'get_twitter_profile_details'

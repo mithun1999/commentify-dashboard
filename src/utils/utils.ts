@@ -1,4 +1,3 @@
-import { envConfig } from '@/config/env.config'
 import { getActiveExtensionId } from '@/lib/extension'
 import { QueryService } from '@/services/query.service'
 import { toast } from 'sonner'

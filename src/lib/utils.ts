@@ -1,4 +1,3 @@
-import { envConfig } from '@/config/env.config'
 import {
   GET_PROFILE_DETAILS,
   LINK_LI_ACCOUNT,
