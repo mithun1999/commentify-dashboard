@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { envConfig } from '@/config/env.config'
-import { checkIsExtensionInstalled } from '@/lib/utils'
+import { detectExtension } from '@/lib/extension'
 import { useOnboarding } from '@/stores/onboarding.store'
 import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
 
@@ -18,10 +17,7 @@ export function useExtensionGuard() {
 
     async function check() {
       try {
-        const installed = await checkIsExtensionInstalled(
-          envConfig.chromeExtensionId,
-          envConfig.chromeExtensionIconUrl
-        )
+        const { installed } = await detectExtension()
 
         if (!installed) {
           updateData({ isExtensionInstalled: false })

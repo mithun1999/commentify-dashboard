@@ -2,14 +2,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { envConfig } from '@/config/env.config'
 import {
   Download,
+  ExternalLink,
   FolderOpen,
   Puzzle,
   ToggleRight,
   RefreshCw,
   Loader2,
 } from 'lucide-react'
+import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
-import { checkIsExtensionInstalled } from '@/lib/utils'
+import { detectExtension } from '@/lib/extension'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -54,6 +56,7 @@ const INSTALL_STEPS = [
 ]
 
 export function ProfileConnectionGuard() {
+  const chromeExtensionAvailable = useFeatureFlagEnabled('chrome-extension-available')
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const { linkProfile, isLinkingProfile } = useLinkProfile()
 
@@ -68,11 +71,8 @@ export function ProfileConnectionGuard() {
   const checkExtension = useCallback(async () => {
     try {
       setIsChecking(true)
-      const installed = await checkIsExtensionInstalled(
-        envConfig.chromeExtensionId,
-        envConfig.chromeExtensionIconUrl
-      )
-      setExtensionInstalled(installed)
+      const result = await detectExtension()
+      setExtensionInstalled(result.installed)
     } catch {
       setExtensionInstalled(false)
     } finally {
@@ -87,10 +87,7 @@ export function ProfileConnectionGuard() {
   }, [isDisconnected, checkExtension])
 
   const handleReconnect = async () => {
-    const installed = await checkIsExtensionInstalled(
-      envConfig.chromeExtensionId,
-      envConfig.chromeExtensionIconUrl
-    )
+    const { installed } = await detectExtension()
     if (!installed) {
       setExtensionInstalled(false)
       return
@@ -129,49 +126,79 @@ export function ProfileConnectionGuard() {
               <DialogTitle>Extension Not Detected</DialogTitle>
               <DialogDescription>
                 The Commentify Chrome extension is required to reconnect your
-                LinkedIn account. Follow these steps to install it.
+                LinkedIn account.{' '}
+                {chromeExtensionAvailable
+                  ? 'Install it from the Chrome Web Store to continue.'
+                  : 'Follow these steps to install it.'}
               </DialogDescription>
             </DialogHeader>
 
-            <ol className='space-y-4 py-2'>
-              {INSTALL_STEPS.map((step, index) => (
-                <li key={index} className='flex gap-3'>
-                  <div className='bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold'>
-                    {index + 1}
-                  </div>
-                  <div className='space-y-0.5 pt-0.5'>
-                    <p className='text-sm leading-tight font-medium'>
-                      {step.title}
-                    </p>
-                    <p className='text-muted-foreground text-sm'>
-                      {step.description}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            {chromeExtensionAvailable ? (
+              <div className='flex flex-col gap-2 pt-2'>
+                <Button
+                  onClick={() => {
+                    window.open(envConfig.chromeWebStoreUrl, '_blank', 'noopener,noreferrer')
+                  }}
+                >
+                  <ExternalLink className='mr-2 h-4 w-4' />
+                  Add to Chrome
+                </Button>
+                <button
+                  className='text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 text-sm underline transition-colors'
+                  disabled={isChecking}
+                  onClick={checkExtension}
+                >
+                  {isChecking ? (
+                    <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                  ) : (
+                    <RefreshCw className='h-3.5 w-3.5' />
+                  )}
+                  {isChecking ? 'Checking...' : 'Already installed? Check again'}
+                </button>
+              </div>
+            ) : (
+              <>
+                <ol className='space-y-4 py-2'>
+                  {INSTALL_STEPS.map((step, index) => (
+                    <li key={index} className='flex gap-3'>
+                      <div className='bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold'>
+                        {index + 1}
+                      </div>
+                      <div className='space-y-0.5 pt-0.5'>
+                        <p className='text-sm leading-tight font-medium'>
+                          {step.title}
+                        </p>
+                        <p className='text-muted-foreground text-sm'>
+                          {step.description}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
 
-            <div className='flex flex-col gap-2 pt-2'>
-              <Button
-                onClick={handleDownload}
-                disabled={!envConfig.extensionDownloadUrl}
-              >
-                <Download className='mr-2 h-4 w-4' />
-                Download ZIP
-              </Button>
-              <button
-                className='text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 text-sm underline transition-colors'
-                disabled={isChecking}
-                onClick={checkExtension}
-              >
-                {isChecking ? (
-                  <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                ) : (
-                  <RefreshCw className='h-3.5 w-3.5' />
-                )}
-                {isChecking ? 'Checking...' : 'Check installation'}
-              </button>
-            </div>
+                <div className='flex flex-col gap-2 pt-2'>
+                  <Button
+                    onClick={handleDownload}
+                    disabled={!envConfig.extensionDownloadUrl}
+                  >
+                    <Download className='mr-2 h-4 w-4' />
+                    Download ZIP
+                  </Button>
+                  <button
+                    className='text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 text-sm underline transition-colors'
+                    disabled={isChecking}
+                    onClick={checkExtension}
+                  >
+                    {isChecking ? (
+                      <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                    ) : (
+                      <RefreshCw className='h-3.5 w-3.5' />
+                    )}
+                    {isChecking ? 'Checking...' : 'Check installation'}
+                  </button>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <>

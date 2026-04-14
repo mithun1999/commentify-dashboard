@@ -3,6 +3,7 @@ import {
   GET_PROFILE_DETAILS,
   LINK_LI_ACCOUNT,
 } from '@/constant/browserEvents.constant'
+import { getActiveExtensionId } from '@/lib/extension'
 import { QueryService } from '@/services/query.service'
 import { type ClassValue, clsx } from 'clsx'
 import { toast } from 'sonner'
@@ -41,7 +42,7 @@ Promise<any> => {
     }
 
     sendMessage(
-      envConfig.chromeExtensionId,
+      getActiveExtensionId(),
       { type: LINK_LI_ACCOUNT },
       (response: unknown) => {
         if (runtime?.lastError) {
@@ -68,7 +69,7 @@ export const getProfileDetailsFromExtension =
       }
 
       sendMessage(
-        envConfig.chromeExtensionId,
+        getActiveExtensionId(),
         { type: GET_PROFILE_DETAILS },
         (response: IProfileResponseFromExtension) => {
           if (runtime?.lastError) {

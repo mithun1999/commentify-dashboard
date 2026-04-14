@@ -5,6 +5,7 @@ import { envConfig } from '@/config/env.config'
 import {
   Download,
   CheckCircle2,
+  ExternalLink,
   Info,
   ToggleRight,
   RefreshCw,
@@ -15,10 +16,10 @@ import {
   Upload,
 } from 'lucide-react'
 import { Crisp } from 'crisp-sdk-web'
-import { usePostHog } from 'posthog-js/react'
+import { useFeatureFlagEnabled, usePostHog } from 'posthog-js/react'
 import extensionImage from '@/assets/images/install-extension.png'
 import { useOnboarding } from '@/stores/onboarding.store'
-import { checkIsExtensionInstalled } from '@/lib/utils'
+import { detectExtension } from '@/lib/extension'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -82,6 +83,7 @@ const INSTALL_STEPS: {
 export function ExtensionStep() {
   useTrackStepView('extension')
   const posthog = usePostHog()
+  const chromeExtensionAvailable = useFeatureFlagEnabled('chrome-extension-available')
   const [isChecking, setIsChecking] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const { data: user } = useGetUserQuery()
@@ -95,10 +97,7 @@ export function ExtensionStep() {
   const checkExtensionInstallation = async () => {
     try {
       setIsChecking(true)
-      const installed = await checkIsExtensionInstalled(
-        envConfig.chromeExtensionId,
-        envConfig.chromeExtensionIconUrl
-      )
+      const { installed } = await detectExtension()
 
       if (installed) {
         posthog?.capture('onboarding_extension_installed')
@@ -179,16 +178,29 @@ export function ExtensionStep() {
 
           {!isInstalled ? (
             <div className='w-full max-w-xs space-y-3 text-center'>
-              <Button
-                className='w-full transition-all hover:shadow-md active:scale-95'
-                onClick={() => {
-                  posthog?.capture('onboarding_extension_install_clicked')
-                  setShowGuide(true)
-                }}
-              >
-                <Download className='mr-2 h-4 w-4' />
-                Install Extension
-              </Button>
+              {chromeExtensionAvailable ? (
+                <Button
+                  className='w-full transition-all hover:shadow-md active:scale-95'
+                  onClick={() => {
+                    posthog?.capture('onboarding_extension_install_clicked', { source: 'web_store' })
+                    window.open(envConfig.chromeWebStoreUrl, '_blank', 'noopener,noreferrer')
+                  }}
+                >
+                  <ExternalLink className='mr-2 h-4 w-4' />
+                  Add to Chrome
+                </Button>
+              ) : (
+                <Button
+                  className='w-full transition-all hover:shadow-md active:scale-95'
+                  onClick={() => {
+                    posthog?.capture('onboarding_extension_install_clicked', { source: 'manual' })
+                    setShowGuide(true)
+                  }}
+                >
+                  <Download className='mr-2 h-4 w-4' />
+                  Install Extension
+                </Button>
+              )}
               <button
                 className='text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1.5 text-sm underline transition-colors'
                 disabled={isChecking}

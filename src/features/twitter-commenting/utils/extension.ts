@@ -1,4 +1,5 @@
 import { envConfig } from '@/config/env.config'
+import { getActiveExtensionId } from '@/lib/extension'
 
 const GET_TWITTER_PROFILE_DETAILS = 'get_twitter_profile_details'
 const LINK_TWITTER_ACCOUNT = 'link_twitter_account'
@@ -31,14 +32,15 @@ function getChromeRuntime() {
 }
 
 export async function getTwitterProfileDetailsFromExtension(): Promise<ITwitterProfileFromExtension> {
+  const extensionId = getActiveExtensionId()
   console.log('[Twitter Extension] Requesting profile details...')
-  console.log('[Twitter Extension] Extension ID:', envConfig.chromeExtensionId)
+  console.log('[Twitter Extension] Extension ID:', extensionId)
   return new Promise((resolve, reject) => {
     try {
       const { runtime, sendMessage } = getChromeRuntime()
       console.log('[Twitter Extension] Chrome runtime available, sending message:', GET_TWITTER_PROFILE_DETAILS)
       sendMessage(
-        envConfig.chromeExtensionId,
+        extensionId,
         { type: GET_TWITTER_PROFILE_DETAILS },
         (response: ITwitterProfileFromExtension) => {
           console.log('[Twitter Extension] Got response:', response)
@@ -68,7 +70,7 @@ export async function linkTwitterAccountFromExtension(): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const { runtime, sendMessage } = getChromeRuntime()
     sendMessage(
-      envConfig.chromeExtensionId,
+      getActiveExtensionId(),
       { type: LINK_TWITTER_ACCOUNT },
       (response: unknown) => {
         if (runtime?.lastError) {

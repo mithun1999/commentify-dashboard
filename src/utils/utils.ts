@@ -1,4 +1,5 @@
 import { envConfig } from '@/config/env.config'
+import { getActiveExtensionId } from '@/lib/extension'
 import { QueryService } from '@/services/query.service'
 import { toast } from 'sonner'
 import {
@@ -35,7 +36,7 @@ export const linkLinkedInProfileFromExtension =
       }
 
       sendMessage(
-        envConfig.chromeExtensionId,
+        getActiveExtensionId(),
         { type: LINK_LI_ACCOUNT },
         (response: unknown) => {
           if (runtime?.lastError) {
@@ -62,7 +63,7 @@ export const getProfileDetailsFromExtension =
       }
 
       sendMessage(
-        envConfig.chromeExtensionId,
+        getActiveExtensionId(),
         { type: GET_PROFILE_DETAILS },
         (response: IProfileResponseFromExtension) => {
           if (runtime?.lastError) {

@@ -9,13 +9,19 @@ export const envConfig = {
     'https://releases.commentify.co/commentify-extension.zip',
   extensionUrl:
     (import.meta.env.VITE_EXTENSION_URL as string) ||
-    'https://github.com/commentify/linkedin-scraper-extension#installation',
+    'https://releases.commentify.co/commentify-extension.zip',
   crispApiKey:
     (import.meta.env.VITE_CRISP_API_KEY as string) ||
     '517b7dc4-a006-4383-afcc-4c3e3416cd05',
   chromeExtensionId:
     (import.meta.env.VITE_CHROME_EXTENSION_ID as string) ||
     'hanejlglhkflpoflkdjgmlldkbhbeghh',
+  chromeWebStoreExtensionId:
+    (import.meta.env.VITE_CHROME_WEB_STORE_EXTENSION_ID as string) ||
+    'enhioaodkkahloldlojahcipgiglehib',
+  chromeWebStoreUrl:
+    (import.meta.env.VITE_CHROME_WEB_STORE_URL as string) ||
+    'https://chromewebstore.google.com/detail/commenting-assistant-ai-r/enhioaodkkahloldlojahcipgiglehib',
   chromeExtensionIconUrl:
     (import.meta.env.VITE_CHROME_EXTENSION_ICON_URL as string) || 'icon-34.png',
   postHogKey:

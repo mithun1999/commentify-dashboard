@@ -1,17 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { envConfig } from '@/config/env.config'
 import { CheckCircle2, Info, Loader2 } from 'lucide-react'
 import { IconBrandLinkedin, IconBrandX } from '@tabler/icons-react'
 import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { useOnboarding } from '@/stores/onboarding.store'
 import { useProfileStore } from '@/stores/profile.store'
-import {
-  checkIsExtensionInstalled,
-  getProfileDetailsFromExtension,
-} from '@/lib/utils'
+import { detectExtension } from '@/lib/extension'
+import { getProfileDetailsFromExtension } from '@/lib/utils'
 import { getAgentType } from '@/features/agent-system/registry'
 import {
   getTwitterProfileDetailsFromExtension,
@@ -98,12 +95,9 @@ export function LinkedInStep() {
   const PlatformIcon = config.icon
 
   const checkIfExtensionIsInstalled = async () => {
-    const isInstalled = await checkIsExtensionInstalled(
-      envConfig.chromeExtensionId,
-      envConfig.chromeExtensionIconUrl
-    )
-    setIsExtensionInstalled(isInstalled)
-    return isInstalled
+    const { installed } = await detectExtension()
+    setIsExtensionInstalled(installed)
+    return installed
   }
 
   const userOnboarding = user?.metadata?.onboarding

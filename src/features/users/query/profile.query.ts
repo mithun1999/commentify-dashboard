@@ -1,13 +1,12 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { envConfig } from '@/config/env.config'
+import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
-import {
-  checkIsExtensionInstalled,
-  getProfileDetailsFromExtension,
-} from '@/utils/utils'
+import { detectExtension } from '@/lib/extension'
+import { getProfileDetailsFromExtension } from '@/utils/utils'
 import {
   deleteProfile,
   getAllProfile,
@@ -76,6 +75,7 @@ export const useDeleteProfile = ({ onSuccess }: { onSuccess?: () => void }) => {
 }
 
 export const useLinkProfile = (isOnboardingStep: boolean = false) => {
+  const chromeExtensionAvailable = useFeatureFlagEnabled('chrome-extension-available')
   const queryClient = useQueryClient()
   const { setActiveProfile } = useProfileStore()
 
@@ -113,16 +113,18 @@ export const useLinkProfile = (isOnboardingStep: boolean = false) => {
       return mutateAsync(profileData)
     }
 
-    const isExtensionInstalled = await checkIsExtensionInstalled(
-      envConfig.chromeExtensionId,
-      envConfig.chromeExtensionIconUrl
-    )
+    const { installed: isExtensionInstalled } = await detectExtension()
 
     if (!isExtensionInstalled) {
       toast.error('Commentify extension is not installed', {
-        description: 'Please install the Chrome extension to continue.',
+        description: chromeExtensionAvailable
+          ? 'Please install the extension from the Chrome Web Store.'
+          : 'Please install the Chrome extension to continue.',
       })
-      window.open(envConfig.extensionUrl, '_blank')
+      window.open(
+        chromeExtensionAvailable ? envConfig.chromeWebStoreUrl : envConfig.extensionUrl,
+        '_blank'
+      )
       return
     }
 
