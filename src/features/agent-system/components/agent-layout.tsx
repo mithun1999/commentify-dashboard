@@ -1,6 +1,6 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { IconArrowLeft, IconClock } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -11,6 +11,11 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { useCurrentAgent } from '../hooks/use-current-agent'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { AgentReconnectBanner } from './agent-reconnect-banner'
+import {
+  getJobTiming,
+  getNextRunTime,
+  formatNextRunRelative,
+} from '../utils/next-run'
 
 function statusLabel(status: ProfileStatusEnum) {
   switch (status) {
@@ -67,6 +72,11 @@ export function AgentLayout({ children }: { children: ReactNode }) {
 
   const Icon = agentTypeDef.icon
   const basePath = `/agents/${agent.profileId}/${agent.type}`
+  const jobTiming = getJobTiming(profile?.setting, agent.platform)
+  const nextRunLabel = useMemo(() => {
+    if (agent.status !== ProfileStatusEnum.OK || !jobTiming) return null
+    return formatNextRunRelative(getNextRunTime(jobTiming))
+  }, [agent.status, jobTiming])
   const activeTab = location.pathname.endsWith('/settings')
     ? 'settings'
     : location.pathname.endsWith('/stats')
@@ -94,6 +104,12 @@ export function AgentLayout({ children }: { children: ReactNode }) {
           <Badge variant={statusVariant(agent.status)}>
             {statusLabel(agent.status)}
           </Badge>
+          {nextRunLabel && (
+            <span className='text-muted-foreground flex items-center gap-1 text-xs'>
+              <IconClock className='size-3.5' />
+              Next run {nextRunLabel}
+            </span>
+          )}
         </div>
         <div className='ml-auto flex items-center space-x-4'>
           <ThemeSwitch />
