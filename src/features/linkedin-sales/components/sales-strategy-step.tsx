@@ -187,6 +187,9 @@ export function SalesStrategyStep() {
           matchMode: values.matchMode,
           competitorNames: values.competitorNames,
           suggestedJobTitles: values.suggestedJobTitles,
+          ...(salesSetting.keywordsToTarget?.length && {
+            keywordsToTarget: salesSetting.keywordsToTarget,
+          }),
         },
       })
 

@@ -111,6 +111,7 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
   }, [profileId, profile, setActiveProfile])
 
   const [urlInput, setUrlInput] = useState(existingSalesSetting?.websiteUrl ?? '')
+  const extractedKeywordsRef = useRef<string[]>([])
   const [painPointInput, setPainPointInput] = useState('')
   const [valuePropInput, setValuePropInput] = useState('')
   const [jobTitleInput, setJobTitleInput] = useState('')
@@ -150,6 +151,12 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
         if (result.painPoints?.length) setValue('painPoints', result.painPoints.slice(0, 6))
         if (result.valuePropositions?.length) setValue('valuePropositions', result.valuePropositions.slice(0, 5))
         if (result.suggestedJobTitles?.length) setValue('suggestedJobTitles', result.suggestedJobTitles.slice(0, 6))
+        extractedKeywordsRef.current = result.keywords ?? []
+        if (result.invalidKeywords?.length) {
+          toast.warning(
+            `Some keywords couldn't be validated: ${result.invalidKeywords.join(', ')}. Your pain points may need refinement.`
+          )
+        }
         toast.success('Product details extracted successfully')
       }
     } catch {
@@ -159,7 +166,7 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
 
   const onSubmit = async (data: SalesSettingsValues) => {
     try {
-      const result = await createSalesSettingAsync({
+      await createSalesSettingAsync({
         profileId,
         data: {
           websiteUrl: data.websiteUrl,
@@ -171,17 +178,14 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
           competitorNames: data.competitorNames,
           suggestedJobTitles: data.suggestedJobTitles,
           numberOfPostsToScrapePerDay: data.numberOfPostsToScrapePerDay,
+          ...(extractedKeywordsRef.current.length && {
+            keywordsToTarget: extractedKeywordsRef.current,
+          }),
         },
       })
 
+      extractedKeywordsRef.current = []
       monitoredRef.current?.save()
-
-      const invalidKws = (result as { _invalidKeywords?: string[] })?._invalidKeywords
-      if (invalidKws?.length) {
-        toast.warning(
-          `Some keywords couldn't be validated: ${invalidKws.join(', ')}. Your pain points may need refinement.`
-        )
-      }
     } catch {
       // handled by hook
     }

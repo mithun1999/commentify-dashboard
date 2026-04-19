@@ -118,6 +118,7 @@ export function SalesProductSetupStep() {
             painPoints: result.painPoints?.slice(0, 6) || [],
             valuePropositions: result.valuePropositions?.slice(0, 5) || [],
             suggestedJobTitles: result.suggestedJobTitles?.slice(0, 6) || [],
+            keywordsToTarget: result.keywords || [],
           },
         })
         posthog?.capture('onboarding_sales_website_extracted', {

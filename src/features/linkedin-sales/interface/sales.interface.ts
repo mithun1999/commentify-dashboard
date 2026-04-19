@@ -3,6 +3,7 @@ import type { ISalesSetting } from '@/features/settings/interface/setting.interf
 export interface ISalesSettingPayload extends Partial<ISalesSetting> {
   suggestedJobTitles?: string[]
   numberOfPostsToScrapePerDay?: number
+  keywordsToTarget?: string[]
 }
 
 export interface ICreateSalesSettingPayload {
@@ -15,8 +16,6 @@ export interface IWebsiteExtractionResult {
   painPoints: string[]
   valuePropositions: string[]
   suggestedJobTitles: string[]
-}
-
-export interface ISalesSettingResponse {
-  _invalidKeywords?: string[]
+  keywords?: string[]
+  invalidKeywords?: string[]
 }

@@ -10,6 +10,7 @@ export interface OnboardingSalesSetting {
   matchMode: 'strict' | 'flexible'
   competitorNames: string[]
   suggestedJobTitles: string[]
+  keywordsToTarget?: string[]
 }
 
 export interface OnboardingData {
