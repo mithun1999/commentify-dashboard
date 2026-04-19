@@ -97,9 +97,11 @@ export function AgentCard({ agent }: AgentCardProps) {
               </Link>
             </DropdownMenuItem>
             {agent.status === ProfileStatusEnum.ACTION_REQUIRED && (
-              <DropdownMenuItem>
-                <IconRefresh className='mr-2 size-4' />
-                Reconnect
+              <DropdownMenuItem asChild>
+                <Link to={statsUrl as string}>
+                  <IconRefresh className='mr-2 size-4' />
+                  Reconnect
+                </Link>
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

@@ -10,6 +10,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { useCurrentAgent } from '../hooks/use-current-agent'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { AgentReconnectBanner } from './agent-reconnect-banner'
 
 function statusLabel(status: ProfileStatusEnum) {
   switch (status) {
@@ -40,7 +41,7 @@ function statusVariant(
 }
 
 export function AgentLayout({ children }: { children: ReactNode }) {
-  const { agent, agentTypeDef } = useCurrentAgent()
+  const { agent, profile, agentTypeDef } = useCurrentAgent()
   const location = useLocation()
 
   if (!agent || !agentTypeDef) {
@@ -113,6 +114,7 @@ export function AgentLayout({ children }: { children: ReactNode }) {
             </TabsTrigger>
           </TabsList>
         </Tabs>
+        {profile && <AgentReconnectBanner profile={profile} />}
         {children}
       </Main>
     </>
