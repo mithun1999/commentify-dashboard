@@ -6,7 +6,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { IconBrandGoogle } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { LoadingButton } from '@/components/ui/LoadingButton'
 import {
   Form,
   FormControl,
@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 import { signInWithGoogle, signInWithPassword } from '../../utils/auth.util'
+import { useGetUserQuery } from '../../query/user.query'
 
 type UserAuthFormProps = HTMLAttributes<HTMLFormElement>
 
@@ -39,6 +40,8 @@ const formSchema = z.object({
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const { isFetching: isUserLoading } = useGetUserQuery()
+  const showLoading = isLoading || isUserLoading
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -112,9 +115,9 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             </FormItem>
           )}
         />
-        <Button className='mt-2' type='submit' disabled={isLoading}>
+        <LoadingButton className='mt-2' type='submit' loading={showLoading}>
           Login
-        </Button>
+        </LoadingButton>
 
         <div className='relative my-2'>
           <div className='absolute inset-0 flex items-center'>
@@ -128,14 +131,14 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         </div>
 
         <div className='grid grid-cols-1'>
-          <Button
+          <LoadingButton
             variant='outline'
             type='button'
-            disabled={isLoading}
+            loading={showLoading}
             onClick={signInWithGoogle}
           >
             <IconBrandGoogle className='h-4 w-4' /> Google
-          </Button>
+          </LoadingButton>
         </div>
       </form>
     </Form>

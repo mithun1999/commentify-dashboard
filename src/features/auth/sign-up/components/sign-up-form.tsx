@@ -7,7 +7,7 @@ import { IconBrandGoogle } from '@tabler/icons-react'
 import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { LoadingButton } from '@/components/ui/LoadingButton'
 import {
   Form,
   FormControl,
@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 import { signUpWithPassword, signInWithGoogle } from '../../utils/auth.util'
+import { useGetUserQuery } from '../../query/user.query'
 
 type SignUpFormProps = HTMLAttributes<HTMLFormElement>
 
@@ -42,9 +43,11 @@ const formSchema = z
   })
 
 export function SignUpForm({ className, ...props }: SignUpFormProps) {
-  const [, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const posthog = usePostHog()
+  const { isFetching: isUserLoading } = useGetUserQuery()
+  const showLoading = isLoading || isUserLoading
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -178,9 +181,9 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
             </FormItem>
           )}
         />
-        <Button className='mt-2' type='submit'>
+        <LoadingButton className='mt-2' type='submit' loading={showLoading}>
           Create Account
-        </Button>
+        </LoadingButton>
 
         <div className='relative my-2'>
           <div className='absolute inset-0 flex items-center'>
@@ -194,13 +197,14 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
         </div>
 
         <div className='grid grid-cols-1'>
-          <Button
+          <LoadingButton
             variant='outline'
             type='button'
+            loading={showLoading}
             onClick={handleGoogleSignIn}
           >
             <IconBrandGoogle className='mr-2 h-4 w-4' /> Google
-          </Button>
+          </LoadingButton>
         </div>
       </form>
     </Form>

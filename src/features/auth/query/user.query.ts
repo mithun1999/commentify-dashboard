@@ -14,7 +14,8 @@ export const useGetUserQuery = () => {
   const { data, isLoading, isFetching, isFetched } = useQuery({
     queryKey: [UserQueryEnum.GET_USER],
     queryFn: getUser,
-    retry: 1,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     staleTime: 1000 * 60 * 5,
