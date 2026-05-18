@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo } from 'react'
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { IconArrowLeft, IconClock } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,11 +11,25 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { useCurrentAgent } from '../hooks/use-current-agent'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { AgentReconnectBanner } from './agent-reconnect-banner'
+import { useOnboardingStatus } from '@/features/post-generator/query/post-generator.query'
+import { PostingOnboarding } from '@/features/post-generator/components/posting-onboarding'
 import {
   getJobTiming,
   getNextRunTime,
   formatNextRunRelative,
 } from '../utils/next-run'
+
+const COMMENTING_TABS = [
+  { value: 'stats', label: 'Stats' },
+  { value: 'queue', label: 'Queue' },
+  { value: 'settings', label: 'Settings' },
+]
+
+const POSTING_TABS = [
+  { value: 'calendar', label: 'Calendar' },
+  { value: 'history', label: 'History' },
+  { value: 'settings', label: 'Settings' },
+]
 
 function statusLabel(status: ProfileStatusEnum) {
   switch (status) {
@@ -48,6 +62,12 @@ function statusVariant(
 export function AgentLayout({ children }: { children: ReactNode }) {
   const { agent, profile, agentTypeDef } = useCurrentAgent()
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const isPostingAgent = agent?.type === 'linkedin-posting'
+  const { data: onboardingStatus, isLoading: isLoadingOnboarding } =
+    useOnboardingStatus(isPostingAgent ? agent?.profileId : undefined)
+  const onboardingComplete = !isPostingAgent || onboardingStatus?.completed
 
   if (!agent || !agentTypeDef) {
     return (
@@ -77,11 +97,52 @@ export function AgentLayout({ children }: { children: ReactNode }) {
     if (agent.status !== ProfileStatusEnum.OK || !jobTiming) return null
     return formatNextRunRelative(getNextRunTime(jobTiming))
   }, [agent.status, jobTiming])
-  const activeTab = location.pathname.endsWith('/settings')
-    ? 'settings'
-    : location.pathname.endsWith('/stats')
-      ? 'stats'
-      : 'queue'
+  const tabs = isPostingAgent ? POSTING_TABS : COMMENTING_TABS
+  const defaultTab = isPostingAgent ? 'calendar' : 'queue'
+
+  const activeTab = tabs.reduce((match, tab) => {
+    if (location.pathname.endsWith(`/${tab.value}`)) return tab.value
+    return match
+  }, defaultTab)
+
+  if (isPostingAgent && !isLoadingOnboarding && !onboardingComplete) {
+    return (
+      <>
+        <Header>
+          <div className='flex items-center gap-3'>
+            <Button variant='ghost' size='icon' asChild>
+              <Link to='/'>
+                <IconArrowLeft className='size-4' />
+              </Link>
+            </Button>
+            <Icon className='size-5' />
+            <div>
+              <h1 className='text-sm font-semibold leading-tight'>
+                {agentTypeDef.name}
+              </h1>
+              <p className='text-muted-foreground text-xs'>
+                {agent.profileName}
+              </p>
+            </div>
+          </div>
+          <div className='ml-auto flex items-center space-x-4'>
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <Main>
+          <PostingOnboarding
+            profileId={agent.profileId}
+            onComplete={() =>
+              navigate({
+                to: `${basePath}/calendar` as string,
+              })
+            }
+          />
+        </Main>
+      </>
+    )
+  }
 
   return (
     <>
@@ -119,15 +180,13 @@ export function AgentLayout({ children }: { children: ReactNode }) {
       <Main>
         <Tabs value={activeTab} className='mb-6'>
           <TabsList>
-            <TabsTrigger value='stats' asChild>
-              <Link to={`${basePath}/stats` as string}>Stats</Link>
-            </TabsTrigger>
-            <TabsTrigger value='queue' asChild>
-              <Link to={`${basePath}/queue` as string}>Queue</Link>
-            </TabsTrigger>
-            <TabsTrigger value='settings' asChild>
-              <Link to={`${basePath}/settings` as string}>Settings</Link>
-            </TabsTrigger>
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} asChild>
+                <Link to={`${basePath}/${tab.value}` as string}>
+                  {tab.label}
+                </Link>
+              </TabsTrigger>
+            ))}
           </TabsList>
         </Tabs>
         {profile && <AgentReconnectBanner profile={profile} />}

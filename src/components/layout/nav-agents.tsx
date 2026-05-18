@@ -39,7 +39,8 @@ export function NavAgents() {
           const typeDef = getAgentType(agent.type)
           if (!typeDef) return null
           const Icon = typeDef.icon
-          const agentUrl = `/agents/${agent.profileId}/${agent.type}/stats`
+          const defaultTab = agent.type === 'linkedin-posting' ? 'calendar' : 'stats'
+          const agentUrl = `/agents/${agent.profileId}/${agent.type}/${defaultTab}`
           const isActive = href.startsWith(
             `/agents/${agent.profileId}/${agent.type}`
           )
@@ -53,7 +54,12 @@ export function NavAgents() {
               >
                 <Link to={agentUrl} onClick={() => setOpenMobile(false)}>
                   <Icon className='size-4 shrink-0' />
-                  <span className='truncate'>{agent.profileName}</span>
+                  <span className='truncate'>
+                    {agent.profileName}
+                    <span className='text-muted-foreground ml-1 text-[10px]'>
+                      {agent.type.includes('posting') ? 'Posting' : 'Commenting'}
+                    </span>
+                  </span>
                   <StatusDot status={agent.status} />
                 </Link>
               </SidebarMenuButton>
