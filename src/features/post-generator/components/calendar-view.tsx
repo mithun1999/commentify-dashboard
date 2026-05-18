@@ -11,6 +11,7 @@ import {
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   useActiveCalendars,
   useGenerateCalendar,
@@ -28,10 +29,12 @@ function formatWeekRange(dateStr: string) {
   return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', yearOpts)}`
 }
 
-function formatWeekLabel(dateStr: string) {
+function formatWeekTabRange(dateStr: string) {
   const start = new Date(dateStr)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
-  return start.toLocaleDateString('en-US', opts)
+  return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`
 }
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -66,7 +69,7 @@ export function CalendarView() {
     agentType: string
   }
   const navigate = useNavigate()
-  const { data: weeks, isLoading } = useActiveCalendars(profileId)
+  const { data: weeks, isPending } = useActiveCalendars(profileId)
   const generateCalendar = useGenerateCalendar()
   const scheduleAll = useScheduleAll()
   const [activeWeekIndex, setActiveWeekIndex] = useState(0)
@@ -109,10 +112,42 @@ export function CalendarView() {
   const nextWeekOffset = weekList.length
   const canGenerateNext = weekList.length < 4
 
-  if (isLoading) {
+  if (isPending) {
     return (
-      <div className='flex items-center justify-center py-20'>
-        <IconLoader2 className='text-muted-foreground size-6 animate-spin' />
+      <div className='mx-auto max-w-3xl'>
+        <div className='mb-4 flex items-center gap-2'>
+          <Skeleton className='h-8 w-32 rounded-md' />
+          <Skeleton className='h-8 w-32 rounded-md' />
+        </div>
+        <div className='mb-6 flex items-center justify-between'>
+          <div className='flex items-center gap-3'>
+            <Skeleton className='h-7 w-56' />
+            <Skeleton className='h-5 w-16 rounded-full' />
+          </div>
+          <div className='flex items-center gap-2'>
+            <Skeleton className='h-8 w-36 rounded-md' />
+            <Skeleton className='h-8 w-28 rounded-md' />
+          </div>
+        </div>
+        <div className='space-y-6'>
+          {[0, 1, 2].map((i) => (
+            <div key={i}>
+              <Skeleton className='mb-3 h-4 w-28' />
+              <div className='rounded-xl border p-4'>
+                <div className='mb-3 flex items-center justify-between'>
+                  <div className='flex items-center gap-2'>
+                    <Skeleton className='h-5 w-16 rounded-full' />
+                    <Skeleton className='h-5 w-20 rounded-full' />
+                  </div>
+                  <Skeleton className='h-5 w-12 rounded-full' />
+                </div>
+                <Skeleton className='mb-2 h-4 w-full' />
+                <Skeleton className='mb-2 h-4 w-4/5' />
+                <Skeleton className='h-4 w-3/5' />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -179,111 +214,110 @@ export function CalendarView() {
 
   return (
     <div className='mx-auto max-w-3xl'>
-      {weekList.length > 0 && (
-        <div className='mb-4 flex items-center gap-2'>
-          {weekList.map((w: any, idx: number) => (
-            <Button
-              key={w.calendar._id}
-              variant={idx === activeWeekIndex ? 'default' : 'outline'}
-              size='sm'
-              onClick={() => setActiveWeekIndex(idx)}
-            >
-              Week {idx + 1}: {formatWeekLabel(w.calendar.weekStartDate)}
-            </Button>
-          ))}
-          {canGenerateNext && (
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() =>
-                generateCalendar.mutate({
-                  profileId,
-                  weekOffset: nextWeekOffset,
-                })
-              }
-              disabled={generateCalendar.isPending}
-            >
-              {generateCalendar.isPending ? (
-                <IconLoader2 className='mr-2 size-4 animate-spin' />
-              ) : (
-                <IconPlus className='mr-2 size-4' />
-              )}
-              Next Week
-            </Button>
-          )}
-        </div>
-      )}
-
       {calendar && (
         <>
-          <div className='mb-6 flex items-center justify-between'>
-            <div className='flex items-center gap-3'>
-              <div className='flex items-center gap-1'>
+          {/* Week navigation */}
+          <div className='mb-6 rounded-xl border'>
+            <div className='flex items-center justify-between border-b px-4 py-3'>
+              <div className='flex items-center gap-2'>
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='size-8'
+                  className='size-7'
                   disabled={activeWeekIndex === 0}
-                  onClick={() =>
-                    setActiveWeekIndex((i) => Math.max(0, i - 1))
-                  }
+                  onClick={() => setActiveWeekIndex((i) => Math.max(0, i - 1))}
                 >
                   <IconChevronLeft className='size-4' />
                 </Button>
-                <h2 className='text-lg font-semibold'>
+                <h2 className='text-base font-semibold'>
                   {formatWeekRange(calendar.weekStartDate)}
                 </h2>
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='size-8'
+                  className='size-7'
                   disabled={activeWeekIndex >= weekList.length - 1}
                   onClick={() =>
-                    setActiveWeekIndex((i) =>
-                      Math.min(weekList.length - 1, i + 1)
-                    )
+                    setActiveWeekIndex((i) => Math.min(weekList.length - 1, i + 1))
                   }
                 >
                   <IconChevronRight className='size-4' />
                 </Button>
               </div>
-              <Badge variant={statusBadgeVariant(calendar.status)}>
+              <div className='flex items-center gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => scheduleAll.mutate(calendar._id)}
+                  disabled={scheduleAll.isPending || readyCount === 0}
+                >
+                  {scheduleAll.isPending && (
+                    <IconLoader2 className='mr-2 size-3.5 animate-spin' />
+                  )}
+                  Approve & Schedule All
+                </Button>
+                <Button
+                  size='sm'
+                  variant='ghost'
+                  onClick={() =>
+                    generateCalendar.mutate({ profileId, weekOffset: activeWeekIndex })
+                  }
+                  disabled={generateCalendar.isPending}
+                >
+                  {generateCalendar.isPending ? (
+                    <IconLoader2 className='mr-2 size-3.5 animate-spin' />
+                  ) : (
+                    <IconCalendarPlus className='mr-2 size-3.5' />
+                  )}
+                  Regenerate
+                </Button>
+              </div>
+            </div>
+
+            <div className='flex items-center gap-1 px-4 py-2'>
+              {weekList.map((w: any, idx: number) => {
+                const isActive = idx === activeWeekIndex
+                return (
+                  <button
+                    key={w.calendar._id}
+                    type='button'
+                    onClick={() => setActiveWeekIndex(idx)}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    {formatWeekTabRange(w.calendar.weekStartDate)}
+                  </button>
+                )
+              })}
+              {canGenerateNext && (
+                <button
+                  type='button'
+                  onClick={() =>
+                    generateCalendar.mutate({ profileId, weekOffset: nextWeekOffset })
+                  }
+                  disabled={generateCalendar.isPending}
+                  className='text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50'
+                >
+                  {generateCalendar.isPending ? (
+                    <IconLoader2 className='size-3 animate-spin' />
+                  ) : (
+                    <IconPlus className='size-3' />
+                  )}
+                  Add week
+                </button>
+              )}
+            </div>
+
+            <div className='flex items-center gap-3 border-t px-4 py-2'>
+              <Badge variant={statusBadgeVariant(calendar.status)} className='text-[11px]'>
                 {calendar.status}
               </Badge>
-              <span className='text-muted-foreground text-sm'>
-                {scheduledCount}/{posts.length} scheduled
+              <span className='text-muted-foreground text-xs'>
+                {posts.length} posts &middot; {scheduledCount} scheduled &middot; {readyCount} ready
               </span>
-            </div>
-            <div className='flex items-center gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => scheduleAll.mutate(calendar._id)}
-                disabled={scheduleAll.isPending || readyCount === 0}
-              >
-                {scheduleAll.isPending ? (
-                  <IconLoader2 className='mr-2 size-4 animate-spin' />
-                ) : null}
-                Approve & Schedule All
-              </Button>
-              <Button
-                size='sm'
-                variant='outline'
-                onClick={() =>
-                  generateCalendar.mutate({
-                    profileId,
-                    weekOffset: activeWeekIndex,
-                  })
-                }
-                disabled={generateCalendar.isPending}
-              >
-                {generateCalendar.isPending ? (
-                  <IconLoader2 className='mr-2 size-4 animate-spin' />
-                ) : (
-                  <IconCalendarPlus className='mr-2 size-4' />
-                )}
-                Regenerate
-              </Button>
             </div>
           </div>
 

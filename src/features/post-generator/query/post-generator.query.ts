@@ -69,7 +69,6 @@ export const useActiveCalendars = (profileId: string | undefined) => {
     queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS, profileId],
     enabled: Boolean(profileId),
     queryFn: () => getActiveCalendars(profileId!),
-    placeholderData: (prev) => prev ?? [],
   })
 }
 

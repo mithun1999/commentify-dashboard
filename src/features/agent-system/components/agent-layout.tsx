@@ -94,9 +94,10 @@ export function AgentLayout({ children }: { children: ReactNode }) {
   const basePath = `/agents/${agent.profileId}/${agent.type}`
   const jobTiming = getJobTiming(profile?.setting, agent.platform)
   const nextRunLabel = useMemo(() => {
+    if (isPostingAgent) return null
     if (agent.status !== ProfileStatusEnum.OK || !jobTiming) return null
     return formatNextRunRelative(getNextRunTime(jobTiming))
-  }, [agent.status, jobTiming])
+  }, [agent.status, jobTiming, isPostingAgent])
   const tabs = isPostingAgent ? POSTING_TABS : COMMENTING_TABS
   const defaultTab = isPostingAgent ? 'calendar' : 'queue'
 
