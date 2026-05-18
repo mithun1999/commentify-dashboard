@@ -32,7 +32,7 @@ export default function Pricing() {
   const { updateSubscriptionPlan, isUpdatingSubscriptionPlan } =
     useUpdateSubscriptionPlan()
 
-  const minQuantity = Math.max(agents.length, 1)
+  const minQuantity = Math.max(agents.filter((a) => !a.type.includes('posting')).length, 1)
   const hasActiveSubscription = user?.status === UserSubscriptionStatus.ACTIVE
   const currentSubscriptionQuantity = user?.subscription?.quantity ?? 1
   const currentPlanPrice = user?.subscribedProduct?.defaultPrice ?? 0

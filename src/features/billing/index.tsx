@@ -24,7 +24,7 @@ export default function Billing() {
   const { data: user } = useGetUserQuery()
   const { agents } = useAgents()
   const maxSlots = user?.subscription?.quantity ?? 1
-  const usedSlots = agents.length
+  const usedSlots = agents.filter((a) => !a.type.includes('posting')).length
   const { data: portal, isLoading } = useGetCustomerPortalUrlQuery({
     // @ts-expect-error shared hook expects a user, placeholder handled inside
     user,
