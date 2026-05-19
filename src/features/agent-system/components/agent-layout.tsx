@@ -106,6 +106,8 @@ export function AgentLayout({ children }: { children: ReactNode }) {
     return match
   }, defaultTab)
 
+  const isPostDetailPage = location.pathname.includes('/post/')
+
   if (isPostingAgent && !isLoadingOnboarding && !onboardingComplete) {
     return (
       <>
@@ -141,6 +143,38 @@ export function AgentLayout({ children }: { children: ReactNode }) {
             }
           />
         </Main>
+      </>
+    )
+  }
+
+  if (isPostDetailPage) {
+    return (
+      <>
+        <Header fixed>
+          <div className='flex items-center gap-3'>
+            <Button variant='ghost' size='icon' asChild>
+              <Link to={`${basePath}/calendar` as string}>
+                <IconArrowLeft className='size-4' />
+              </Link>
+            </Button>
+            <Icon className='size-5' />
+            <div>
+              <h1 className='text-sm font-semibold leading-tight'>
+                {agentTypeDef.name}
+              </h1>
+              <p className='text-muted-foreground text-xs'>
+                {agent.profileName}
+              </p>
+            </div>
+          </div>
+          <div className='ml-auto flex items-center space-x-4'>
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <main className='peer-[.header-fixed]/header:mt-16 fixed-main flex grow flex-col overflow-hidden'>
+          {children}
+        </main>
       </>
     )
   }

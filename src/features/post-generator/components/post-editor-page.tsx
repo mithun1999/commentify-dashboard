@@ -4,16 +4,16 @@ import {
   IconArrowLeft,
   IconCheck,
   IconDeviceFloppy,
-  IconLoader2,
   IconX,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import {
-  useCurrentCalendar,
+  useActiveCalendars,
   useEditPost,
   useApprovePost,
   useRejectPost,
@@ -71,10 +71,14 @@ export function PostEditorPage() {
     postId: string
   }
   const navigate = useNavigate()
-  const { data } = useCurrentCalendar(profileId)
+  const { data: weeks } = useActiveCalendars(profileId)
 
-  const calendar = data?.calendar
-  const posts = data?.posts ?? []
+  const weekList = (weeks as any[]) ?? []
+  const matchedWeek = weekList.find((w: any) =>
+    w.posts?.some((p: any) => p._id === postId)
+  )
+  const calendar = matchedWeek?.calendar
+  const posts: any[] = matchedWeek?.posts ?? []
   const post = posts.find((p: any) => p._id === postId)
   const postIndex = posts.findIndex((p: any) => p._id === postId)
 
@@ -155,8 +159,32 @@ export function PostEditorPage() {
 
   if (!post) {
     return (
-      <div className='flex items-center justify-center py-20'>
-        <IconLoader2 className='text-muted-foreground size-6 animate-spin' />
+      <div className='flex h-full flex-col'>
+        <div className='flex shrink-0 items-center justify-between border-b px-4 py-3'>
+          <div className='flex items-center gap-3'>
+            <Skeleton className='size-8 rounded-md' />
+            <Skeleton className='h-5 w-24 rounded-full' />
+            <Skeleton className='h-5 w-20 rounded-full' />
+          </div>
+          <Skeleton className='h-5 w-16' />
+        </div>
+        <div className='flex min-h-0 flex-1'>
+          <div className='flex flex-1 flex-col border-r p-6' style={{ flex: '55 0 0' }}>
+            <Skeleton className='mb-4 h-4 w-full' />
+            <Skeleton className='mb-4 h-4 w-11/12' />
+            <Skeleton className='mb-4 h-4 w-4/5' />
+            <Skeleton className='mb-4 h-4 w-full' />
+            <Skeleton className='mb-4 h-4 w-3/4' />
+            <Skeleton className='mb-4 h-4 w-5/6' />
+            <Skeleton className='mb-4 h-4 w-full' />
+            <Skeleton className='mb-4 h-4 w-2/3' />
+          </div>
+          <div className='flex flex-col p-6' style={{ flex: '45 0 0' }}>
+            <Skeleton className='mb-4 h-6 w-28' />
+            <Skeleton className='mb-3 h-4 w-full' />
+            <Skeleton className='h-4 w-3/4' />
+          </div>
+        </div>
       </div>
     )
   }
@@ -166,7 +194,7 @@ export function PostEditorPage() {
   const nextPost = postIndex < posts.length - 1 ? posts[postIndex + 1] : null
 
   return (
-    <div className='flex h-[calc(100vh-4rem)] flex-col'>
+    <div className='flex h-full flex-col'>
       {/* Top bar */}
       <div className='flex shrink-0 items-center justify-between border-b px-4 py-3'>
         <div className='flex items-center gap-3'>

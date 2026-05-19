@@ -18,7 +18,6 @@ import {
   useScheduleAll,
 } from '../query/post-generator.query'
 import { PostCard } from './post-card'
-import { PostEditorDialog } from './post-editor-dialog'
 
 function formatWeekRange(dateStr: string) {
   const start = new Date(dateStr)
@@ -73,7 +72,6 @@ export function CalendarView() {
   const generateCalendar = useGenerateCalendar()
   const scheduleAll = useScheduleAll()
   const [activeWeekIndex, setActiveWeekIndex] = useState(0)
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
 
   const needsOnboarding =
     generateCalendar.isError &&
@@ -104,10 +102,6 @@ export function CalendarView() {
     },
     {} as Record<number, any[]>
   )
-
-  const selectedPost = selectedPostId
-    ? posts.find((p: any) => p._id === selectedPostId)
-    : null
 
   const nextWeekOffset = weekList.length
   const canGenerateNext = weekList.length < 4
@@ -333,7 +327,12 @@ export function CalendarView() {
                       key={post._id}
                       post={post}
                       calendarId={calendar._id}
-                      onClick={() => setSelectedPostId(post._id)}
+                      onClick={() =>
+                        navigate({
+                          to: '/agents/$profileId/$agentType/post/$postId',
+                          params: { profileId, agentType, postId: post._id },
+                        } as any)
+                      }
                     />
                   ))}
                 </div>
@@ -349,16 +348,6 @@ export function CalendarView() {
               </p>
             </div>
           )}
-
-          <PostEditorDialog
-            post={selectedPost}
-            calendarId={calendar._id}
-            profileId={profileId}
-            open={!!selectedPost}
-            onOpenChange={(open) => {
-              if (!open) setSelectedPostId(null)
-            }}
-          />
         </>
       )}
     </div>

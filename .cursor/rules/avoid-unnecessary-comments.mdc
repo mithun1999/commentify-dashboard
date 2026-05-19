@@ -1,0 +1,48 @@
+---
+description: Avoid unnecessary comments that narrate or restate code
+alwaysApply: true
+---
+
+# Avoid Unnecessary Comments
+
+Do not add comments that narrate, restate, or label what the code obviously does. Comments should only explain non-obvious **intent**, **trade-offs**, or **constraints** that the code itself cannot convey.
+
+## Don't write these
+
+- Section labels (`// Imports`, `// State`, `// Helpers`)
+- Step narration (`// Increment counter`, `// Return result`, `// Loop through items`)
+- Restating signatures (`// Function that fetches user`)
+- Change-log comments (`// Updated to use new API`, `// Fixed bug here`)
+- Obvious type/value comments (`// string`, `// true`)
+
+## Do write these
+
+- Why a non-obvious choice was made
+- Workarounds tied to external constraints (browser quirks, library bugs) — link/cite the cause
+- Invariants the code relies on but doesn't express
+- TODOs with concrete context
+
+## Examples
+
+```ts
+// ❌ BAD
+// Increment count
+count += 1;
+
+// Fetch the user
+const user = await fetchUser(id);
+
+// Loop through items
+for (const item of items) { ... }
+```
+
+```ts
+// ✅ GOOD
+// Safari ignores `preventDefault` on passive listeners; force non-passive here.
+el.addEventListener("touchmove", onMove, { passive: false });
+
+// LinkedIn rate-limits at ~100 req/min per IP — keep batch size below this.
+const BATCH_SIZE = 80;
+```
+
+If you'd delete the comment and the code still reads clearly, the comment shouldn't exist.
