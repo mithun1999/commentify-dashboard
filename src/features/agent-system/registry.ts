@@ -1,4 +1,4 @@
-import { IconBrandLinkedin, IconBrandX } from '@tabler/icons-react'
+import { IconBrandLinkedin, IconBrandX, IconPencil } from '@tabler/icons-react'
 import type { AgentTypeDefinition } from './types/agent.types'
 
 const PlaceholderComponent = () => null
@@ -30,6 +30,21 @@ export const AGENT_TYPES: Record<string, AgentTypeDefinition> = {
     icon: IconBrandX,
     platform: 'twitter',
     access: 'open',
+    scrapeSettingsComponent: PlaceholderComponent,
+    commentSettingsComponent: PlaceholderComponent,
+    queueColumns: [],
+    queueItemComponent: PlaceholderComponent,
+  },
+  'linkedin-posting': {
+    slug: 'linkedin-posting',
+    name: 'LinkedIn Posting',
+    description:
+      'AI-powered content calendar that generates, refines, and publishes LinkedIn posts on your behalf.',
+    icon: IconPencil,
+    platform: 'linkedin',
+    access: 'invite-only',
+    badge: 'Beta',
+    featureFlag: 'linkedin-posting-agent',
     scrapeSettingsComponent: PlaceholderComponent,
     commentSettingsComponent: PlaceholderComponent,
     queueColumns: [],

@@ -21,16 +21,17 @@ export function useCurrentAgent() {
       return { agent: null, profile: null, agentTypeDef: null }
     }
 
-    const platform = inferPlatform(profile)
-    const expectedType =
-      platform === 'twitter' ? 'twitter-commenting' : 'linkedin-commenting'
-
-    if (agentType !== expectedType) {
+    const agentTypeDef = getAgentType(agentType)
+    if (!agentTypeDef) {
       return { agent: null, profile: null, agentTypeDef: null }
     }
 
-    const agent = deriveAgentFromProfile(profile)
-    const agentTypeDef = getAgentType(agentType)
+    const platform = inferPlatform(profile)
+    if (agentTypeDef.platform !== platform) {
+      return { agent: null, profile: null, agentTypeDef: null }
+    }
+
+    const agent = deriveAgentFromProfile(profile, agentType)
 
     return { agent, profile, agentTypeDef: agentTypeDef ?? null }
   }, [profileId, agentType, profiles])

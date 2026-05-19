@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
-import { IconBrandLinkedin, IconBrandX } from '@tabler/icons-react'
+import { IconBrandLinkedin, IconBrandX, IconPlus } from '@tabler/icons-react'
 import { toast } from 'sonner'
+import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,9 +18,11 @@ import { getAllAgentTypes } from '@/features/agent-system/registry'
 import type { AgentTypeDefinition } from '@/features/agent-system/types/agent.types'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import {
+  useGetAllProfileQuery,
   useLinkProfile,
   useLinkTwitterProfile,
 } from '@/features/users/query/profile.query'
+import { useActivateAgentType } from '@/features/post-generator/query/post-generator.query'
 import { getTwitterProfileDetailsFromExtension } from '@/features/twitter-commenting/utils/extension'
 
 interface AddAgentDialogProps {
@@ -45,21 +48,33 @@ type Step = 'select' | 'connect'
 export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
   const [step, setStep] = useState<Step>('select')
   const [selected, setSelected] = useState<AgentTypeDefinition | null>(null)
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
   const { data: user } = useGetUserQuery()
+  const { data: profiles } = useGetAllProfileQuery()
   const navigate = useNavigate()
   const agentTypes = getAllAgentTypes()
 
   const { linkProfile, isLinkingProfile } = useLinkProfile(false)
   const { linkTwitterProfile, isLinkingTwitterProfile } = useLinkTwitterProfile(false)
+  const activateAgentType = useActivateAgentType()
   const [isLinking, setIsLinking] = useState(false)
+  const postingFlagEnabled = useFeatureFlagEnabled('linkedin-posting-agent')
 
   const isConnecting = isLinking || isLinkingProfile || isLinkingTwitterProfile
+
+  const existingProfiles = (profiles ?? []).filter(
+    (p) => (selected?.platform === 'twitter' ? p.platform === 'twitter' : p.platform !== 'twitter')
+  )
 
   const resetAndClose = () => {
     onOpenChange(false)
     setStep('select')
     setSelected(null)
+    setSelectedProfileId(null)
   }
+
+  const defaultTabForAgent = (slug: string) =>
+    slug === 'linkedin-posting' ? 'calendar' : 'settings'
 
   const handleConnect = async () => {
     if (!selected) return
@@ -84,9 +99,13 @@ export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
       }
 
       if (profileId) {
+        await activateAgentType.mutateAsync({
+          profileId,
+          agentType: selected.slug,
+        })
         resetAndClose()
         navigate({
-          to: '/agents/$profileId/$agentType/settings',
+          to: `/agents/$profileId/$agentType/${defaultTabForAgent(selected.slug)}` as string,
           params: { profileId, agentType: selected.slug },
         })
       }
@@ -98,6 +117,9 @@ export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
   }
 
   const isEligible = (type: AgentTypeDefinition) => {
+    if (type.featureFlag) {
+      if (type.featureFlag === 'linkedin-posting-agent' && !postingFlagEnabled) return false
+    }
     if (type.access === 'open') return true
     if (!user || !type.isEligible) return false
     return type.isEligible(user)
@@ -188,48 +210,107 @@ export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
         {step === 'connect' && selected && (
           <>
             <DialogHeader>
-              <DialogTitle>Connect Your Account</DialogTitle>
+              <DialogTitle>Choose Account</DialogTitle>
               <DialogDescription>
-                Link your {platform === 'twitter' ? 'X' : 'LinkedIn'} account
-                to start using this agent.
+                Select an existing {platform === 'twitter' ? 'X' : 'LinkedIn'} account or connect a new one.
               </DialogDescription>
             </DialogHeader>
-            <div className='flex flex-col items-center gap-4 py-6'>
-              <div className='bg-muted flex size-16 items-center justify-center rounded-full'>
-                <PlatformIcon className='size-8' />
-              </div>
-              <p className='text-muted-foreground text-center text-sm'>
-                Make sure you're logged in to{' '}
-                {platform === 'twitter' ? 'X.com' : 'LinkedIn'} and have the
-                Commentify extension installed.
-              </p>
-              <Button
-                className='w-full max-w-xs'
-                onClick={handleConnect}
+            <div className='grid max-h-[50vh] gap-2 overflow-y-auto py-4'>
+              {existingProfiles.map((profile) => {
+                const isSelected = selectedProfileId === profile._id
+                const displayName =
+                  platform === 'twitter' && profile.screenName
+                    ? `@${profile.screenName}`
+                    : `${profile.firstName} ${profile.lastName}`
+
+                return (
+                  <button
+                    key={profile._id}
+                    type='button'
+                    onClick={() => setSelectedProfileId(profile._id)}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg border p-3 text-left transition-colors',
+                      isSelected && 'ring-primary border-primary ring-1',
+                      'hover:bg-muted cursor-pointer'
+                    )}
+                  >
+                    <div className='bg-muted flex size-9 shrink-0 items-center justify-center rounded-full'>
+                      <PlatformIcon className='size-4' />
+                    </div>
+                    <div className='min-w-0 flex-1'>
+                      <p className='text-sm font-medium'>{displayName}</p>
+                      {profile.publicIdentifier && (
+                        <p className='text-muted-foreground truncate text-xs'>
+                          {profile.publicIdentifier}
+                        </p>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <div className='bg-primary size-2 shrink-0 rounded-full' />
+                    )}
+                  </button>
+                )
+              })}
+              <button
+                type='button'
+                onClick={() => {
+                  setSelectedProfileId(null)
+                  handleConnect()
+                }}
                 disabled={isConnecting}
-              >
-                {isConnecting ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    {config.connectingLabel}
-                  </>
-                ) : (
-                  <>
-                    <PlatformIcon className='mr-2 h-4 w-4' />
-                    {config.buttonLabel}
-                  </>
+                className={cn(
+                  'flex items-center gap-3 rounded-lg border border-dashed p-3 text-left transition-colors',
+                  'hover:bg-muted cursor-pointer',
+                  isConnecting && 'cursor-not-allowed opacity-60'
                 )}
-              </Button>
+              >
+                <div className='bg-muted flex size-9 shrink-0 items-center justify-center rounded-full'>
+                  {isConnecting ? (
+                    <Loader2 className='size-4 animate-spin' />
+                  ) : (
+                    <IconPlus className='size-4' />
+                  )}
+                </div>
+                <p className='text-sm font-medium'>
+                  {isConnecting
+                    ? config.connectingLabel
+                    : `Connect new ${platform === 'twitter' ? 'X' : 'LinkedIn'} account`}
+                </p>
+              </button>
             </div>
-            <div className='flex justify-start'>
+            <div className='flex justify-between'>
               <Button
                 variant='ghost'
                 size='sm'
-                onClick={() => setStep('select')}
+                onClick={() => {
+                  setStep('select')
+                  setSelectedProfileId(null)
+                }}
                 disabled={isConnecting}
               >
                 Back
               </Button>
+              {selectedProfileId && (
+                <Button
+                  disabled={activateAgentType.isPending}
+                  onClick={async () => {
+                    await activateAgentType.mutateAsync({
+                      profileId: selectedProfileId,
+                      agentType: selected.slug,
+                    })
+                    resetAndClose()
+                    navigate({
+                      to: `/agents/$profileId/$agentType/${defaultTabForAgent(selected.slug)}` as string,
+                      params: { profileId: selectedProfileId, agentType: selected.slug },
+                    })
+                  }}
+                >
+                  {activateAgentType.isPending ? (
+                    <Loader2 className='mr-2 size-4 animate-spin' />
+                  ) : null}
+                  Continue
+                </Button>
+              )}
             </div>
           </>
         )}

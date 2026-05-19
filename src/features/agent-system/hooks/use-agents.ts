@@ -11,13 +11,13 @@ export function inferAgentMode(profile: IProfile): AgentMode {
   return (profile.setting?.agentMode as AgentMode) || 'branding'
 }
 
-function agentTypeForPlatform(platform: Platform): string {
-  return platform === 'twitter' ? 'twitter-commenting' : 'linkedin-commenting'
+function defaultAgentTypes(platform: Platform): string[] {
+  return platform === 'twitter' ? ['twitter-commenting'] : ['linkedin-commenting']
 }
 
-export function deriveAgentFromProfile(profile: IProfile): DerivedAgent {
+export function deriveAgentFromProfile(profile: IProfile, overrideType?: string): DerivedAgent {
   const platform = inferPlatform(profile)
-  const agentType = agentTypeForPlatform(platform)
+  const agentType = overrideType || defaultAgentTypes(platform)[0]
   const agentMode = inferAgentMode(profile)
 
   return {
@@ -39,7 +39,17 @@ export function useAgents() {
 
   const agents = useMemo(() => {
     if (!profiles) return []
-    return profiles.map(deriveAgentFromProfile)
+    const result: DerivedAgent[] = []
+    for (const p of profiles) {
+      const platform = inferPlatform(p)
+      const commentingType = defaultAgentTypes(platform)[0]
+      result.push(deriveAgentFromProfile(p, commentingType))
+      const extras = (p.activeAgentTypes ?? []).filter((t) => t !== commentingType)
+      for (const agentType of extras) {
+        result.push(deriveAgentFromProfile(p, agentType))
+      }
+    }
+    return result
   }, [profiles])
 
   return { agents, isLoading, isFetched, profiles }

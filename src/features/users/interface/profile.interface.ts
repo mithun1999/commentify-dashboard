@@ -17,6 +17,7 @@ export interface IProfile {
   platform?: 'linkedin' | 'twitter'
   twitterUserId?: string
   screenName?: string
+  activeAgentTypes?: string[]
 }
 
 export interface IProfileResponseFromExtension {

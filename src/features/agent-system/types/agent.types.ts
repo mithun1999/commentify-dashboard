@@ -1,4 +1,4 @@
-import { type ComponentType } from 'react'
+import { type ComponentType, type ReactNode } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
 import { type IUser } from '@/features/auth/interface/user.interface'
 import { type ProfileStatusEnum } from '@/features/users/enum/profile.enum'
@@ -15,12 +15,14 @@ export interface AgentTypeDefinition {
   access: AccessLevel
   badge?: string
   recommended?: boolean
+  featureFlag?: string
   isEligible?: (user: IUser) => boolean
   scrapeSettingsComponent: ComponentType<{ profileId: string }>
   commentSettingsComponent: ComponentType<{ profileId: string }>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   queueColumns: ColumnDef<any, any>[]
   queueItemComponent: ComponentType<{ postId: string }>
+  layoutComponent?: ComponentType<{ children: ReactNode }>
 }
 
 export type AgentMode = 'branding' | 'sales'
