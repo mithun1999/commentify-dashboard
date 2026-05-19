@@ -118,7 +118,7 @@ export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
 
   const isEligible = (type: AgentTypeDefinition) => {
     if (type.featureFlag) {
-      if (type.featureFlag === 'linkedin-posting-agent' && !postingFlagEnabled) return false
+      if (type.featureFlag === 'linkedin-posting-agent') return !!postingFlagEnabled
     }
     if (type.access === 'open') return true
     if (!user || !type.isEligible) return false
