@@ -143,15 +143,14 @@ export function PostEditorPage() {
   const goBack = () => {
     navigate({
       to: `/agents/$profileId/$agentType/calendar` as any,
-      params: { profileId, agentType },
     })
   }
 
   const goToPost = (id: string) => {
     navigate({
       to: `/agents/$profileId/$agentType/post/$postId` as any,
-      params: { profileId, agentType, postId: id },
-    })
+      params: { postId: id },
+    } as any)
   }
 
   if (!post) {

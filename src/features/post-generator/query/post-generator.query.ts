@@ -264,7 +264,7 @@ export const useAddCreator = () => {
 export const useDeleteCreator = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ creatorId, profileId }: { creatorId: string; profileId: string }) =>
+    mutationFn: ({ creatorId }: { creatorId: string; profileId: string }) =>
       deleteCreator(creatorId),
     onSuccess: (_data, { profileId }) => {
       queryClient.invalidateQueries({

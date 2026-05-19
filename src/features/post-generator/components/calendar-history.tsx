@@ -1,4 +1,4 @@
-import { useParams, Link } from '@tanstack/react-router'
+import { useParams } from '@tanstack/react-router'
 import { IconCalendar, IconLoader2 } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { useCalendarHistory } from '../query/post-generator.query'

@@ -31,7 +31,7 @@ function charCountColor(count: number) {
 export function PostEditorDialog({
   post,
   calendarId,
-  profileId,
+  profileId: _profileId,
   open,
   onOpenChange,
 }: PostEditorDialogProps) {
