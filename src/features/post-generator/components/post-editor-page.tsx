@@ -65,7 +65,7 @@ function statusVariant(
 }
 
 export function PostEditorPage() {
-  const { profileId, agentType, postId } = useParams({ strict: false }) as {
+  const { profileId, agentType: _agentType, postId } = useParams({ strict: false }) as {
     profileId: string
     agentType: string
     postId: string
