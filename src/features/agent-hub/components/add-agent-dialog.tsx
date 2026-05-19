@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { IconBrandLinkedin, IconBrandX, IconPlus } from '@tabler/icons-react'
 import { toast } from 'sonner'
+import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -57,6 +58,7 @@ export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
   const { linkTwitterProfile, isLinkingTwitterProfile } = useLinkTwitterProfile(false)
   const activateAgentType = useActivateAgentType()
   const [isLinking, setIsLinking] = useState(false)
+  const postingFlagEnabled = useFeatureFlagEnabled('linkedin-posting-agent')
 
   const isConnecting = isLinking || isLinkingProfile || isLinkingTwitterProfile
 
@@ -115,6 +117,9 @@ export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
   }
 
   const isEligible = (type: AgentTypeDefinition) => {
+    if (type.featureFlag) {
+      if (type.featureFlag === 'linkedin-posting-agent' && !postingFlagEnabled) return false
+    }
     if (type.access === 'open') return true
     if (!user || !type.isEligible) return false
     return type.isEligible(user)
