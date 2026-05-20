@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   useActiveCalendars,
+  useCalendarStream,
   useGenerateCalendar,
   useScheduleAll,
 } from '../query/post-generator.query'
@@ -84,6 +85,12 @@ export function CalendarView() {
   const activeWeek = weekList[activeWeekIndex] ?? null
   const calendar = activeWeek?.calendar
   const posts: any[] = activeWeek?.posts ?? []
+
+  const generatingWeek = useMemo(
+    () => weekList.find((w: any) => w?.calendar?.status === 'generating'),
+    [weekList],
+  )
+  useCalendarStream(generatingWeek?.calendar?._id, profileId)
 
   const scheduledCount = posts.filter(
     (p) =>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -21,6 +22,7 @@ import {
   deleteCreator,
   getPostingPreferences,
   updatePostingPreferences,
+  getCalendarStreamUrl,
   type PostingPreferences,
 } from '../api/post-generator.api'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
@@ -70,6 +72,54 @@ export const useActiveCalendars = (profileId: string | undefined) => {
     enabled: Boolean(profileId),
     queryFn: () => getActiveCalendars(profileId!),
   })
+}
+
+export const useCalendarStream = (
+  calendarId: string | undefined,
+  profileId: string | undefined,
+) => {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!calendarId || !profileId) return
+
+    const url = getCalendarStreamUrl(calendarId)
+    const es = new EventSource(url)
+
+    const refetch = () => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS, profileId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
+      })
+    }
+
+    es.onmessage = (event) => {
+      let payload: any
+      try {
+        payload = JSON.parse(event.data)
+      } catch {
+        return
+      }
+      if (!payload?.type || payload.type === 'ping') return
+
+      refetch()
+
+      if (payload.type === 'complete' || payload.type === 'error') {
+        es.close()
+      }
+    }
+
+    es.onerror = () => {
+      es.close()
+      refetch()
+    }
+
+    return () => {
+      es.close()
+    }
+  }, [calendarId, profileId, queryClient])
 }
 
 export const useGenerateCalendar = () => {
