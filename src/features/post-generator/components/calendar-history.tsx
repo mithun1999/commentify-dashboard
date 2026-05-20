@@ -1,6 +1,7 @@
 import { useParams } from '@tanstack/react-router'
-import { IconCalendar, IconLoader2 } from '@tabler/icons-react'
+import { IconCalendar } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useCalendarHistory } from '../query/post-generator.query'
 
 function formatDate(dateStr: string) {
@@ -17,8 +18,23 @@ export function CalendarHistory() {
 
   if (isLoading) {
     return (
-      <div className='flex items-center justify-center py-20'>
-        <IconLoader2 className='text-muted-foreground size-6 animate-spin' />
+      <div className='mx-auto max-w-2xl space-y-3'>
+        <Skeleton className='mb-4 h-6 w-40' />
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className='flex items-center justify-between rounded-lg border p-4'
+          >
+            <div className='flex items-center gap-3'>
+              <Skeleton className='size-5 rounded-md' />
+              <div className='space-y-1.5'>
+                <Skeleton className='h-4 w-40' />
+                <Skeleton className='h-3 w-56' />
+              </div>
+            </div>
+            <Skeleton className='h-5 w-16 rounded-full' />
+          </div>
+        ))}
       </div>
     )
   }

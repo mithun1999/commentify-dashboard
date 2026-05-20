@@ -6,6 +6,7 @@ import {
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useApprovePost, useRejectPost, usePublishPost } from '../query/post-generator.query'
 
@@ -60,16 +61,14 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
       onClick={onClick}
     >
       <div className='mb-2 flex items-start justify-between gap-3'>
-        <p className='text-sm leading-relaxed'>
-          {isGenerating ? (
-            <span className='text-muted-foreground flex items-center gap-2'>
-              <IconLoader2 className='size-3.5 animate-spin' />
-              Generating...
-            </span>
-          ) : (
-            getHookPreview(post.content)
-          )}
-        </p>
+        {isGenerating ? (
+          <div className='flex-1 space-y-2'>
+            <Skeleton className='h-4 w-full' />
+            <Skeleton className='h-4 w-4/5' />
+          </div>
+        ) : (
+          <p className='text-sm leading-relaxed'>{getHookPreview(post.content)}</p>
+        )}
         <Badge variant={postStatusVariant(post.status)} className='shrink-0'>
           {post.status}
         </Badge>

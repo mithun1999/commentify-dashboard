@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import {
   useStartOnboarding,
@@ -293,8 +294,27 @@ function CompletedSettingsView({
           </div>
 
           {isLoadingPrefs ? (
-            <div className='flex justify-center py-4'>
-              <IconLoader2 className='text-muted-foreground size-5 animate-spin' />
+            <div className='space-y-5'>
+              <div>
+                <Skeleton className='mb-2 h-3 w-24' />
+                <div className='flex items-center gap-2'>
+                  <Skeleton className='size-10 rounded-lg' />
+                  <Skeleton className='size-10 rounded-lg' />
+                  <Skeleton className='size-10 rounded-lg' />
+                </div>
+              </div>
+              <div>
+                <Skeleton className='mb-2 h-3 w-24' />
+                <div className='flex flex-wrap gap-2'>
+                  {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                    <Skeleton key={i} className='h-8 w-12 rounded-lg' />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Skeleton className='mb-2 h-3 w-24' />
+                <Skeleton className='h-9 w-32 rounded-md' />
+              </div>
             </div>
           ) : (
             <div className='space-y-5'>
@@ -420,8 +440,22 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
 
   if (isLoadingStatus) {
     return (
-      <div className='flex items-center justify-center py-20'>
-        <IconLoader2 className='text-muted-foreground size-6 animate-spin' />
+      <div className='mx-auto max-w-3xl space-y-6 py-6'>
+        <div className='flex items-center justify-between'>
+          <Skeleton className='h-6 w-48' />
+          <Skeleton className='h-9 w-32 rounded-md' />
+        </div>
+        <div className='flex items-center gap-2'>
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className='h-8 w-32 rounded-md' />
+          ))}
+        </div>
+        <div className='space-y-3 rounded-xl border p-6'>
+          <Skeleton className='h-5 w-40' />
+          <Skeleton className='h-4 w-full' />
+          <Skeleton className='h-4 w-5/6' />
+          <Skeleton className='h-4 w-3/4' />
+        </div>
       </div>
     )
   }

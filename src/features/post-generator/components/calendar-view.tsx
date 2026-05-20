@@ -348,11 +348,26 @@ export function CalendarView() {
           </div>
 
           {calendar.status === 'generating' && posts.length === 0 && (
-            <div className='flex flex-col items-center gap-3 py-16'>
-              <IconLoader2 className='text-muted-foreground size-8 animate-spin' />
-              <p className='text-muted-foreground text-sm'>
-                Generating your content calendar...
-              </p>
+            <div className='space-y-6'>
+              {[0, 1, 2].map((i) => (
+                <div key={i}>
+                  <Skeleton className='mb-3 h-4 w-28' />
+                  <div className='rounded-lg border p-4'>
+                    <div className='mb-3 flex items-start justify-between gap-3'>
+                      <div className='flex-1 space-y-2'>
+                        <Skeleton className='h-4 w-full' />
+                        <Skeleton className='h-4 w-4/5' />
+                      </div>
+                      <Skeleton className='h-5 w-20 shrink-0 rounded-full' />
+                    </div>
+                    <div className='flex items-center gap-3'>
+                      <Skeleton className='h-3 w-24' />
+                      <Skeleton className='h-3 w-16' />
+                      <Skeleton className='h-3 w-20' />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>
