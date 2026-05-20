@@ -101,6 +101,24 @@ export async function getCalendarHistory(profileId: string) {
   return data
 }
 
+export interface CreateManualPostPayload {
+  profileId: string
+  content: string
+  scheduledAt?: string
+  topic?: string
+  pillar?: string
+  publishNow?: boolean
+}
+
+export async function createManualPost(payload: CreateManualPostPayload) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: '/post-generator/posts/manual',
+    data: payload,
+  })
+  return data as { calendar: any; post: any }
+}
+
 export interface PostingPreferences {
   postsPerWeek: number
   preferredDays: string[]

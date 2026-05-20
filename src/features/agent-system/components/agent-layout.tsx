@@ -106,7 +106,9 @@ export function AgentLayout({ children }: { children: ReactNode }) {
     return match
   }, defaultTab)
 
-  const isPostDetailPage = location.pathname.includes('/post/')
+  const isPostDetailPage =
+    location.pathname.includes('/post/') ||
+    location.pathname.endsWith('/compose')
 
   if (isPostingAgent && !isLoadingOnboarding && !onboardingComplete) {
     return (

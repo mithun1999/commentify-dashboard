@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
+  createManualPost,
   generateCalendar,
   getCurrentCalendar,
   getCalendar,
@@ -23,6 +24,7 @@ import {
   getPostingPreferences,
   updatePostingPreferences,
   getCalendarStreamUrl,
+  type CreateManualPostPayload,
   type PostingPreferences,
 } from '../api/post-generator.api'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
@@ -120,6 +122,25 @@ export const useCalendarStream = (
       es.close()
     }
   }, [calendarId, profileId, queryClient])
+}
+
+export const useCreateManualPost = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: CreateManualPostPayload) => createManualPost(payload),
+    onSuccess: (_data, payload) => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS, payload.profileId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR_HISTORY, payload.profileId],
+      })
+      toast.success(payload.publishNow ? 'Post queued to publish' : 'Post scheduled')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to create post'))
+    },
+  })
 }
 
 export const useGenerateCalendar = () => {

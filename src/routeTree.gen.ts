@@ -48,6 +48,7 @@ import { Route as AuthenticatedAgentsProfileIdAgentTypeStatsImport } from './rou
 import { Route as AuthenticatedAgentsProfileIdAgentTypeSettingsImport } from './routes/_authenticated/agents/$profileId/$agentType/settings'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeQueueImport } from './routes/_authenticated/agents/$profileId/$agentType/queue'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeHistoryImport } from './routes/_authenticated/agents/$profileId/$agentType/history'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeComposeImport } from './routes/_authenticated/agents/$profileId/$agentType/compose'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeCalendarImport } from './routes/_authenticated/agents/$profileId/$agentType/calendar'
 import { Route as AuthenticatedAgentsProfileIdAgentTypePostPostIdImport } from './routes/_authenticated/agents/$profileId/$agentType/post/$postId'
 
@@ -280,6 +281,13 @@ const AuthenticatedAgentsProfileIdAgentTypeHistoryRoute =
   AuthenticatedAgentsProfileIdAgentTypeHistoryImport.update({
     id: '/history',
     path: '/history',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
+  } as any)
+
+const AuthenticatedAgentsProfileIdAgentTypeComposeRoute =
+  AuthenticatedAgentsProfileIdAgentTypeComposeImport.update({
+    id: '/compose',
+    path: '/compose',
     getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
   } as any)
 
@@ -539,6 +547,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeCalendarImport
       parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
     }
+    '/_authenticated/agents/$profileId/$agentType/compose': {
+      id: '/_authenticated/agents/$profileId/$agentType/compose'
+      path: '/compose'
+      fullPath: '/agents/$profileId/$agentType/compose'
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeComposeImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+    }
     '/_authenticated/agents/$profileId/$agentType/history': {
       id: '/_authenticated/agents/$profileId/$agentType/history'
       path: '/history'
@@ -597,6 +612,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 
 interface AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren {
   AuthenticatedAgentsProfileIdAgentTypeCalendarRoute: typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
+  AuthenticatedAgentsProfileIdAgentTypeComposeRoute: typeof AuthenticatedAgentsProfileIdAgentTypeComposeRoute
   AuthenticatedAgentsProfileIdAgentTypeHistoryRoute: typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
   AuthenticatedAgentsProfileIdAgentTypeQueueRoute: typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   AuthenticatedAgentsProfileIdAgentTypeSettingsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
@@ -608,6 +624,8 @@ const AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren: AuthenticatedAgen
   {
     AuthenticatedAgentsProfileIdAgentTypeCalendarRoute:
       AuthenticatedAgentsProfileIdAgentTypeCalendarRoute,
+    AuthenticatedAgentsProfileIdAgentTypeComposeRoute:
+      AuthenticatedAgentsProfileIdAgentTypeComposeRoute,
     AuthenticatedAgentsProfileIdAgentTypeHistoryRoute:
       AuthenticatedAgentsProfileIdAgentTypeHistoryRoute,
     AuthenticatedAgentsProfileIdAgentTypeQueueRoute:
@@ -716,6 +734,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof AuthenticatedUsersIndexRoute
   '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
+  '/agents/$profileId/$agentType/compose': typeof AuthenticatedAgentsProfileIdAgentTypeComposeRoute
   '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
   '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
@@ -756,6 +775,7 @@ export interface FileRoutesByTo {
   '/users': typeof AuthenticatedUsersIndexRoute
   '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
+  '/agents/$profileId/$agentType/compose': typeof AuthenticatedAgentsProfileIdAgentTypeComposeRoute
   '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
   '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
@@ -799,6 +819,7 @@ export interface FileRoutesById {
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/_authenticated/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
+  '/_authenticated/agents/$profileId/$agentType/compose': typeof AuthenticatedAgentsProfileIdAgentTypeComposeRoute
   '/_authenticated/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
   '/_authenticated/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/_authenticated/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
@@ -843,6 +864,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/agents/$profileId/$agentType'
     | '/agents/$profileId/$agentType/calendar'
+    | '/agents/$profileId/$agentType/compose'
     | '/agents/$profileId/$agentType/history'
     | '/agents/$profileId/$agentType/queue'
     | '/agents/$profileId/$agentType/settings'
@@ -882,6 +904,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/agents/$profileId/$agentType'
     | '/agents/$profileId/$agentType/calendar'
+    | '/agents/$profileId/$agentType/compose'
     | '/agents/$profileId/$agentType/history'
     | '/agents/$profileId/$agentType/queue'
     | '/agents/$profileId/$agentType/settings'
@@ -923,6 +946,7 @@ export interface FileRouteTypes {
     | '/_authenticated/users/'
     | '/_authenticated/agents/$profileId/$agentType'
     | '/_authenticated/agents/$profileId/$agentType/calendar'
+    | '/_authenticated/agents/$profileId/$agentType/compose'
     | '/_authenticated/agents/$profileId/$agentType/history'
     | '/_authenticated/agents/$profileId/$agentType/queue'
     | '/_authenticated/agents/$profileId/$agentType/settings'
@@ -1134,6 +1158,7 @@ export const routeTree = rootRoute
       "parent": "/_authenticated",
       "children": [
         "/_authenticated/agents/$profileId/$agentType/calendar",
+        "/_authenticated/agents/$profileId/$agentType/compose",
         "/_authenticated/agents/$profileId/$agentType/history",
         "/_authenticated/agents/$profileId/$agentType/queue",
         "/_authenticated/agents/$profileId/$agentType/settings",
@@ -1143,6 +1168,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/agents/$profileId/$agentType/calendar": {
       "filePath": "_authenticated/agents/$profileId/$agentType/calendar.tsx",
+      "parent": "/_authenticated/agents/$profileId/$agentType"
+    },
+    "/_authenticated/agents/$profileId/$agentType/compose": {
+      "filePath": "_authenticated/agents/$profileId/$agentType/compose.tsx",
       "parent": "/_authenticated/agents/$profileId/$agentType"
     },
     "/_authenticated/agents/$profileId/$agentType/history": {

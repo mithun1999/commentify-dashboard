@@ -46,6 +46,16 @@ function formatDayHeader(weekStart: string, dayIndex: number) {
   return `${dayName} ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
 }
 
+function bucketDayIndex(post: any, weekStartDate?: string): number {
+  if (post?.scheduledAt && weekStartDate) {
+    const ms =
+      new Date(post.scheduledAt).getTime() - new Date(weekStartDate).getTime()
+    const idx = Math.floor(ms / (24 * 60 * 60 * 1000))
+    return Math.max(0, Math.min(6, idx))
+  }
+  return post?.slotIndex ?? 0
+}
+
 function statusBadgeVariant(
   status: string
 ): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -102,7 +112,7 @@ export function CalendarView() {
 
   const postsByDay = posts.reduce(
     (acc: Record<number, any[]>, post: any) => {
-      const dayIdx = post.slotIndex ?? 0
+      const dayIdx = bucketDayIndex(post, calendar?.weekStartDate)
       if (!acc[dayIdx]) acc[dayIdx] = []
       acc[dayIdx].push(post)
       return acc
@@ -190,19 +200,33 @@ export function CalendarView() {
                 Generate your first weekly content calendar to get started.
               </p>
             </div>
-            <Button
-              onClick={() =>
-                generateCalendar.mutate({ profileId, weekOffset: 0 })
-              }
-              disabled={generateCalendar.isPending}
-            >
-              {generateCalendar.isPending ? (
-                <IconLoader2 className='mr-2 size-4 animate-spin' />
-              ) : (
-                <IconCalendarPlus className='mr-2 size-4' />
-              )}
-              Generate Calendar
-            </Button>
+            <div className='flex items-center gap-2'>
+              <Button
+                onClick={() =>
+                  generateCalendar.mutate({ profileId, weekOffset: 0 })
+                }
+                disabled={generateCalendar.isPending}
+              >
+                {generateCalendar.isPending ? (
+                  <IconLoader2 className='mr-2 size-4 animate-spin' />
+                ) : (
+                  <IconCalendarPlus className='mr-2 size-4' />
+                )}
+                Generate Calendar
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() =>
+                  navigate({
+                    to: '/agents/$profileId/$agentType/compose' as any,
+                    params: { profileId, agentType },
+                  } as any)
+                }
+              >
+                <IconPlus className='mr-2 size-4' />
+                Create from scratch
+              </Button>
+            </div>
           </>
         )}
       </div>
@@ -256,6 +280,19 @@ export function CalendarView() {
                     <IconLoader2 className='mr-2 size-3.5 animate-spin' />
                   )}
                   Approve & Schedule All
+                </Button>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() =>
+                    navigate({
+                      to: '/agents/$profileId/$agentType/compose' as any,
+                      params: { profileId, agentType },
+                    } as any)
+                  }
+                >
+                  <IconPlus className='mr-2 size-3.5' />
+                  New Post
                 </Button>
                 <Button
                   size='sm'
