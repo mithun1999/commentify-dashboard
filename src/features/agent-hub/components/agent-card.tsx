@@ -43,13 +43,15 @@ export function AgentCard({ agent }: AgentCardProps) {
 
   const Icon = typeDef.icon
   const status = statusConfig(agent.status)
-  const statsUrl = `/agents/${agent.profileId}/${agent.type}/stats`
+  const defaultTab = agent.type === 'linkedin-posting' ? 'calendar' : 'stats'
+  const agentUrl = `/agents/${agent.profileId}/${agent.type}/${defaultTab}`
   const settingsUrl = `/agents/${agent.profileId}/${agent.type}/settings`
   const completedCount = postStats?.completed ?? 0
+  const showModeBadge = agent.type === 'linkedin-commenting'
 
   return (
     <Card className='group relative transition-shadow hover:shadow-md'>
-      <Link to={statsUrl as string} className='absolute inset-0 z-0' />
+      <Link to={agentUrl as string} className='absolute inset-0 z-0' />
       <CardHeader className='flex flex-row items-start justify-between gap-2 pb-3'>
         <div className='flex items-center gap-3'>
           <div className='bg-muted flex size-10 items-center justify-center rounded-lg'>
@@ -60,7 +62,7 @@ export function AgentCard({ agent }: AgentCardProps) {
               <p className='text-sm font-semibold leading-tight'>
                 {typeDef.name}
               </p>
-              {agent.platform === 'linkedin' && (
+              {showModeBadge && (
                 <Badge
                   variant='outline'
                   className={cn(
@@ -98,7 +100,7 @@ export function AgentCard({ agent }: AgentCardProps) {
             </DropdownMenuItem>
             {agent.status === ProfileStatusEnum.ACTION_REQUIRED && (
               <DropdownMenuItem asChild>
-                <Link to={statsUrl as string}>
+                <Link to={agentUrl as string}>
                   <IconRefresh className='mr-2 size-4' />
                   Reconnect
                 </Link>
