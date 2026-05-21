@@ -103,11 +103,10 @@ export async function getCalendarHistory(profileId: string) {
 
 export interface CreateManualPostPayload {
   profileId: string
-  content: string
-  scheduledAt?: string
+  idea: string
+  scheduledAt: string
   topic?: string
   pillar?: string
-  publishNow?: boolean
 }
 
 export async function createManualPost(payload: CreateManualPostPayload) {

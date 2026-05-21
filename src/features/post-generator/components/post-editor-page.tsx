@@ -14,8 +14,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import {
   useActiveCalendars,
-  useEditPost,
   useApprovePost,
+  useCalendarStream,
+  useEditPost,
   useRejectPost,
 } from '../query/post-generator.query'
 import { PostChatPanel } from './post-chat-panel'
@@ -86,6 +87,11 @@ export function PostEditorPage() {
   const editPost = useEditPost(calendarId)
   const approvePost = useApprovePost(calendarId)
   const rejectPost = useRejectPost(calendarId)
+
+  useCalendarStream(
+    post?.status === 'generating' ? calendarId || undefined : undefined,
+    profileId,
+  )
 
   const [content, setContent] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)

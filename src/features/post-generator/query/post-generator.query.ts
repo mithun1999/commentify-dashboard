@@ -135,7 +135,7 @@ export const useCreateManualPost = () => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CALENDAR_HISTORY, payload.profileId],
       })
-      toast.success(payload.publishNow ? 'Post queued to publish' : 'Post scheduled')
+      toast.success('Drafting your post with AI...')
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to create post'))

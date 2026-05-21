@@ -2,22 +2,15 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import {
   IconArrowLeft,
-  IconCalendarPlus,
   IconLoader2,
-  IconSend,
+  IconSparkles,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
 import { useCreateManualPost } from '../query/post-generator.query'
 
-function charCountColor(count: number) {
-  if (count >= 1000 && count <= 1200) return 'text-green-600'
-  if (count >= 800 && count <= 1300) return 'text-yellow-600'
-  return 'text-red-500'
-}
+const IDEA_PLACEHOLDER = `e.g. Lessons from migrating off Postgres at 3am — the part that scared me was not the data but the team's morale. Three things saved us...`
 
 function defaultScheduledAtIso(): string {
   const d = new Date()
@@ -27,8 +20,6 @@ function defaultScheduledAtIso(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-type Mode = 'schedule' | 'now'
-
 export function ComposePage() {
   const { profileId, agentType } = useParams({ strict: false }) as {
     profileId: string
@@ -37,26 +28,24 @@ export function ComposePage() {
   const navigate = useNavigate()
   const createPost = useCreateManualPost()
 
-  const [content, setContent] = useState('')
+  const [idea, setIdea] = useState('')
   const [topic, setTopic] = useState('')
   const [scheduledAt, setScheduledAt] = useState(() => defaultScheduledAtIso())
-  const [mode, setMode] = useState<Mode>('schedule')
 
-  const charCount = content.length
-  const trimmedContent = content.trim()
+  const trimmedIdea = idea.trim()
   const scheduleInPast = useMemo(() => {
-    if (mode !== 'schedule') return false
     const ts = new Date(scheduledAt).getTime()
     return Number.isNaN(ts) || ts <= Date.now()
-  }, [mode, scheduledAt])
+  }, [scheduledAt])
 
   const canSubmit =
-    trimmedContent.length > 0 &&
-    !createPost.isPending &&
-    (mode === 'now' || !scheduleInPast)
+    trimmedIdea.length > 0 && !scheduleInPast && !createPost.isPending
 
   const goBack = () => {
-    navigate({ to: '/agents/$profileId/$agentType/calendar' as any })
+    navigate({
+      to: '/agents/$profileId/$agentType/calendar' as any,
+      params: { profileId, agentType },
+    } as any)
   }
 
   const handleSubmit = () => {
@@ -64,11 +53,9 @@ export function ComposePage() {
     createPost.mutate(
       {
         profileId,
-        content: trimmedContent,
+        idea: trimmedIdea,
         topic: topic.trim() || undefined,
-        publishNow: mode === 'now',
-        scheduledAt:
-          mode === 'schedule' ? new Date(scheduledAt).toISOString() : undefined,
+        scheduledAt: new Date(scheduledAt).toISOString(),
       },
       {
         onSuccess: ({ post }) => {
@@ -97,96 +84,64 @@ export function ComposePage() {
           <Button size='sm' onClick={handleSubmit} disabled={!canSubmit}>
             {createPost.isPending ? (
               <IconLoader2 className='mr-1.5 size-3.5 animate-spin' />
-            ) : mode === 'now' ? (
-              <IconSend className='mr-1.5 size-3.5' />
             ) : (
-              <IconCalendarPlus className='mr-1.5 size-3.5' />
+              <IconSparkles className='mr-1.5 size-3.5' />
             )}
-            {mode === 'now' ? 'Publish now' : 'Schedule post'}
+            Generate draft
           </Button>
         </div>
       </div>
 
       <div className='mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-auto p-6'>
         <div>
-          <label className='text-muted-foreground mb-2 block text-xs font-medium'>
-            Topic (optional)
-          </label>
-          <Input
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder='e.g. Lessons from shipping a side project'
-          />
+          <h2 className='text-base font-semibold'>What's on your mind?</h2>
+          <p className='text-muted-foreground mt-1 text-sm'>
+            Share the idea, story, or angle. Our writer will draft it in your
+            voice. You'll be able to edit and chat with the AI to refine it
+            before it ships.
+          </p>
         </div>
 
         <div className='flex flex-1 flex-col'>
-          <label className='text-muted-foreground mb-2 block text-xs font-medium'>
-            Post content
-          </label>
           <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder='Write your LinkedIn post...'
-            className='min-h-[280px] flex-1 resize-none text-sm leading-relaxed'
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            placeholder={IDEA_PLACEHOLDER}
+            className='min-h-[260px] flex-1 resize-none text-sm leading-relaxed'
           />
-          <div className='mt-2 flex items-center gap-3 text-xs'>
-            <span className={cn('font-medium', charCountColor(charCount))}>
-              {charCount} chars
-            </span>
-            <Separator orientation='vertical' className='h-4' />
-            <span className='text-muted-foreground'>
-              LinkedIn sweet spot is 1000-1200 chars
-            </span>
-          </div>
+          <p className='text-muted-foreground mt-2 text-xs'>
+            Rough notes are fine — bullets, half-sentences, the punchline you
+            already have. The more specific the better.
+          </p>
         </div>
 
-        <div className='rounded-lg border p-4'>
-          <p className='mb-3 text-sm font-medium'>When to publish</p>
-          <div className='flex items-center gap-2'>
-            <button
-              type='button'
-              onClick={() => setMode('schedule')}
-              className={cn(
-                'rounded-md border px-3 py-1.5 text-xs font-medium transition-colors',
-                mode === 'schedule'
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'hover:bg-muted',
-              )}
-            >
-              Schedule
-            </button>
-            <button
-              type='button'
-              onClick={() => setMode('now')}
-              className={cn(
-                'rounded-md border px-3 py-1.5 text-xs font-medium transition-colors',
-                mode === 'now'
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'hover:bg-muted',
-              )}
-            >
-              Publish now
-            </button>
+        <div className='grid gap-4 md:grid-cols-2'>
+          <div>
+            <label className='text-muted-foreground mb-2 block text-xs font-medium'>
+              Topic (optional)
+            </label>
+            <Input
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder='Short title for this post'
+            />
           </div>
-
-          {mode === 'schedule' && (
-            <div className='mt-4'>
-              <label className='text-muted-foreground mb-2 block text-xs font-medium'>
-                Date and time
-              </label>
-              <input
-                type='datetime-local'
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className='border-input bg-background ring-offset-background focus:ring-ring h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2'
-              />
-              {scheduleInPast && (
-                <p className='mt-1.5 text-xs text-red-500'>
-                  Pick a time in the future.
-                </p>
-              )}
-            </div>
-          )}
+          <div>
+            <label className='text-muted-foreground mb-2 block text-xs font-medium'>
+              Schedule for
+            </label>
+            <input
+              type='datetime-local'
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className='border-input bg-background ring-offset-background focus:ring-ring h-9 w-full rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2'
+            />
+            {scheduleInPast && (
+              <p className='mt-1.5 text-xs text-red-500'>
+                Pick a time in the future.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

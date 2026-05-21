@@ -224,7 +224,7 @@ export function CalendarView() {
                 }
               >
                 <IconPlus className='mr-2 size-4' />
-                Create from scratch
+                Draft with AI
               </Button>
             </div>
           </>
