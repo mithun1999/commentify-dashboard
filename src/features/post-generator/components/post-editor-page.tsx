@@ -1,9 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import {
   IconArrowLeft,
   IconCheck,
   IconDeviceFloppy,
+  IconFileTypePdf,
+  IconPaperclip,
+  IconSparkles,
   IconX,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
@@ -16,9 +19,13 @@ import {
   useActiveCalendars,
   useApprovePost,
   useCalendarStream,
+  useDeletePostMedia,
   useEditPost,
+  useFormatSuggestions,
   useRejectPost,
+  useUploadPostMedia,
 } from '../query/post-generator.query'
+import type { PostMedia } from '../api/post-generator.api'
 import { PostChatPanel } from './post-chat-panel'
 
 function charCountColor(count: number) {
@@ -87,6 +94,16 @@ export function PostEditorPage() {
   const editPost = useEditPost(calendarId)
   const approvePost = useApprovePost(calendarId)
   const rejectPost = useRejectPost(calendarId)
+  const uploadMedia = useUploadPostMedia(calendarId)
+  const deleteMedia = useDeletePostMedia(calendarId)
+
+  const media: PostMedia[] = post?.media ?? []
+  const imageCount = media.filter((m) => m.type === 'image').length
+  const pdfCount = media.filter((m) => m.type === 'pdf').length
+  const hasPdf = pdfCount > 0
+  const hasImages = imageCount > 0
+  const imageSlotsRemaining = Math.max(0, 9 - imageCount)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useCalendarStream(
     post?.status === 'generating' ? calendarId || undefined : undefined,
@@ -95,6 +112,35 @@ export function PostEditorPage() {
 
   const [content, setContent] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [debouncedCommentary, setDebouncedCommentary] = useState('')
+  const dismissKey = postId ? `format-suggest-dismissed:${postId}` : ''
+  const [formatDismissed, setFormatDismissed] = useState<boolean>(() => {
+    if (!dismissKey) return false
+    return sessionStorage.getItem(dismissKey) === '1'
+  })
+
+  useEffect(() => {
+    if (!postId) return
+    setFormatDismissed(sessionStorage.getItem(`format-suggest-dismissed:${postId}`) === '1')
+  }, [postId])
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedCommentary(content), 1500)
+    return () => clearTimeout(t)
+  }, [content])
+
+  const formatSuggestion = useFormatSuggestions(
+    postId,
+    debouncedCommentary,
+    !formatDismissed && !hasImages && !hasPdf,
+  )
+  const suggestion = formatSuggestion.data
+
+  const dismissFormatSuggestion = useCallback(() => {
+    if (!dismissKey) return
+    sessionStorage.setItem(dismissKey, '1')
+    setFormatDismissed(true)
+  }, [dismissKey])
 
   useEffect(() => {
     if (post?.content) {
@@ -149,6 +195,41 @@ export function PostEditorPage() {
     setContent(newContent)
     setHasUnsavedChanges(false)
   }, [])
+
+  const handleFiles = useCallback(
+    (files: FileList | null) => {
+      if (!files || !post?._id) return
+      const arr = Array.from(files)
+      if (arr.length === 0) return
+      uploadMedia.mutate({ postId: post._id, files: arr })
+    },
+    [post?._id, uploadMedia],
+  )
+
+  const handleAttachClick = (kind: 'image' | 'pdf') => {
+    if (!fileInputRef.current) return
+    fileInputRef.current.accept =
+      kind === 'pdf' ? 'application/pdf' : 'image/png,image/jpeg,image/webp,image/gif'
+    fileInputRef.current.multiple = kind === 'image'
+    fileInputRef.current.click()
+  }
+
+  const handleRemoveMedia = (mediaId: string) => {
+    if (!post?._id) return
+    deleteMedia.mutate({ postId: post._id, mediaId })
+  }
+
+  const acceptSuggestion = useCallback(() => {
+    if (!suggestion) return
+    if (suggestion.suggestion === 'image') handleAttachClick('image')
+    else if (suggestion.suggestion === 'pdf') handleAttachClick('pdf')
+  }, [suggestion])
+
+  const blockedByPdf = hasPdf
+  const blockedReason = useMemo(() => {
+    if (!blockedByPdf) return ''
+    return 'PDF posts can\u2019t be auto-published yet. Remove the PDF or publish manually on LinkedIn.'
+  }, [blockedByPdf])
 
   const goBack = () => {
     navigate({
@@ -255,18 +336,58 @@ export function PostEditorPage() {
         {/* Editor */}
         <div className='flex flex-1 flex-col border-r' style={{ flex: '55 0 0' }}>
           <div className='flex-1 overflow-auto p-6'>
+            {suggestion && suggestion.suggestion !== 'none' && !formatDismissed && (
+              <FormatSuggestionBanner
+                suggestion={suggestion}
+                onAccept={acceptSuggestion}
+                onDismiss={dismissFormatSuggestion}
+              />
+            )}
             <Textarea
               value={content}
               onChange={(e) => handleContentChange(e.target.value)}
-              className='min-h-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0'
+              className='min-h-[60vh] resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0'
               placeholder='Post content...'
             />
+            <MediaStrip
+              media={media}
+              onRemove={handleRemoveMedia}
+              onAttachImages={() => handleAttachClick('image')}
+              onAttachPdf={() => handleAttachClick('pdf')}
+              imageSlotsRemaining={imageSlotsRemaining}
+              hasPdf={hasPdf}
+              hasImages={hasImages}
+              uploading={uploadMedia.isPending}
+            />
+            <input
+              ref={fileInputRef}
+              type='file'
+              className='hidden'
+              onChange={(e) => {
+                handleFiles(e.target.files)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }}
+            />
           </div>
+          {blockedByPdf && (
+            <div className='border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800'>
+              {blockedReason}
+            </div>
+          )}
           <div className='flex shrink-0 items-center justify-between border-t px-4 py-3'>
             <div className='flex items-center gap-3 text-xs'>
               <span className={cn('font-medium', charCountColor(charCount))}>
                 {charCount} chars
               </span>
+              {media.length > 0 && (
+                <>
+                  <Separator orientation='vertical' className='h-4' />
+                  <span className='text-muted-foreground'>
+                    {imageCount > 0 && `${imageCount} image${imageCount > 1 ? 's' : ''}`}
+                    {pdfCount > 0 && `${imageCount > 0 ? ', ' : ''}PDF`}
+                  </span>
+                </>
+              )}
               {post.overallScore != null && (
                 <>
                   <Separator orientation='vertical' className='h-4' />
@@ -306,7 +427,12 @@ export function PostEditorPage() {
               <Button
                 size='sm'
                 onClick={handleApprove}
-                disabled={approvePost.isPending || post.status === 'approved'}
+                disabled={
+                  approvePost.isPending ||
+                  post.status === 'approved' ||
+                  blockedByPdf
+                }
+                title={blockedByPdf ? blockedReason : undefined}
               >
                 <IconCheck className='mr-1.5 size-3.5' />
                 Approve
@@ -324,6 +450,142 @@ export function PostEditorPage() {
           />
         </div>
       </div>
+    </div>
+  )
+}
+
+function FormatSuggestionBanner({
+  suggestion,
+  onAccept,
+  onDismiss,
+}: {
+  suggestion: { suggestion: 'image' | 'pdf' | 'none'; reason: string }
+  onAccept: () => void
+  onDismiss: () => void
+}) {
+  const label =
+    suggestion.suggestion === 'pdf'
+      ? 'Try a PDF carousel'
+      : 'Try adding an image'
+  return (
+    <div className='mb-4 flex items-start gap-3 rounded-lg border border-indigo-200 bg-indigo-50/60 px-3 py-2 text-xs'>
+      <IconSparkles className='mt-0.5 size-4 shrink-0 text-indigo-500' />
+      <div className='flex-1'>
+        <div className='font-medium text-indigo-900'>{label}</div>
+        <div className='mt-0.5 text-indigo-800/80'>{suggestion.reason}</div>
+      </div>
+      <Button
+        size='sm'
+        variant='outline'
+        className='h-7 border-indigo-300 text-xs text-indigo-700 hover:bg-indigo-100'
+        onClick={onAccept}
+      >
+        Attach
+      </Button>
+      <Button
+        size='icon'
+        variant='ghost'
+        className='size-7 text-indigo-700 hover:bg-indigo-100'
+        onClick={onDismiss}
+        aria-label='Dismiss suggestion'
+      >
+        <IconX className='size-3.5' />
+      </Button>
+    </div>
+  )
+}
+
+function MediaStrip({
+  media,
+  onRemove,
+  onAttachImages,
+  onAttachPdf,
+  imageSlotsRemaining,
+  hasPdf,
+  hasImages,
+  uploading,
+}: {
+  media: PostMedia[]
+  onRemove: (mediaId: string) => void
+  onAttachImages: () => void
+  onAttachPdf: () => void
+  imageSlotsRemaining: number
+  hasPdf: boolean
+  hasImages: boolean
+  uploading: boolean
+}) {
+  const canAttachImages = !hasPdf && imageSlotsRemaining > 0
+  const canAttachPdf = !hasImages && !hasPdf
+
+  return (
+    <div className='mt-6 space-y-2'>
+      {media.length > 0 && (
+        <div className='flex flex-wrap gap-2'>
+          {media.map((m) => (
+            <MediaTile key={m._id} media={m} onRemove={onRemove} />
+          ))}
+        </div>
+      )}
+      <div className='flex items-center gap-2'>
+        <Button
+          variant='outline'
+          size='sm'
+          className='h-8 text-xs'
+          onClick={onAttachImages}
+          disabled={!canAttachImages || uploading}
+        >
+          <IconPaperclip className='mr-1.5 size-3.5' />
+          {hasImages ? `Add image (${imageSlotsRemaining} left)` : 'Attach images'}
+        </Button>
+        <Button
+          variant='outline'
+          size='sm'
+          className='h-8 text-xs'
+          onClick={onAttachPdf}
+          disabled={!canAttachPdf || uploading}
+        >
+          <IconFileTypePdf className='mr-1.5 size-3.5' />
+          Attach PDF
+        </Button>
+        {uploading && (
+          <span className='text-muted-foreground text-xs'>Uploading...</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MediaTile({
+  media,
+  onRemove,
+}: {
+  media: PostMedia
+  onRemove: (mediaId: string) => void
+}) {
+  return (
+    <div className='group relative h-24 w-24 overflow-hidden rounded-md border bg-muted'>
+      {media.type === 'image' ? (
+        <img
+          src={media.url}
+          alt={media.originalFilename}
+          className='h-full w-full object-cover'
+        />
+      ) : (
+        <div className='flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center'>
+          <IconFileTypePdf className='size-7 text-red-500' />
+          <span className='line-clamp-2 text-[10px] text-muted-foreground'>
+            {media.originalFilename}
+          </span>
+        </div>
+      )}
+      <button
+        type='button'
+        aria-label='Remove attachment'
+        onClick={() => onRemove(media._id)}
+        className='absolute right-1 top-1 hidden rounded-full bg-black/70 p-0.5 text-white hover:bg-black group-hover:block'
+      >
+        <IconX className='size-3' />
+      </button>
     </div>
   )
 }

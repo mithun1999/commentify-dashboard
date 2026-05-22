@@ -213,3 +213,50 @@ export function getCalendarStreamUrl(calendarId: string): string {
   const base = axiosInstance.defaults.baseURL || ''
   return `${base}/post-generator/calendar/stream/${calendarId}`
 }
+
+export interface PostMedia {
+  _id: string
+  type: 'image' | 'pdf'
+  blobName: string
+  url: string
+  mimeType: string
+  originalFilename: string
+  size: number
+  createdAt?: string
+}
+
+export async function uploadPostMedia(postId: string, files: File[]): Promise<{ media: PostMedia[] }> {
+  const form = new FormData()
+  for (const f of files) form.append('files', f)
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/media`,
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export async function deletePostMedia(postId: string, mediaId: string): Promise<{ media: PostMedia[] }> {
+  const { data } = await axiosInstance({
+    method: 'DELETE',
+    url: `/post-generator/posts/${postId}/media/${mediaId}`,
+  })
+  return data
+}
+
+export interface FormatSuggestion {
+  suggestion: 'image' | 'pdf' | 'none'
+  reason: string
+  imagePrompt?: string
+  pdfOutline?: string[]
+}
+
+export async function getFormatSuggestions(postId: string, commentary: string): Promise<FormatSuggestion> {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/format-suggestions`,
+    data: { commentary },
+  })
+  return data
+}

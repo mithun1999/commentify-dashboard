@@ -24,8 +24,12 @@ import {
   getPostingPreferences,
   updatePostingPreferences,
   getCalendarStreamUrl,
+  uploadPostMedia,
+  deletePostMedia,
+  getFormatSuggestions,
   type CreateManualPostPayload,
   type PostingPreferences,
+  type FormatSuggestion,
 } from '../api/post-generator.api'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 
@@ -354,6 +358,52 @@ export const usePostingPreferences = (profileId: string | undefined) => {
     queryKey: [PostGeneratorQueryEnum.POSTING_PREFERENCES, profileId],
     enabled: Boolean(profileId),
     queryFn: () => getPostingPreferences(profileId!),
+  })
+}
+
+export const useUploadPostMedia = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ postId, files }: { postId: string; files: File[] }) =>
+      uploadPostMedia(postId, files),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
+      })
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Upload failed'))
+    },
+  })
+}
+
+export const useDeletePostMedia = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ postId, mediaId }: { postId: string; mediaId: string }) =>
+      deletePostMedia(postId, mediaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
+      })
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to remove attachment'))
+    },
+  })
+}
+
+export const useFormatSuggestions = (
+  postId: string | undefined,
+  commentary: string,
+  enabled: boolean,
+) => {
+  return useQuery<FormatSuggestion>({
+    queryKey: ['post-gen-format-suggestion', postId, commentary],
+    enabled: Boolean(postId) && enabled && commentary.trim().length >= 40,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    queryFn: () => getFormatSuggestions(postId!, commentary),
   })
 }
 
