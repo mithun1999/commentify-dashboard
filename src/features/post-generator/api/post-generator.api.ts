@@ -1,10 +1,21 @@
 import { axiosInstance } from '@/utils/axios.util'
 
-export async function generateCalendar(profileId: string, weekOffset: number = 0) {
+export interface CalendarUserContextInput {
+  thisWeekEvents?: string
+  nextWeekThemes?: string
+  specificStories?: string
+  avoidTopics?: string
+}
+
+export async function generateCalendar(
+  profileId: string,
+  weekOffset: number = 0,
+  userContext?: CalendarUserContextInput,
+) {
   const { data } = await axiosInstance({
     method: 'POST',
     url: '/post-generator/calendar/generate',
-    data: { profileId, weekOffset },
+    data: { profileId, weekOffset, userContext },
   })
   return data
 }
@@ -73,6 +84,26 @@ export async function chatEditPost(calendarId: string, postId: string, message: 
       content: string
       timestamp: string
       postSnapshot?: string
+    }>
+  }
+}
+
+export async function chatUpdateVoice(profileId: string, message: string) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: '/post-generator/voice/chat',
+    data: { profileId, message },
+  })
+  return data as {
+    assistantMessage: string
+    needsClarification: boolean
+    updated: boolean
+    voiceSignature: any
+    voiceEditHistory: Array<{
+      role: 'user' | 'assistant'
+      content: string
+      timestamp: string
+      appliedPatch?: Record<string, any>
     }>
   }
 }
@@ -222,7 +253,29 @@ export interface PostMedia {
   mimeType: string
   originalFilename: string
   size: number
+  source?: 'ai' | 'user'
+  aiKind?: 'chat_screenshot' | 'dashboard_screenshot'
   createdAt?: string
+}
+
+export interface RegenerateAiImageResponse {
+  status: 'queued'
+  jobId: string
+  mediaId: string
+  message: string
+}
+
+export async function regenerateAiImage(
+  postId: string,
+  mediaId: string,
+  instruction: string,
+): Promise<RegenerateAiImageResponse> {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/media/${mediaId}/regenerate-ai`,
+    data: { instruction },
+  })
+  return data
 }
 
 export async function uploadPostMedia(postId: string, files: File[]): Promise<{ media: PostMedia[] }> {

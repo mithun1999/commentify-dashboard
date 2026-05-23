@@ -1,5 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { IconDotsVertical, IconSettings, IconRefresh, IconMessageCheck } from '@tabler/icons-react'
+import {
+  IconDotsVertical,
+  IconSettings,
+  IconRefresh,
+  IconMessageCheck,
+  IconSend,
+} from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,7 +23,10 @@ import { cn } from '@/lib/utils'
 import { getAgentType } from '@/features/agent-system/registry'
 import type { DerivedAgent } from '@/features/agent-system/types/agent.types'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
-import { useGetPostStats } from '@/features/users/query/profile.query'
+import {
+  useGetPostStats,
+  useGetPostingStats,
+} from '@/features/users/query/profile.query'
 
 function statusConfig(status: ProfileStatusEnum) {
   switch (status) {
@@ -38,16 +47,35 @@ interface AgentCardProps {
 
 export function AgentCard({ agent }: AgentCardProps) {
   const typeDef = getAgentType(agent.type)
-  const { data: postStats } = useGetPostStats(agent.profileId)
+  const isPosting = agent.type === 'linkedin-posting'
+  const { data: commentingStats } = useGetPostStats(
+    !isPosting ? agent.profileId : undefined,
+  )
+  const { data: postingStats } = useGetPostingStats(
+    isPosting ? agent.profileId : undefined,
+  )
   if (!typeDef) return null
 
   const Icon = typeDef.icon
   const status = statusConfig(agent.status)
-  const defaultTab = agent.type === 'linkedin-posting' ? 'calendar' : 'stats'
+  const defaultTab = isPosting ? 'calendar' : 'stats'
   const agentUrl = `/agents/${agent.profileId}/${agent.type}/${defaultTab}`
   const settingsUrl = `/agents/${agent.profileId}/${agent.type}/settings`
-  const completedCount = postStats?.completed ?? 0
   const showModeBadge = agent.type === 'linkedin-commenting'
+
+  const metric = isPosting
+    ? postingStats
+      ? {
+          icon: IconSend,
+          label: `${postingStats.published.toLocaleString()} published`,
+        }
+      : null
+    : commentingStats
+      ? {
+          icon: IconMessageCheck,
+          label: `${commentingStats.completed.toLocaleString()} commented`,
+        }
+      : null
 
   return (
     <Card className='group relative transition-shadow hover:shadow-md'>
@@ -119,10 +147,10 @@ export function AgentCard({ agent }: AgentCardProps) {
               {status.label}
             </Badge>
           </div>
-          {postStats && (
+          {metric && (
             <div className='text-muted-foreground flex items-center gap-1 text-xs'>
-              <IconMessageCheck className='size-3.5' />
-              <span>{completedCount.toLocaleString()} posted</span>
+              <metric.icon className='size-3.5' />
+              <span>{metric.label}</span>
             </div>
           )}
         </div>

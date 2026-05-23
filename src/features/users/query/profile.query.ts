@@ -12,6 +12,7 @@ import {
   getAllProfile,
   getLinkedInStats,
   getPostStats,
+  getPostingStats,
   linkProfile,
   linkTwitterProfile,
 } from '../api/profile.api'
@@ -207,5 +208,14 @@ export const useGetPostStats = (profileId?: string) => {
     enabled: Boolean(profileId),
     staleTime: 5 * 60 * 1000,
     queryFn: () => getPostStats(profileId!),
+  })
+}
+
+export const useGetPostingStats = (profileId?: string, enabled = true) => {
+  return useQuery({
+    queryKey: ['posting-stats', profileId],
+    enabled: Boolean(profileId) && enabled,
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => getPostingStats(profileId!),
   })
 }

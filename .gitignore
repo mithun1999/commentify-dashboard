@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .env
 .env.config.ts
+
+# Playwright MCP session captures
+.playwright-mcp/

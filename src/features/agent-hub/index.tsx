@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { usePostHog } from 'posthog-js/react'
+import { IconPencil } from '@tabler/icons-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Header } from '@/components/layout/header'
@@ -13,7 +14,7 @@ import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { AgentCard } from './components/agent-card'
 import { AddAgentCard } from './components/add-agent-card'
 import { AddAgentDialog } from './components/add-agent-dialog'
-import { ComingSoonCards } from './components/coming-soon-card'
+import { BetaAgentCard, ComingSoonCards } from './components/coming-soon-card'
 import { EmptyState } from './components/empty-state'
 
 export default function AgentHub() {
@@ -21,6 +22,12 @@ export default function AgentHub() {
   const { data: user } = useGetUserQuery()
   const posthog = usePostHog()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [presetAgentSlug, setPresetAgentSlug] = useState<string | undefined>()
+
+  const openAddDialog = (slug?: string) => {
+    setPresetAgentSlug(slug)
+    setAddDialogOpen(true)
+  }
 
   return (
     <>
@@ -61,13 +68,18 @@ export default function AgentHub() {
         )}
 
         {!isLoading && agents.length === 0 ? (
-          <EmptyState onAddAgent={() => setAddDialogOpen(true)} />
+          <EmptyState onAddAgent={() => openAddDialog()} />
         ) : (
           <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
             {agents.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />
             ))}
-            <AddAgentCard onClick={() => setAddDialogOpen(true)} />
+            <BetaAgentCard
+              name='LinkedIn Posting'
+              icon={IconPencil}
+              onClick={() => openAddDialog('linkedin-posting')}
+            />
+            <AddAgentCard onClick={() => openAddDialog()} />
             <ComingSoonCards />
           </div>
         )}
@@ -75,7 +87,11 @@ export default function AgentHub() {
 
       <AddAgentDialog
         open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
+        onOpenChange={(value) => {
+          setAddDialogOpen(value)
+          if (!value) setPresetAgentSlug(undefined)
+        }}
+        initialAgentSlug={presetAgentSlug}
       />
     </>
   )

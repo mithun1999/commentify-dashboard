@@ -51,3 +51,11 @@ export async function getPostStats(profileId: string) {
   })
   return data as { pending: number; scheduled: number; completed: number }
 }
+
+export async function getPostingStats(profileId: string) {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/post-generator/stats/${profileId}`,
+  })
+  return data as { published: number; scheduled: number; draft: number }
+}

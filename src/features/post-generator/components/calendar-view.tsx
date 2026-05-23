@@ -19,6 +19,8 @@ import {
   useScheduleAll,
 } from '../query/post-generator.query'
 import { PostCard } from './post-card'
+import { GenerateCalendarDialog } from './generate-calendar-dialog'
+import type { CalendarUserContextInput } from '../api/post-generator.api'
 
 function formatWeekRange(dateStr: string) {
   const start = new Date(dateStr)
@@ -83,6 +85,30 @@ export function CalendarView() {
   const generateCalendar = useGenerateCalendar()
   const scheduleAll = useScheduleAll()
   const [activeWeekIndex, setActiveWeekIndex] = useState(0)
+  const [pendingWeekOffset, setPendingWeekOffset] = useState<number | null>(null)
+
+  const openGenerateDialog = (weekOffset: number) => {
+    setPendingWeekOffset(weekOffset)
+  }
+  const closeGenerateDialog = () => {
+    if (generateCalendar.isPending) return
+    setPendingWeekOffset(null)
+  }
+  const submitGenerate = (userContext?: CalendarUserContextInput) => {
+    if (pendingWeekOffset === null) return
+    generateCalendar.mutate(
+      { profileId, weekOffset: pendingWeekOffset, userContext },
+      { onSettled: () => setPendingWeekOffset(null) },
+    )
+  }
+  const dialogWeekLabel =
+    pendingWeekOffset === null
+      ? undefined
+      : pendingWeekOffset === 0
+        ? 'this week'
+        : pendingWeekOffset === activeWeekIndex
+          ? 'this calendar'
+          : 'next week'
 
   const needsOnboarding =
     generateCalendar.isError &&
@@ -165,6 +191,14 @@ export function CalendarView() {
 
   if (weekList.length === 0) {
     return (
+      <>
+      <GenerateCalendarDialog
+        open={pendingWeekOffset !== null}
+        onOpenChange={(o) => (o ? null : closeGenerateDialog())}
+        onGenerate={submitGenerate}
+        isPending={generateCalendar.isPending}
+        weekLabel={dialogWeekLabel}
+      />
       <div className='flex flex-col items-center justify-center gap-4 py-20'>
         {needsOnboarding ? (
           <>
@@ -202,9 +236,7 @@ export function CalendarView() {
             </div>
             <div className='flex items-center gap-2'>
               <Button
-                onClick={() =>
-                  generateCalendar.mutate({ profileId, weekOffset: 0 })
-                }
+                onClick={() => openGenerateDialog(0)}
                 disabled={generateCalendar.isPending}
               >
                 {generateCalendar.isPending ? (
@@ -230,6 +262,7 @@ export function CalendarView() {
           </>
         )}
       </div>
+      </>
     )
   }
 
@@ -239,6 +272,13 @@ export function CalendarView() {
 
   return (
     <div className='mx-auto max-w-3xl'>
+      <GenerateCalendarDialog
+        open={pendingWeekOffset !== null}
+        onOpenChange={(o) => (o ? null : closeGenerateDialog())}
+        onGenerate={submitGenerate}
+        isPending={generateCalendar.isPending}
+        weekLabel={dialogWeekLabel}
+      />
       {calendar && (
         <>
           {/* Week navigation */}
@@ -297,9 +337,7 @@ export function CalendarView() {
                 <Button
                   size='sm'
                   variant='ghost'
-                  onClick={() =>
-                    generateCalendar.mutate({ profileId, weekOffset: activeWeekIndex })
-                  }
+                  onClick={() => openGenerateDialog(activeWeekIndex)}
                   disabled={generateCalendar.isPending}
                 >
                   {generateCalendar.isPending ? (
@@ -333,9 +371,7 @@ export function CalendarView() {
               {canGenerateNext && (
                 <button
                   type='button'
-                  onClick={() =>
-                    generateCalendar.mutate({ profileId, weekOffset: nextWeekOffset })
-                  }
+                  onClick={() => openGenerateDialog(nextWeekOffset)}
                   disabled={generateCalendar.isPending}
                   className='text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50'
                 >

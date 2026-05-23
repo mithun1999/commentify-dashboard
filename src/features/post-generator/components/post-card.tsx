@@ -54,11 +54,13 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
   return (
     <div
       className={cn(
-        'group cursor-pointer rounded-lg border p-4 transition-colors',
-        'hover:border-primary/40 hover:bg-muted/50',
-        isGenerating && 'opacity-60'
+        'group rounded-lg border p-4 transition-colors',
+        isGenerating
+          ? 'cursor-not-allowed opacity-60'
+          : 'hover:border-primary/40 hover:bg-muted/50 cursor-pointer'
       )}
-      onClick={onClick}
+      onClick={isGenerating ? undefined : onClick}
+      aria-disabled={isGenerating}
     >
       <div className='mb-2 flex items-start justify-between gap-3'>
         {isGenerating ? (

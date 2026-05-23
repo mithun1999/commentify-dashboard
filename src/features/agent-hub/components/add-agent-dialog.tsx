@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { IconBrandLinkedin, IconBrandX, IconPlus } from '@tabler/icons-react'
 import { toast } from 'sonner'
-import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,10 +23,12 @@ import {
 } from '@/features/users/query/profile.query'
 import { useActivateAgentType } from '@/features/post-generator/query/post-generator.query'
 import { getTwitterProfileDetailsFromExtension } from '@/features/twitter-commenting/utils/extension'
+import { getAgentType } from '@/features/agent-system/registry'
 
 interface AddAgentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialAgentSlug?: string
 }
 
 const PLATFORM_CONFIG = {
@@ -45,7 +46,11 @@ const PLATFORM_CONFIG = {
 
 type Step = 'select' | 'connect'
 
-export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
+export function AddAgentDialog({
+  open,
+  onOpenChange,
+  initialAgentSlug,
+}: AddAgentDialogProps) {
   const [step, setStep] = useState<Step>('select')
   const [selected, setSelected] = useState<AgentTypeDefinition | null>(null)
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
@@ -58,7 +63,15 @@ export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
   const { linkTwitterProfile, isLinkingTwitterProfile } = useLinkTwitterProfile(false)
   const activateAgentType = useActivateAgentType()
   const [isLinking, setIsLinking] = useState(false)
-  const postingFlagEnabled = useFeatureFlagEnabled('linkedin-posting-agent')
+
+  useEffect(() => {
+    if (!open || !initialAgentSlug) return
+    const preset = getAgentType(initialAgentSlug)
+    if (preset) {
+      setSelected(preset)
+      setStep('connect')
+    }
+  }, [open, initialAgentSlug])
 
   const isConnecting = isLinking || isLinkingProfile || isLinkingTwitterProfile
 
@@ -117,9 +130,6 @@ export function AddAgentDialog({ open, onOpenChange }: AddAgentDialogProps) {
   }
 
   const isEligible = (type: AgentTypeDefinition) => {
-    if (type.featureFlag) {
-      if (type.featureFlag === 'linkedin-posting-agent') return !!postingFlagEnabled
-    }
     if (type.access === 'open') return true
     if (!user || !type.isEligible) return false
     return type.isEligible(user)

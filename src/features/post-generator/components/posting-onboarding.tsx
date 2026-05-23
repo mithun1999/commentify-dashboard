@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { IconCheck, IconExternalLink, IconLoader2, IconPlus, IconTrash, IconSparkles, IconUsers, IconRocket, IconRefresh, IconCalendarEvent } from '@tabler/icons-react'
+import { IconCheck, IconExternalLink, IconLoader2, IconPlus, IconTrash, IconSparkles, IconUsers, IconRocket, IconRefresh, IconCalendarEvent, IconMessage2, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
+import { VoiceChatPanel } from './voice-chat-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -62,6 +63,7 @@ function CompletedSettingsView({
   const [preferredDays, setPreferredDays] = useState<string[]>(['Monday', 'Wednesday', 'Friday'])
   const [preferredTime, setPreferredTime] = useState('09:00')
   const [prefsDirty, setPrefsDirty] = useState(false)
+  const [voiceChatOpen, setVoiceChatOpen] = useState(false)
 
   useEffect(() => {
     if (prefs) {
@@ -143,7 +145,11 @@ function CompletedSettingsView({
               <div className='grid grid-cols-2 gap-4'>
                 <div>
                   <p className='text-muted-foreground text-xs font-medium'>Posts Analyzed</p>
-                  <p className='text-sm font-medium'>{voice.postsAnalyzed ?? 0}</p>
+                  <p className='text-sm font-medium'>
+                    {voice.topPostsUsed != null && voice.totalPostsScraped != null
+                      ? `Top ${voice.topPostsUsed} of ${voice.totalPostsScraped}`
+                      : (voice.postsAnalyzed ?? 0)}
+                  </p>
                 </div>
                 <div>
                   <p className='text-muted-foreground text-xs font-medium'>Voice Source</p>
@@ -172,6 +178,45 @@ function CompletedSettingsView({
                   </div>
                 </div>
               )}
+
+              {voice.vocabulary?.avoidWords?.length > 0 && (
+                <div>
+                  <p className='text-muted-foreground mb-2 text-xs font-medium'>Words to avoid</p>
+                  <div className='flex flex-wrap gap-2'>
+                    {voice.vocabulary.avoidWords.map((word: string) => (
+                      <Badge key={word} variant='outline'>
+                        {word}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className='border-t pt-4'>
+                <button
+                  type='button'
+                  onClick={() => setVoiceChatOpen((v) => !v)}
+                  className='hover:text-primary text-muted-foreground flex w-full items-center justify-between text-sm font-medium transition-colors'
+                >
+                  <span className='flex items-center gap-2'>
+                    <IconMessage2 className='size-4' />
+                    Refine with AI
+                  </span>
+                  {voiceChatOpen ? (
+                    <IconChevronUp className='size-4' />
+                  ) : (
+                    <IconChevronDown className='size-4' />
+                  )}
+                </button>
+                {voiceChatOpen && (
+                  <div className='mt-3 h-[420px] overflow-hidden rounded-lg border'>
+                    <VoiceChatPanel
+                      profileId={profileId}
+                      history={onboardingStatus?.voiceSignature?.voiceEditHistory ?? []}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <p className='text-muted-foreground text-sm'>

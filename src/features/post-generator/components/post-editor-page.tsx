@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   IconArrowLeft,
   IconCheck,
   IconDeviceFloppy,
   IconFileTypePdf,
+  IconLoader2,
   IconPaperclip,
+  IconRefresh,
   IconSparkles,
   IconX,
 } from '@tabler/icons-react'
@@ -22,11 +25,13 @@ import {
   useDeletePostMedia,
   useEditPost,
   useFormatSuggestions,
+  useRegenerateAiImage,
   useRejectPost,
   useUploadPostMedia,
 } from '../query/post-generator.query'
 import type { PostMedia } from '../api/post-generator.api'
 import { PostChatPanel } from './post-chat-panel'
+import { RegenerateImageDialog } from './regenerate-image-dialog'
 
 function charCountColor(count: number) {
   if (count >= 1000 && count <= 1200) return 'text-green-600'
@@ -96,6 +101,10 @@ export function PostEditorPage() {
   const rejectPost = useRejectPost(calendarId)
   const uploadMedia = useUploadPostMedia(calendarId)
   const deleteMedia = useDeletePostMedia(calendarId)
+  const regenerateAi = useRegenerateAiImage(calendarId)
+  const [regenTargetMediaId, setRegenTargetMediaId] = useState<string | null>(
+    null,
+  )
 
   const media: PostMedia[] = post?.media ?? []
   const imageCount = media.filter((m) => m.type === 'image').length
@@ -129,10 +138,27 @@ export function PostEditorPage() {
     return () => clearTimeout(t)
   }, [content])
 
+  // The smart image-fit classifier runs at generation time and stores its
+  // decision on `post.imageFit`. If it deliberately decided "none" (any
+  // non-zero confidence means a real LLM call returned, not a fallback),
+  // suppress the older format-suggestion banner — it would only re-litigate
+  // a decision the system has already made. Same when the classifier already
+  // picked an image kind (the generator handles attachment automatically).
+  const imageFit = post?.imageFit as
+    | { type?: string; confidence?: number }
+    | undefined
+  const classifierDecidedNoImage =
+    imageFit?.type === 'none' && (imageFit?.confidence ?? 0) > 0
+  const classifierPickedImage =
+    imageFit?.type === 'chat_screenshot' ||
+    imageFit?.type === 'dashboard_screenshot'
+  const suppressImageBannerByClassifier =
+    classifierDecidedNoImage || classifierPickedImage
+
   const formatSuggestion = useFormatSuggestions(
     postId,
     debouncedCommentary,
-    !formatDismissed && !hasImages && !hasPdf,
+    !formatDismissed && !hasImages && !hasPdf && !suppressImageBannerByClassifier,
   )
   const suggestion = formatSuggestion.data
 
@@ -218,6 +244,52 @@ export function PostEditorPage() {
     if (!post?._id) return
     deleteMedia.mutate({ postId: post._id, mediaId })
   }
+
+  const queryClient = useQueryClient()
+  const regenInFlight = Boolean(post?.regeneratingMediaId)
+  useEffect(() => {
+    if (!regenInFlight) return
+    const id = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: ['post-gen-active-calendars', profileId],
+      })
+    }, 20000)
+    return () => clearInterval(id)
+  }, [regenInFlight, profileId, queryClient])
+
+  const handleOpenRegen = (mediaId: string) => {
+    setRegenTargetMediaId(mediaId)
+  }
+  const closeRegenDialog = () => {
+    if (regenerateAi.isPending || uploadMedia.isPending) return
+    setRegenTargetMediaId(null)
+  }
+  const handleRegenSubmit = (instruction: string) => {
+    if (!post?._id || !regenTargetMediaId) return
+    regenerateAi.mutate(
+      { postId: post._id, mediaId: regenTargetMediaId, instruction },
+      { onSettled: () => setRegenTargetMediaId(null) },
+    )
+  }
+  const handleRegenUploadReplace = (file: File) => {
+    if (!post?._id || !regenTargetMediaId) return
+    const targetId = regenTargetMediaId
+    deleteMedia.mutate(
+      { postId: post._id, mediaId: targetId },
+      {
+        onSuccess: () => {
+          uploadMedia.mutate(
+            { postId: post._id, files: [file] },
+            { onSettled: () => setRegenTargetMediaId(null) },
+          )
+        },
+        onError: () => setRegenTargetMediaId(null),
+      },
+    )
+  }
+  const regenTargetMedia: PostMedia | null = regenTargetMediaId
+    ? (media.find((m) => m._id === regenTargetMediaId) ?? null)
+    : null
 
   const acceptSuggestion = useCallback(() => {
     if (!suggestion) return
@@ -336,13 +408,16 @@ export function PostEditorPage() {
         {/* Editor */}
         <div className='flex flex-1 flex-col border-r' style={{ flex: '55 0 0' }}>
           <div className='flex-1 overflow-auto p-6'>
-            {suggestion && suggestion.suggestion !== 'none' && !formatDismissed && (
-              <FormatSuggestionBanner
-                suggestion={suggestion}
-                onAccept={acceptSuggestion}
-                onDismiss={dismissFormatSuggestion}
-              />
-            )}
+            {suggestion &&
+              suggestion.suggestion !== 'none' &&
+              !formatDismissed &&
+              !suppressImageBannerByClassifier && (
+                <FormatSuggestionBanner
+                  suggestion={suggestion}
+                  onAccept={acceptSuggestion}
+                  onDismiss={dismissFormatSuggestion}
+                />
+              )}
             <Textarea
               value={content}
               onChange={(e) => handleContentChange(e.target.value)}
@@ -352,12 +427,23 @@ export function PostEditorPage() {
             <MediaStrip
               media={media}
               onRemove={handleRemoveMedia}
+              onRegenerate={handleOpenRegen}
+              regeneratingMediaId={post?.regeneratingMediaId ?? null}
               onAttachImages={() => handleAttachClick('image')}
               onAttachPdf={() => handleAttachClick('pdf')}
               imageSlotsRemaining={imageSlotsRemaining}
               hasPdf={hasPdf}
               hasImages={hasImages}
               uploading={uploadMedia.isPending}
+            />
+            <RegenerateImageDialog
+              open={regenTargetMediaId !== null}
+              onOpenChange={(o) => (o ? null : closeRegenDialog())}
+              media={regenTargetMedia}
+              onRegenerate={handleRegenSubmit}
+              onReplaceUpload={handleRegenUploadReplace}
+              isRegenerating={regenerateAi.isPending}
+              isUploading={uploadMedia.isPending || deleteMedia.isPending}
             />
             <input
               ref={fileInputRef}
@@ -498,6 +584,8 @@ function FormatSuggestionBanner({
 function MediaStrip({
   media,
   onRemove,
+  onRegenerate,
+  regeneratingMediaId,
   onAttachImages,
   onAttachPdf,
   imageSlotsRemaining,
@@ -507,6 +595,8 @@ function MediaStrip({
 }: {
   media: PostMedia[]
   onRemove: (mediaId: string) => void
+  onRegenerate?: (mediaId: string) => void
+  regeneratingMediaId?: string | null
   onAttachImages: () => void
   onAttachPdf: () => void
   imageSlotsRemaining: number
@@ -522,7 +612,13 @@ function MediaStrip({
       {media.length > 0 && (
         <div className='flex flex-wrap gap-2'>
           {media.map((m) => (
-            <MediaTile key={m._id} media={m} onRemove={onRemove} />
+            <MediaTile
+              key={m._id}
+              media={m}
+              onRemove={onRemove}
+              onRegenerate={onRegenerate}
+              isRegenerating={String(regeneratingMediaId) === String(m._id)}
+            />
           ))}
         </div>
       )}
@@ -558,17 +654,25 @@ function MediaStrip({
 function MediaTile({
   media,
   onRemove,
+  onRegenerate,
+  isRegenerating,
 }: {
   media: PostMedia
   onRemove: (mediaId: string) => void
+  onRegenerate?: (mediaId: string) => void
+  isRegenerating?: boolean
 }) {
+  const isAi = media.source === 'ai'
   return (
     <div className='group relative h-24 w-24 overflow-hidden rounded-md border bg-muted'>
       {media.type === 'image' ? (
         <img
           src={media.url}
           alt={media.originalFilename}
-          className='h-full w-full object-cover'
+          className={cn(
+            'h-full w-full object-cover',
+            isRegenerating && 'opacity-40',
+          )}
         />
       ) : (
         <div className='flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center'>
@@ -578,14 +682,40 @@ function MediaTile({
           </span>
         </div>
       )}
-      <button
-        type='button'
-        aria-label='Remove attachment'
-        onClick={() => onRemove(media._id)}
-        className='absolute right-1 top-1 hidden rounded-full bg-black/70 p-0.5 text-white hover:bg-black group-hover:block'
-      >
-        <IconX className='size-3' />
-      </button>
+      {isAi && (
+        <span className='absolute left-1 top-1 rounded bg-violet-600/90 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-white'>
+          AI
+        </span>
+      )}
+      {isRegenerating && (
+        <div className='absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/30 text-white'>
+          <IconLoader2 className='size-5 animate-spin' />
+          <span className='text-[9px] font-medium'>Remixing...</span>
+        </div>
+      )}
+      {!isRegenerating && (
+        <div className='absolute right-1 top-1 hidden gap-1 group-hover:flex'>
+          {isAi && onRegenerate && (
+            <button
+              type='button'
+              aria-label='Replace AI image'
+              title='Replace this AI image'
+              onClick={() => onRegenerate(media._id)}
+              className='rounded-full bg-black/70 p-0.5 text-white hover:bg-black'
+            >
+              <IconRefresh className='size-3' />
+            </button>
+          )}
+          <button
+            type='button'
+            aria-label='Remove attachment'
+            onClick={() => onRemove(media._id)}
+            className='rounded-full bg-black/70 p-0.5 text-white hover:bg-black'
+          >
+            <IconX className='size-3' />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

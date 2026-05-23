@@ -11,6 +11,7 @@ import {
   editPost,
   rejectPost,
   chatEditPost,
+  chatUpdateVoice,
   publishPost,
   scheduleAll,
   getCalendarHistory,
@@ -26,6 +27,7 @@ import {
   getCalendarStreamUrl,
   uploadPostMedia,
   deletePostMedia,
+  regenerateAiImage,
   getFormatSuggestions,
   type CreateManualPostPayload,
   type PostingPreferences,
@@ -150,8 +152,15 @@ export const useCreateManualPost = () => {
 export const useGenerateCalendar = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ profileId, weekOffset = 0 }: { profileId: string; weekOffset?: number }) =>
-      generateCalendar(profileId, weekOffset),
+    mutationFn: ({
+      profileId,
+      weekOffset = 0,
+      userContext,
+    }: {
+      profileId: string
+      weekOffset?: number
+      userContext?: import('../api/post-generator.api').CalendarUserContextInput
+    }) => generateCalendar(profileId, weekOffset, userContext),
     onSuccess: (_data, { profileId }) => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CURRENT_CALENDAR, profileId],
@@ -233,6 +242,24 @@ export const useChatEditPost = (calendarId: string) => {
   })
 }
 
+export const useChatUpdateVoice = (profileId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (message: string) => chatUpdateVoice(profileId, message),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.ONBOARDING_STATUS, profileId],
+      })
+      if (data.updated) {
+        toast.success('Voice profile updated')
+      }
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to update voice profile'))
+    },
+  })
+}
+
 export const usePublishPost = (calendarId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -266,8 +293,14 @@ export const useScheduleAll = () => {
 }
 
 export const useStartOnboarding = () => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (profileId: string) => startOnboarding(profileId),
+    onSuccess: (_data, profileId) => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.ONBOARDING_STATUS, profileId],
+      })
+    },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Onboarding failed'))
     },
@@ -328,7 +361,9 @@ export const useAddCreator = () => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.CREATORS, profileId],
       })
-      toast.success('Creator added')
+      toast.success(
+        'Creator added — re-analyzing your voice profile in the background. Refresh in ~1 min to see the updated profile.',
+      )
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to add creator'))
@@ -345,7 +380,9 @@ export const useDeleteCreator = () => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.CREATORS, profileId],
       })
-      toast.success('Creator removed')
+      toast.success(
+        'Creator removed — re-analyzing your voice profile in the background. Refresh in ~1 min to see the updated profile.',
+      )
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to remove creator'))
@@ -389,6 +426,36 @@ export const useDeletePostMedia = (calendarId: string) => {
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to remove attachment'))
+    },
+  })
+}
+
+export const useRegenerateAiImage = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      postId,
+      mediaId,
+      instruction,
+    }: {
+      postId: string
+      mediaId: string
+      instruction: string
+    }) => regenerateAiImage(postId, mediaId, instruction),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS],
+      })
+      toast.success(
+        data?.message ||
+          'Image queued — your new image will appear here in about 2 minutes.',
+      )
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to queue image regen'))
     },
   })
 }
