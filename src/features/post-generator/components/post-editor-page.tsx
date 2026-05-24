@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -311,12 +311,6 @@ export function PostEditorPage() {
     else if (suggestion.suggestion === 'pdf') handleAttachClick('pdf')
   }, [suggestion])
 
-  const blockedByPdf = hasPdf
-  const blockedReason = useMemo(() => {
-    if (!blockedByPdf) return ''
-    return 'PDF posts can\u2019t be auto-published yet. Remove the PDF or publish manually on LinkedIn.'
-  }, [blockedByPdf])
-
   const goBack = () => {
     navigate({
       to: `/agents/$profileId/$agentType/calendar` as any,
@@ -509,11 +503,6 @@ export function PostEditorPage() {
               }}
             />
           </div>
-          {blockedByPdf && (
-            <div className='border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800'>
-              {blockedReason}
-            </div>
-          )}
           <div className='flex shrink-0 items-center justify-between border-t px-4 py-3'>
             <div className='flex items-center gap-3 text-xs'>
               <span className={cn('font-medium', charCountColor(charCount))}>
@@ -569,10 +558,8 @@ export function PostEditorPage() {
                 onClick={handleApprove}
                 disabled={
                   approvePost.isPending ||
-                  post.status === 'approved' ||
-                  blockedByPdf
+                  post.status === 'approved'
                 }
-                title={blockedByPdf ? blockedReason : undefined}
               >
                 <IconCheck className='mr-1.5 size-3.5' />
                 Approve

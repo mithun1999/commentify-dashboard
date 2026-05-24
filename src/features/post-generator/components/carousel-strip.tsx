@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   IconLoader2,
   IconRefresh,
@@ -7,6 +7,9 @@ import {
   IconFileTypePdf,
   IconPalette,
   IconDownload,
+  IconChevronLeft,
+  IconChevronRight,
+  IconZoomIn,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -78,6 +81,7 @@ export function CarouselStrip({
   onSwitchTemplate,
   isMutating,
 }: CarouselStripProps) {
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const [activeSlide, setActiveSlide] = useState<CarouselSlideState | null>(null)
   const [switchOpen, setSwitchOpen] = useState(false)
 
@@ -144,10 +148,23 @@ export function CarouselStrip({
           <SlideTile
             key={slide.index}
             slide={slide}
-            onClick={() => setActiveSlide(slide)}
+            onClick={() => setPreviewIndex(slide.index)}
           />
         ))}
       </div>
+
+      {previewIndex !== null && (
+        <SlideLightboxDialog
+          slides={carousel.slides}
+          index={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          onChangeIndex={setPreviewIndex}
+          onEdit={(slide) => {
+            setPreviewIndex(null)
+            setActiveSlide(slide)
+          }}
+        />
+      )}
 
       {activeSlide && (
         <SlideActionsDialog
@@ -222,11 +239,139 @@ function SlideTile({
       {ready && (
         <div className='absolute inset-x-0 top-0 hidden items-center justify-end gap-1 p-1 group-hover:flex'>
           <span className='rounded-full bg-black/70 p-1 text-white'>
-            <IconEdit className='size-3' />
+            <IconZoomIn className='size-3' />
           </span>
         </div>
       )}
     </button>
+  )
+}
+
+function SlideLightboxDialog({
+  slides,
+  index,
+  onClose,
+  onChangeIndex,
+  onEdit,
+}: {
+  slides: CarouselSlideState[]
+  index: number
+  onClose: () => void
+  onChangeIndex: (next: number) => void
+  onEdit: (slide: CarouselSlideState) => void
+}) {
+  const slide = slides[index]
+  const hasPrev = index > 0
+  const hasNext = index < slides.length - 1
+  const ready = slide?.status === 'ready' && !!slide.url
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && hasPrev) onChangeIndex(index - 1)
+      else if (e.key === 'ArrowRight' && hasNext) onChangeIndex(index + 1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [index, hasPrev, hasNext, onChangeIndex])
+
+  if (!slide) return null
+
+  return (
+    <Dialog open onOpenChange={(o) => (o ? null : onClose())}>
+      <DialogContent className='max-w-3xl gap-4 p-4 sm:p-6'>
+        <DialogHeader className='flex flex-row items-start justify-between gap-2 space-y-0'>
+          <div className='min-w-0'>
+            <DialogTitle className='truncate'>{slide.title}</DialogTitle>
+            <DialogDescription className='text-xs'>
+              Slide {index + 1} of {slides.length}
+            </DialogDescription>
+          </div>
+          <Button
+            size='sm'
+            variant='outline'
+            onClick={() => onEdit(slide)}
+            disabled={!ready}
+            className='shrink-0'
+          >
+            <IconEdit className='mr-1.5 size-3.5' />
+            Edit slide
+          </Button>
+        </DialogHeader>
+
+        <div className='relative flex items-center justify-center'>
+          <Button
+            variant='outline'
+            size='icon'
+            className='absolute left-1 z-10 size-9 rounded-full shadow disabled:opacity-30'
+            onClick={() => hasPrev && onChangeIndex(index - 1)}
+            disabled={!hasPrev}
+            aria-label='Previous slide'
+          >
+            <IconChevronLeft className='size-5' />
+          </Button>
+
+          <div className='flex aspect-square w-full max-w-[560px] items-center justify-center overflow-hidden rounded-lg border bg-muted'>
+            {ready ? (
+              <img
+                src={slide.url}
+                alt={slide.title}
+                className='h-full w-full object-contain'
+              />
+            ) : (
+              <div className='flex flex-col items-center gap-2 p-6 text-center'>
+                {slide.status === 'failed' ? (
+                  <>
+                    <IconAlertTriangle className='size-8 text-red-500' />
+                    <span className='text-xs text-red-700'>
+                      {slide.error || 'Slide generation failed'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <IconLoader2 className='size-8 animate-spin text-muted-foreground' />
+                    <span className='text-xs text-muted-foreground'>
+                      Generating…
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <Button
+            variant='outline'
+            size='icon'
+            className='absolute right-1 z-10 size-9 rounded-full shadow disabled:opacity-30'
+            onClick={() => hasNext && onChangeIndex(index + 1)}
+            disabled={!hasNext}
+            aria-label='Next slide'
+          >
+            <IconChevronRight className='size-5' />
+          </Button>
+        </div>
+
+        {slide.body && (
+          <p className='line-clamp-3 text-center text-xs text-muted-foreground'>
+            {slide.body}
+          </p>
+        )}
+
+        <div className='flex justify-center gap-1.5'>
+          {slides.map((s, i) => (
+            <button
+              key={s.index}
+              type='button'
+              onClick={() => onChangeIndex(i)}
+              aria-label={`Go to slide ${i + 1}`}
+              className={cn(
+                'h-1.5 rounded-full transition-all',
+                i === index ? 'w-6 bg-foreground' : 'w-1.5 bg-muted-foreground/30',
+              )}
+            />
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
