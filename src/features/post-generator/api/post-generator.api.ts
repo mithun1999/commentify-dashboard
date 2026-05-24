@@ -254,8 +254,41 @@ export interface PostMedia {
   originalFilename: string
   size: number
   source?: 'ai' | 'user'
-  aiKind?: 'chat_screenshot' | 'dashboard_screenshot'
+  aiKind?: 'chat_screenshot' | 'dashboard_screenshot' | 'carousel_slide' | 'carousel_pdf'
+  slideIndex?: number
   createdAt?: string
+}
+
+export interface CarouselSlideState {
+  index: number
+  title: string
+  body?: string
+  accent?: string
+  prompt: string
+  status: 'pending' | 'generating' | 'ready' | 'failed'
+  blobName?: string
+  url?: string
+  size?: number
+  error?: string
+  updatedAt?: string
+}
+
+export interface CarouselPayload {
+  styleKey: CarouselStyleKey
+  narrativeContext?: string
+  slides: CarouselSlideState[]
+  pdf?: { blobName?: string; url?: string; size?: number; assembledAt?: string }
+  status: 'generating' | 'assembling' | 'ready' | 'failed'
+  error?: string
+}
+
+export interface PostImageFit {
+  type: string
+  confidence?: number
+  reasoning?: string
+  generatedAt?: string
+  error?: string | null
+  carousel?: CarouselPayload
 }
 
 export interface RegenerateAiImageResponse {
@@ -310,6 +343,115 @@ export async function getFormatSuggestions(postId: string, commentary: string): 
     method: 'POST',
     url: `/post-generator/posts/${postId}/format-suggestions`,
     data: { commentary },
+  })
+  return data
+}
+
+export type CarouselStyleKey =
+  | 'gradient_modern'
+  | 'editorial_quote'
+  | 'hand_drawn'
+  | 'tabloid_breaking'
+  | 'minimalist_blue'
+  | 'vintage_print'
+
+export type BrandBackgroundMode = 'cream' | 'white' | 'dark'
+
+export interface BrandSettings {
+  _id?: string
+  profileId: string
+  ownerId: string
+  colors: {
+    primary: string
+    accent: string
+    background: BrandBackgroundMode
+  }
+  lockedStyles: CarouselStyleKey[]
+  autoDerived: boolean
+  derivedFrom?: {
+    sourceSummary?: string
+    creatorSampleIds?: string[]
+    derivedAt?: string
+  }
+  lastRotationIndex?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export async function getBrandSettings(profileId: string): Promise<BrandSettings> {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/post-generator/brand-settings/${profileId}`,
+  })
+  return data
+}
+
+export async function updateBrandSettings(
+  profileId: string,
+  patch: {
+    colors?: Partial<BrandSettings['colors']>
+    lockedStyles?: CarouselStyleKey[]
+  },
+): Promise<BrandSettings> {
+  const { data } = await axiosInstance({
+    method: 'PATCH',
+    url: `/post-generator/brand-settings/${profileId}`,
+    data: patch,
+  })
+  return data
+}
+
+export async function rederiveBrandSettings(profileId: string): Promise<BrandSettings> {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/brand-settings/${profileId}/rederive`,
+  })
+  return data
+}
+
+export interface CarouselSlideJobResponse {
+  status: 'queued'
+  jobId?: string
+  slideIndex?: number
+  slideCount?: number
+  styleKey?: CarouselStyleKey
+  message: string
+}
+
+export async function editCarouselSlide(
+  postId: string,
+  slideIndex: number,
+  instruction: string,
+): Promise<CarouselSlideJobResponse> {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/carousel/slides/${slideIndex}/edit`,
+    data: { instruction },
+  })
+  return data
+}
+
+export async function regenerateCarouselSlide(
+  postId: string,
+  slideIndex: number,
+  overrides: { title?: string; body?: string; accent?: string } = {},
+): Promise<CarouselSlideJobResponse> {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/carousel/slides/${slideIndex}/regenerate`,
+    data: overrides,
+  })
+  return data
+}
+
+export async function switchCarouselTemplate(
+  postId: string,
+  styleKey: CarouselStyleKey,
+): Promise<CarouselSlideJobResponse> {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/carousel/switch-template`,
+    data: { styleKey },
   })
   return data
 }

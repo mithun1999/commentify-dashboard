@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { IconCheck, IconExternalLink, IconLoader2, IconPlus, IconTrash, IconSparkles, IconUsers, IconRocket, IconRefresh, IconCalendarEvent, IconMessage2, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { VoiceChatPanel } from './voice-chat-panel'
+import { BrandSettingsPanel } from './brand-settings-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -318,6 +319,9 @@ function CompletedSettingsView({
             </p>
           )}
         </div>
+
+        {/* Brand for Carousels */}
+        <BrandSettingsPanel profileId={profileId} />
 
         {/* Posting Schedule */}
         <div className='rounded-xl border p-6'>

@@ -29,9 +29,18 @@ import {
   deletePostMedia,
   regenerateAiImage,
   getFormatSuggestions,
+  getBrandSettings,
+  updateBrandSettings,
+  rederiveBrandSettings,
+  editCarouselSlide,
+  regenerateCarouselSlide,
+  switchCarouselTemplate,
   type CreateManualPostPayload,
   type PostingPreferences,
   type FormatSuggestion,
+  type BrandSettings,
+  type CarouselStyleKey,
+  type CarouselStyleKey,
 } from '../api/post-generator.api'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 
@@ -47,6 +56,7 @@ export enum PostGeneratorQueryEnum {
   ONBOARDING_STATUS = 'post-gen-onboarding-status',
   CREATORS = 'post-gen-creators',
   POSTING_PREFERENCES = 'post-gen-preferences',
+  BRAND_SETTINGS = 'post-gen-brand-settings',
 }
 
 export const useCurrentCalendar = (profileId: string | undefined) => {
@@ -460,6 +470,79 @@ export const useRegenerateAiImage = (calendarId: string) => {
   })
 }
 
+const invalidateCalendarQueries = (queryClient: any, calendarId: string) => {
+  queryClient.invalidateQueries({
+    queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
+  })
+  queryClient.invalidateQueries({
+    queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS],
+  })
+}
+
+export const useEditCarouselSlide = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      postId,
+      slideIndex,
+      instruction,
+    }: {
+      postId: string
+      slideIndex: number
+      instruction: string
+    }) => editCarouselSlide(postId, slideIndex, instruction),
+    onSuccess: (data) => {
+      invalidateCalendarQueries(queryClient, calendarId)
+      toast.success(data?.message || 'Slide edit queued.')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to queue slide edit'))
+    },
+  })
+}
+
+export const useRegenerateCarouselSlide = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      postId,
+      slideIndex,
+      overrides,
+    }: {
+      postId: string
+      slideIndex: number
+      overrides?: { title?: string; body?: string; accent?: string }
+    }) => regenerateCarouselSlide(postId, slideIndex, overrides ?? {}),
+    onSuccess: (data) => {
+      invalidateCalendarQueries(queryClient, calendarId)
+      toast.success(data?.message || 'Slide regenerating.')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to queue slide regen'))
+    },
+  })
+}
+
+export const useSwitchCarouselTemplate = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      postId,
+      styleKey,
+    }: {
+      postId: string
+      styleKey: CarouselStyleKey
+    }) => switchCarouselTemplate(postId, styleKey),
+    onSuccess: (data) => {
+      invalidateCalendarQueries(queryClient, calendarId)
+      toast.success(data?.message || 'Switching carousel template — all slides regenerating.')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to switch carousel template'))
+    },
+  })
+}
+
 export const useFormatSuggestions = (
   postId: string | undefined,
   commentary: string,
@@ -487,6 +570,49 @@ export const useUpdatePostingPreferences = () => {
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to save preferences'))
+    },
+  })
+}
+
+export const useBrandSettings = (profileId: string | undefined) => {
+  return useQuery<BrandSettings>({
+    queryKey: [PostGeneratorQueryEnum.BRAND_SETTINGS, profileId],
+    enabled: Boolean(profileId),
+    queryFn: () => getBrandSettings(profileId!),
+  })
+}
+
+export const useUpdateBrandSettings = (profileId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (patch: {
+      colors?: Partial<BrandSettings['colors']>
+      lockedStyles?: CarouselStyleKey[]
+    }) => updateBrandSettings(profileId, patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.BRAND_SETTINGS, profileId],
+      })
+      toast.success('Brand settings saved')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to save brand settings'))
+    },
+  })
+}
+
+export const useRederiveBrandSettings = (profileId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => rederiveBrandSettings(profileId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.BRAND_SETTINGS, profileId],
+      })
+      toast.success('Brand re-derived from your voice and creators')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to re-derive brand'))
     },
   })
 }

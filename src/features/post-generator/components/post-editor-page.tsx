@@ -23,15 +23,19 @@ import {
   useApprovePost,
   useCalendarStream,
   useDeletePostMedia,
+  useEditCarouselSlide,
   useEditPost,
   useFormatSuggestions,
   useRegenerateAiImage,
+  useRegenerateCarouselSlide,
   useRejectPost,
+  useSwitchCarouselTemplate,
   useUploadPostMedia,
 } from '../query/post-generator.query'
-import type { PostMedia } from '../api/post-generator.api'
+import type { CarouselPayload, PostMedia } from '../api/post-generator.api'
 import { PostChatPanel } from './post-chat-panel'
 import { RegenerateImageDialog } from './regenerate-image-dialog'
+import { CarouselStrip } from './carousel-strip'
 
 function charCountColor(count: number) {
   if (count >= 1000 && count <= 1200) return 'text-green-600'
@@ -102,6 +106,9 @@ export function PostEditorPage() {
   const uploadMedia = useUploadPostMedia(calendarId)
   const deleteMedia = useDeletePostMedia(calendarId)
   const regenerateAi = useRegenerateAiImage(calendarId)
+  const editSlide = useEditCarouselSlide(calendarId)
+  const regenerateSlide = useRegenerateCarouselSlide(calendarId)
+  const switchTemplate = useSwitchCarouselTemplate(calendarId)
   const [regenTargetMediaId, setRegenTargetMediaId] = useState<string | null>(
     null,
   )
@@ -114,8 +121,15 @@ export function PostEditorPage() {
   const imageSlotsRemaining = Math.max(0, 9 - imageCount)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const carouselInProgress = (() => {
+    const c = (post as any)?.imageFit?.carousel as CarouselPayload | undefined
+    if (!c) return false
+    return c.status !== 'ready' && c.status !== 'failed'
+  })()
   useCalendarStream(
-    post?.status === 'generating' ? calendarId || undefined : undefined,
+    post?.status === 'generating' || carouselInProgress
+      ? calendarId || undefined
+      : undefined,
     profileId,
   )
 
@@ -424,18 +438,58 @@ export function PostEditorPage() {
               className='min-h-[60vh] resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0'
               placeholder='Post content...'
             />
-            <MediaStrip
-              media={media}
-              onRemove={handleRemoveMedia}
-              onRegenerate={handleOpenRegen}
-              regeneratingMediaId={post?.regeneratingMediaId ?? null}
-              onAttachImages={() => handleAttachClick('image')}
-              onAttachPdf={() => handleAttachClick('pdf')}
-              imageSlotsRemaining={imageSlotsRemaining}
-              hasPdf={hasPdf}
-              hasImages={hasImages}
-              uploading={uploadMedia.isPending}
-            />
+            {(() => {
+              const carousel = (post as any)?.imageFit?.carousel as
+                | CarouselPayload
+                | undefined
+              if (carousel?.slides?.length) {
+                return (
+                  <CarouselStrip
+                    carousel={carousel}
+                    media={media}
+                    isMutating={
+                      editSlide.isPending ||
+                      regenerateSlide.isPending ||
+                      switchTemplate.isPending
+                    }
+                    onEditSlide={(slideIndex, instruction) =>
+                      post?._id &&
+                      editSlide.mutate({
+                        postId: post._id,
+                        slideIndex,
+                        instruction,
+                      })
+                    }
+                    onRegenerateSlide={(slideIndex, overrides) =>
+                      post?._id &&
+                      regenerateSlide.mutate({
+                        postId: post._id,
+                        slideIndex,
+                        overrides,
+                      })
+                    }
+                    onSwitchTemplate={(styleKey) =>
+                      post?._id &&
+                      switchTemplate.mutate({ postId: post._id, styleKey })
+                    }
+                  />
+                )
+              }
+              return (
+                <MediaStrip
+                  media={media}
+                  onRemove={handleRemoveMedia}
+                  onRegenerate={handleOpenRegen}
+                  regeneratingMediaId={post?.regeneratingMediaId ?? null}
+                  onAttachImages={() => handleAttachClick('image')}
+                  onAttachPdf={() => handleAttachClick('pdf')}
+                  imageSlotsRemaining={imageSlotsRemaining}
+                  hasPdf={hasPdf}
+                  hasImages={hasImages}
+                  uploading={uploadMedia.isPending}
+                />
+              )
+            })()}
             <RegenerateImageDialog
               open={regenTargetMediaId !== null}
               onOpenChange={(o) => (o ? null : closeRegenDialog())}
