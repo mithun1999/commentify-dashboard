@@ -40,7 +40,6 @@ import {
   type FormatSuggestion,
   type BrandSettings,
   type CarouselStyleKey,
-  type CarouselStyleKey,
 } from '../api/post-generator.api'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 
