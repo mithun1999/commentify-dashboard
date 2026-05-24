@@ -16,6 +16,7 @@ export interface AgentTypeDefinition {
   badge?: string
   recommended?: boolean
   featureFlag?: string
+  hiddenInOnboarding?: boolean
   isEligible?: (user: IUser) => boolean
   scrapeSettingsComponent: ComponentType<{ profileId: string }>
   commentSettingsComponent: ComponentType<{ profileId: string }>

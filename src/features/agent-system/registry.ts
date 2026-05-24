@@ -44,6 +44,7 @@ export const AGENT_TYPES: Record<string, AgentTypeDefinition> = {
     platform: 'linkedin',
     access: 'open',
     badge: 'Beta',
+    hiddenInOnboarding: true,
     scrapeSettingsComponent: PlaceholderComponent,
     commentSettingsComponent: PlaceholderComponent,
     queueColumns: [],

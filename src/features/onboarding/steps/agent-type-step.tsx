@@ -51,7 +51,7 @@ export function AgentTypeStep() {
     useUpdateOnboardingStatus()
   const [selected, setSelected] = useState<AgentTypeDefinition | null>(null)
   const [selectedMode, setSelectedMode] = useState<AgentMode | null>(null)
-  const agentTypes = getAllAgentTypes()
+  const agentTypes = getAllAgentTypes().filter((t) => !t.hiddenInOnboarding)
 
   if (isChecking) {
     return (
