@@ -85,7 +85,7 @@ const twitterSchema = z.object({
   customKeywords: z.array(z.string()),
   selectedHashtags: z.array(z.string()).max(6, 'Maximum 6 hashtags'),
   customHashtags: z.array(z.string()),
-  tweetsPerDay: z.number().min(1).max(100),
+  tweetsPerDay: z.number().min(1).max(30),
 })
 
 type TwitterValues = z.infer<typeof twitterSchema>

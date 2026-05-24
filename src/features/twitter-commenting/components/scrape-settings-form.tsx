@@ -57,7 +57,7 @@ const schema = z.object({
   noneOfTheseWords: z.array(z.string()).max(6),
   theseHashtags: z.array(z.string()).max(6),
   language: z.string(),
-  numberOfPostsToScrapePerDay: z.number().min(1).max(100),
+  numberOfPostsToScrapePerDay: z.number().min(1).max(30),
   autoSchedule: z.boolean(),
   skipCompanyPosts: z.boolean(),
   engagementThreshold: z.enum(['strict', 'moderate', 'disabled']),
@@ -471,11 +471,11 @@ export function TwitterScrapeSettings({ profileId }: { profileId: string }) {
                     <Input
                       type='number'
                       min={1}
-                      max={100}
+                      max={30}
                       className='mt-2 w-32'
                       {...field}
                       onChange={(e) => {
-                        const val = Math.min(100, Math.max(1, Number(e.target.value)))
+                        const val = Math.min(30, Math.max(1, Number(e.target.value)))
                         field.onChange(val)
                       }}
                     />
@@ -484,7 +484,7 @@ export function TwitterScrapeSettings({ profileId }: { profileId: string }) {
                     <span className='border-border flex h-4 w-4 items-center justify-center rounded-full border'>
                       <Info className='text-muted-foreground h-3 w-3' />
                     </span>
-                    Max. 100 tweets per day
+                    Max. 30 tweets per day
                   </p>
                 </FormItem>
               )}
