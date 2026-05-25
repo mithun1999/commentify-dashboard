@@ -1,14 +1,22 @@
+import { useState } from 'react'
 import {
   IconCheck,
   IconX,
   IconSend,
   IconLoader2,
+  IconArrowBackUp,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { useApprovePost, useRejectPost, usePublishPost } from '../query/post-generator.query'
+import {
+  useApprovePost,
+  useUnapprovePost,
+  useRejectPost,
+  usePublishPost,
+} from '../query/post-generator.query'
+import { RejectPostDialog } from './reject-post-dialog'
 
 interface PostCardProps {
   post: any
@@ -45,11 +53,20 @@ function getHookPreview(content: string | undefined) {
 
 export function PostCard({ post, calendarId, onClick }: PostCardProps) {
   const approvePost = useApprovePost(calendarId)
+  const unapprovePost = useUnapprovePost(calendarId)
   const rejectPost = useRejectPost(calendarId)
   const publishPost = usePublishPost(calendarId)
+  const [rejectOpen, setRejectOpen] = useState(false)
 
   const isGenerating = post.status === 'generating'
   const charCount = post.content?.length ?? 0
+
+  const submitReject = (reason: string) => {
+    rejectPost.mutate(
+      { postId: post._id, reason, profileId: post.profileId },
+      { onSuccess: () => setRejectOpen(false) },
+    )
+  }
 
   return (
     <div
@@ -128,13 +145,7 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
               variant='ghost'
               size='icon'
               className='size-7'
-              onClick={() =>
-                rejectPost.mutate({
-                  postId: post._id,
-                  reason: 'Not aligned with goals',
-                  profileId: post.profileId,
-                })
-              }
+              onClick={() => setRejectOpen(true)}
               disabled={rejectPost.isPending}
               title='Reject & Regenerate'
             >
@@ -167,9 +178,33 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
 
         {(post.status === 'approved' || post.status === 'scheduled') && (
           <div
-            className='opacity-0 transition-opacity group-hover:opacity-100'
+            className='flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100'
             onClick={(e) => e.stopPropagation()}
           >
+            <Button
+              variant='ghost'
+              size='icon'
+              className='size-7'
+              onClick={() => unapprovePost.mutate(post._id)}
+              disabled={unapprovePost.isPending}
+              title='Unapprove (move back to draft)'
+            >
+              {unapprovePost.isPending ? (
+                <IconLoader2 className='size-3.5 animate-spin' />
+              ) : (
+                <IconArrowBackUp className='size-3.5 text-amber-600' />
+              )}
+            </Button>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='size-7'
+              onClick={() => setRejectOpen(true)}
+              disabled={rejectPost.isPending}
+              title='Reject & Regenerate'
+            >
+              <IconX className='size-3.5 text-red-500' />
+            </Button>
             <Button
               variant='ghost'
               size='sm'
@@ -187,6 +222,13 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
           </div>
         )}
       </div>
+
+      <RejectPostDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        onConfirm={submitReject}
+        isPending={rejectPost.isPending}
+      />
     </div>
   )
 }

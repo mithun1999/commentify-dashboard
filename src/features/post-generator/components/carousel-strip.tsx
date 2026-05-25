@@ -86,23 +86,33 @@ export function CarouselStrip({
   const [switchOpen, setSwitchOpen] = useState(false)
 
   const pdfMedia = media.find((m) => m.aiKind === 'carousel_pdf')
-  const allSlidesReady = carousel.slides.every((s) => s.status === 'ready')
+  const slides = carousel.slides ?? []
+  const hasSlides = slides.length > 0
+  const allSlidesReady = hasSlides && slides.every((s) => s.status === 'ready')
   const isAssembling =
     carousel.status === 'assembling' ||
     (allSlidesReady && carousel.status !== 'ready')
+  // While we're seeding a fresh carousel (convertToCarousel set status=generating
+  // with slides=[]), show placeholder tiles so the user gets visual feedback
+  // during the 5-30s gap before slides start streaming in.
+  const isSeeding = !hasSlides && carousel.status === 'generating'
+  const placeholderCount = 5
+  const styleLabel = carousel.styleKey
+    ? (STYLE_LABELS[carousel.styleKey] ?? carousel.styleKey)
+    : 'Building…'
 
   return (
-    <div className='mt-6 space-y-3'>
+    <div className='mt-6 w-full min-w-0 space-y-3'>
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <div className='flex items-center gap-2 text-xs'>
           <span className='inline-flex items-center gap-1 rounded-md bg-violet-100 px-2 py-1 font-medium text-violet-700'>
             <IconPalette className='size-3' />
-            Carousel · {STYLE_LABELS[carousel.styleKey] ?? carousel.styleKey}
+            Carousel · {styleLabel}
           </span>
           <span className='text-muted-foreground'>
-            {carousel.slides.length} slides
+            {hasSlides ? `${slides.length} slides` : 'preparing slides'}
           </span>
-          {carousel.status === 'generating' && (
+          {carousel.status === 'generating' && !allSlidesReady && (
             <span className='inline-flex items-center gap-1 text-amber-700'>
               <IconLoader2 className='size-3 animate-spin' />
               Slides generating…
@@ -130,27 +140,34 @@ export function CarouselStrip({
               </a>
             </Button>
           )}
-          <Button
-            variant='outline'
-            size='sm'
-            className='h-8 text-xs'
-            onClick={() => setSwitchOpen(true)}
-            disabled={isMutating}
-          >
-            <IconPalette className='mr-1.5 size-3.5' />
-            Switch template
-          </Button>
+          {hasSlides && (
+            <Button
+              variant='outline'
+              size='sm'
+              className='h-8 text-xs'
+              onClick={() => setSwitchOpen(true)}
+              disabled={isMutating}
+            >
+              <IconPalette className='mr-1.5 size-3.5' />
+              Switch template
+            </Button>
+          )}
         </div>
       </div>
 
       <div className='flex gap-3 overflow-x-auto pb-2'>
-        {carousel.slides.map((slide) => (
-          <SlideTile
-            key={slide.index}
-            slide={slide}
-            onClick={() => setPreviewIndex(slide.index)}
-          />
-        ))}
+        {hasSlides
+          ? slides.map((slide) => (
+              <SlideTile
+                key={slide.index}
+                slide={slide}
+                onClick={() => setPreviewIndex(slide.index)}
+              />
+            ))
+          : isSeeding &&
+            Array.from({ length: placeholderCount }).map((_, i) => (
+              <SlideSkeletonTile key={i} index={i} />
+            ))}
       </div>
 
       {previewIndex !== null && (
@@ -192,6 +209,20 @@ export function CarouselStrip({
         }}
         isMutating={isMutating}
       />
+    </div>
+  )
+}
+
+function SlideSkeletonTile({ index }: { index: number }) {
+  return (
+    <div
+      className='border-border bg-muted/40 relative flex h-32 w-32 shrink-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-md border'
+      aria-label={`Slide ${index + 1} generating`}
+    >
+      <IconLoader2 className='text-muted-foreground size-5 animate-spin' />
+      <span className='text-muted-foreground text-[10px]'>
+        Slide {index + 1}
+      </span>
     </div>
   )
 }

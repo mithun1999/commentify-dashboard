@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { IconCheck, IconDeviceFloppy } from '@tabler/icons-react'
+import { IconArrowBackUp, IconCheck, IconDeviceFloppy, IconX } from '@tabler/icons-react'
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,14 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
-import { useEditPost, useApprovePost } from '../query/post-generator.query'
+import {
+  useEditPost,
+  useApprovePost,
+  useUnapprovePost,
+  useRejectPost,
+} from '../query/post-generator.query'
 import { PostChatPanel } from './post-chat-panel'
+import { RejectPostDialog } from './reject-post-dialog'
 
 interface PostEditorDialogProps {
   post: any
@@ -31,14 +37,17 @@ function charCountColor(count: number) {
 export function PostEditorDialog({
   post,
   calendarId,
-  profileId: _profileId,
+  profileId,
   open,
   onOpenChange,
 }: PostEditorDialogProps) {
   const [content, setContent] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [rejectOpen, setRejectOpen] = useState(false)
   const editPost = useEditPost(calendarId)
   const approvePost = useApprovePost(calendarId)
+  const unapprovePost = useUnapprovePost(calendarId)
+  const rejectPost = useRejectPost(calendarId)
 
   useEffect(() => {
     if (post?.content) {
@@ -84,6 +93,29 @@ export function PostEditorDialog({
         onSuccess: () => onOpenChange(false),
       })
     }
+  }
+
+  const handleUnapprove = () => {
+    if (!post) return
+    unapprovePost.mutate(post._id)
+  }
+
+  const handleReject = () => {
+    if (!post) return
+    setRejectOpen(true)
+  }
+
+  const submitReject = (reason: string) => {
+    if (!post) return
+    rejectPost.mutate(
+      { postId: post._id, reason, profileId },
+      {
+        onSuccess: () => {
+          setRejectOpen(false)
+          onOpenChange(false)
+        },
+      },
+    )
   }
 
   const handleChatUpdate = useCallback((newContent: string) => {
@@ -148,6 +180,20 @@ export function PostEditorDialog({
                 )}
               </div>
               <div className='flex items-center gap-2'>
+                {(post.status === 'ready' ||
+                  post.status === 'approved' ||
+                  post.status === 'scheduled' ||
+                  post.status === 'needs_attention') && (
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={handleReject}
+                    disabled={rejectPost.isPending}
+                  >
+                    <IconX className='mr-1.5 size-3.5 text-red-500' />
+                    Reject
+                  </Button>
+                )}
                 <Button
                   variant='outline'
                   size='sm'
@@ -157,14 +203,26 @@ export function PostEditorDialog({
                   <IconDeviceFloppy className='mr-1.5 size-3.5' />
                   Save
                 </Button>
-                <Button
-                  size='sm'
-                  onClick={handleApprove}
-                  disabled={approvePost.isPending}
-                >
-                  <IconCheck className='mr-1.5 size-3.5' />
-                  Approve
-                </Button>
+                {post.status === 'approved' || post.status === 'scheduled' ? (
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={handleUnapprove}
+                    disabled={unapprovePost.isPending}
+                  >
+                    <IconArrowBackUp className='mr-1.5 size-3.5 text-amber-600' />
+                    Unapprove
+                  </Button>
+                ) : (
+                  <Button
+                    size='sm'
+                    onClick={handleApprove}
+                    disabled={approvePost.isPending}
+                  >
+                    <IconCheck className='mr-1.5 size-3.5' />
+                    Approve
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -178,6 +236,13 @@ export function PostEditorDialog({
           </div>
         </div>
       </DialogContent>
+
+      <RejectPostDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        onConfirm={submitReject}
+        isPending={rejectPost.isPending}
+      />
     </Dialog>
   )
 }

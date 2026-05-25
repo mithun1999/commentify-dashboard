@@ -52,6 +52,14 @@ export async function approvePost(calendarId: string, postId: string) {
   return data
 }
 
+export async function unapprovePost(calendarId: string, postId: string) {
+  const { data } = await axiosInstance({
+    method: 'PATCH',
+    url: `/post-generator/calendar/${calendarId}/post/${postId}/unapprove`,
+  })
+  return data
+}
+
 export async function editPost(calendarId: string, postId: string, content: string) {
   const { data } = await axiosInstance({
     method: 'PATCH',
@@ -77,6 +85,11 @@ export async function chatEditPost(calendarId: string, postId: string, message: 
     data: { message },
   })
   return data as {
+    action?:
+      | 'edit_text'
+      | 'convert_to_carousel'
+      | 'regenerate_image'
+      | 'unsupported'
     content: string
     assistantMessage: string
     editHistory: Array<{
@@ -86,6 +99,14 @@ export async function chatEditPost(calendarId: string, postId: string, message: 
       postSnapshot?: string
     }>
   }
+}
+
+export async function convertPostToCarousel(postId: string) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/convert-to-carousel`,
+  })
+  return data as { status: 'queued'; message: string }
 }
 
 export async function chatUpdateVoice(profileId: string, message: string) {

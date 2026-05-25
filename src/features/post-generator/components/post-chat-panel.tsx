@@ -24,6 +24,9 @@ export function PostChatPanel({
   onContentUpdate,
 }: PostChatPanelProps) {
   const [input, setInput] = useState('')
+  const [pendingIntent, setPendingIntent] = useState<
+    'edit' | 'carousel' | 'image' | null
+  >(null)
   const chatEditPost = useChatEditPost(calendarId)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -36,17 +39,29 @@ export function PostChatPanel({
     }
   }, [messages.length, chatEditPost.isPending])
 
+  const guessIntent = (text: string): 'edit' | 'carousel' | 'image' => {
+    const t = text.toLowerCase()
+    if (/(carousel|slides?|pdf|deck)/.test(t)) return 'carousel'
+    if (/(image|screenshot|chat|dashboard|picture|visual)/.test(t))
+      return 'image'
+    return 'edit'
+  }
+
   const handleSend = () => {
     const trimmed = input.trim()
     if (!trimmed || chatEditPost.isPending) return
 
     setInput('')
+    setPendingIntent(guessIntent(trimmed))
     chatEditPost.mutate(
       { postId: post._id, message: trimmed },
       {
         onSuccess: (data) => {
-          onContentUpdate(data.content)
+          if (!data?.action || data.action === 'edit_text') {
+            onContentUpdate(data.content)
+          }
         },
+        onSettled: () => setPendingIntent(null),
       }
     )
   }
@@ -70,9 +85,11 @@ export function PostChatPanel({
           <div className='flex flex-col items-center justify-center gap-2 py-12'>
             <IconSparkles className='text-muted-foreground/40 size-8' />
             <p className='text-muted-foreground text-center text-xs'>
-              Ask the AI to refine your post.
+              Ask the AI to refine your post, generate an image, or turn it
+              into a carousel.
               <br />
-              Try: "Make the hook punchier" or "Add a stat about retention"
+              Try: "Tighten the hook", "Generate an image", or "Convert this
+              into a 5-slide carousel"
             </p>
           </div>
         ) : (
@@ -115,7 +132,11 @@ export function PostChatPanel({
                 <div className='bg-muted flex items-center gap-2 rounded-lg px-3 py-2'>
                   <IconLoader2 className='size-3.5 animate-spin' />
                   <span className='text-muted-foreground text-xs'>
-                    Editing your post...
+                    {pendingIntent === 'carousel'
+                      ? 'Setting up a carousel from this post...'
+                      : pendingIntent === 'image'
+                        ? 'Working on the image...'
+                        : 'Editing your post...'}
                   </span>
                 </div>
               </div>
@@ -131,7 +152,7 @@ export function PostChatPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder='Tell the AI how to edit this post...'
+            placeholder='Edit the post, generate an image, or make it a carousel...'
             className='max-h-20 min-h-[40px] resize-none text-sm'
             rows={1}
           />

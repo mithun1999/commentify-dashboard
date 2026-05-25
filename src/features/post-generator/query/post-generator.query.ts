@@ -8,6 +8,7 @@ import {
   getCalendar,
   getActiveCalendars,
   approvePost,
+  unapprovePost,
   editPost,
   rejectPost,
   chatEditPost,
@@ -201,6 +202,25 @@ export const useApprovePost = (calendarId: string) => {
   })
 }
 
+export const useUnapprovePost = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (postId: string) => unapprovePost(calendarId, postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CURRENT_CALENDAR],
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS],
+      })
+      toast.success('Post moved back to draft')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to unapprove post'))
+    },
+  })
+}
+
 export const useEditPost = (calendarId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -240,10 +260,23 @@ export const useChatEditPost = (calendarId: string) => {
   return useMutation({
     mutationFn: ({ postId, message }: { postId: string; message: string }) =>
       chatEditPost(calendarId, postId, message),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CURRENT_CALENDAR],
       })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS],
+      })
+      if (data?.action === 'convert_to_carousel') {
+        toast.success('Generating carousel slides…')
+      } else if (data?.action === 'regenerate_image') {
+        toast.success('Working on the image…')
+      } else if (data?.action === 'unsupported') {
+        toast.info(data.assistantMessage || 'That request isn\'t supported.')
+      }
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to process edit'))

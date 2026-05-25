@@ -79,8 +79,8 @@ export function GenerateCalendarDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-2xl'>
-        <DialogHeader>
+      <DialogContent className='flex max-h-[90vh] flex-col sm:max-w-2xl'>
+        <DialogHeader className='shrink-0'>
           <DialogTitle>What's on your mind?</DialogTitle>
           <DialogDescription>
             {weekLabel
@@ -89,7 +89,7 @@ export function GenerateCalendarDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className='grid gap-5 py-2'>
+        <div className='-mx-6 grid flex-1 gap-5 overflow-y-auto px-6 py-2'>
           <div className='grid gap-2'>
             <Label htmlFor='this-week-events'>
               What did you do this week?
@@ -106,6 +106,7 @@ export function GenerateCalendarDialog({
               rows={3}
               maxLength={FIELD_MAX}
               disabled={isPending}
+              className='max-h-40 overflow-y-auto'
             />
           </div>
 
@@ -124,6 +125,7 @@ export function GenerateCalendarDialog({
               rows={3}
               maxLength={FIELD_MAX}
               disabled={isPending}
+              className='max-h-40 overflow-y-auto'
             />
           </div>
 
@@ -144,6 +146,7 @@ export function GenerateCalendarDialog({
               rows={3}
               maxLength={FIELD_MAX}
               disabled={isPending}
+              className='max-h-40 overflow-y-auto'
             />
           </div>
 
@@ -160,11 +163,12 @@ export function GenerateCalendarDialog({
               rows={2}
               maxLength={FIELD_MAX}
               disabled={isPending}
+              className='max-h-40 overflow-y-auto'
             />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className='shrink-0'>
           <Button
             type='button'
             variant='ghost'
