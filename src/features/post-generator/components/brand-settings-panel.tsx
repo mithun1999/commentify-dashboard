@@ -5,10 +5,13 @@ import {
   IconRefresh,
   IconCheck,
   IconSparkles,
+  IconMoodSmile,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import {
   useBrandSettings,
@@ -101,6 +104,7 @@ export function BrandSettingsPanel({ profileId }: BrandSettingsPanelProps) {
   const [accent, setAccent] = useState('#f97316')
   const [background, setBackground] = useState<BrandBackgroundMode>('cream')
   const [styles, setStyles] = useState<CarouselStyleKey[]>([])
+  const [allowMemes, setAllowMemes] = useState(false)
   const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
@@ -109,6 +113,7 @@ export function BrandSettingsPanel({ profileId }: BrandSettingsPanelProps) {
     setAccent(data.colors.accent)
     setBackground(data.colors.background)
     setStyles(data.lockedStyles)
+    setAllowMemes(!!data.allowMemes)
     setDirty(false)
   }, [data])
 
@@ -149,7 +154,11 @@ export function BrandSettingsPanel({ profileId }: BrandSettingsPanelProps) {
 
   const handleSave = () => {
     update.mutate(
-      { colors: { primary, accent, background }, lockedStyles: styles },
+      {
+        colors: { primary, accent, background },
+        lockedStyles: styles,
+        allowMemes,
+      },
       { onSuccess: () => setDirty(false) },
     )
   }
@@ -296,6 +305,36 @@ export function BrandSettingsPanel({ profileId }: BrandSettingsPanelProps) {
           )}
         </div>
 
+        <div className='border-muted/50 rounded-lg border p-3'>
+          <div className='flex items-start justify-between gap-4'>
+            <div className='flex items-start gap-3'>
+              <IconMoodSmile className='text-muted-foreground mt-0.5 size-4 shrink-0' />
+              <div>
+                <Label
+                  htmlFor='allow-memes-toggle'
+                  className='text-sm font-medium'
+                >
+                  Allow trending memes
+                </Label>
+                <p className='text-muted-foreground mt-0.5 text-xs'>
+                  When on, posts that fit a meme format may be illustrated with a
+                  curated, LinkedIn-appropriate meme template instead of a custom
+                  illustration. Off by default — turn on when you're comfortable
+                  with the tone.
+                </p>
+              </div>
+            </div>
+            <Switch
+              id='allow-memes-toggle'
+              checked={allowMemes}
+              onCheckedChange={(next) => {
+                setAllowMemes(next)
+                setDirty(true)
+              }}
+            />
+          </div>
+        </div>
+
         <div className='flex items-center justify-end gap-2 border-t pt-4'>
           {dirty && (
             <p className='text-muted-foreground mr-auto text-xs'>Unsaved changes</p>
@@ -310,6 +349,7 @@ export function BrandSettingsPanel({ profileId }: BrandSettingsPanelProps) {
               setAccent(data.colors.accent)
               setBackground(data.colors.background)
               setStyles(data.lockedStyles)
+              setAllowMemes(!!data.allowMemes)
               setDirty(false)
             }}
           >

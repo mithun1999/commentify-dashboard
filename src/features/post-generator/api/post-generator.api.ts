@@ -78,6 +78,14 @@ export async function rejectPost(calendarId: string, postId: string, reason: str
   return data
 }
 
+export async function deletePost(calendarId: string, postId: string) {
+  const { data } = await axiosInstance({
+    method: 'DELETE',
+    url: `/post-generator/calendar/${calendarId}/post/${postId}`,
+  })
+  return data
+}
+
 export async function chatEditPost(calendarId: string, postId: string, message: string) {
   const { data } = await axiosInstance({
     method: 'POST',
@@ -137,6 +145,19 @@ export async function publishPost(calendarId: string, postId: string) {
   return data
 }
 
+export async function reschedulePost(
+  calendarId: string,
+  postId: string,
+  scheduledAt: string,
+) {
+  const { data } = await axiosInstance({
+    method: 'PATCH',
+    url: `/post-generator/calendar/${calendarId}/post/${postId}/reschedule`,
+    data: { scheduledAt },
+  })
+  return data
+}
+
 export async function scheduleAll(calendarId: string) {
   const { data } = await axiosInstance({
     method: 'POST',
@@ -153,10 +174,24 @@ export async function getCalendarHistory(profileId: string) {
   return data
 }
 
+export type ComposerOutputType =
+  | 'auto'
+  | 'text_only'
+  | 'concept_illustration'
+  | 'chat_screenshot'
+  | 'dashboard_screenshot'
+  | 'trending_meme'
+  | 'carousel_deck'
+
 export interface CreateManualPostPayload {
   profileId: string
   idea: string
-  scheduledAt: string
+  // EITHER calendarId (active tab exists) OR weekStartDate (bootstrap /
+  // empty state). At least one preferred; if neither, the backend defaults
+  // to the current Monday's calendar.
+  calendarId?: string
+  weekStartDate?: string
+  outputType?: ComposerOutputType
   topic?: string
   pillar?: string
 }
@@ -275,10 +310,24 @@ export interface PostMedia {
   originalFilename: string
   size: number
   source?: 'ai' | 'user'
-  aiKind?: 'chat_screenshot' | 'dashboard_screenshot' | 'carousel_slide' | 'carousel_pdf'
+  aiKind?:
+    | 'chat_screenshot'
+    | 'dashboard_screenshot'
+    | 'carousel_slide'
+    | 'carousel_pdf'
+    | 'concept_illustration'
+    | 'trending_meme'
   slideIndex?: number
   createdAt?: string
 }
+
+export type SlideTemplateKey =
+  | 'generic'
+  | 'deck_cover'
+  | 'deck_closer'
+  | 'photo_metaphor'
+  | 'process_flowchart'
+  | 'comparison_table'
 
 export interface CarouselSlideState {
   index: number
@@ -292,6 +341,12 @@ export interface CarouselSlideState {
   size?: number
   error?: string
   updatedAt?: string
+  /**
+   * Per-slide layout template chosen by the carousel content agent (or
+   * overridden by the user in the regenerate dialog). When null/undefined
+   * the renderer treats it as 'generic'.
+   */
+  slideTemplate?: SlideTemplateKey
 }
 
 export interface CarouselPayload {
@@ -389,6 +444,7 @@ export interface BrandSettings {
   }
   lockedStyles: CarouselStyleKey[]
   autoDerived: boolean
+  allowMemes?: boolean
   derivedFrom?: {
     sourceSummary?: string
     creatorSampleIds?: string[]
@@ -412,6 +468,7 @@ export async function updateBrandSettings(
   patch: {
     colors?: Partial<BrandSettings['colors']>
     lockedStyles?: CarouselStyleKey[]
+    allowMemes?: boolean
   },
 ): Promise<BrandSettings> {
   const { data } = await axiosInstance({
@@ -426,6 +483,68 @@ export async function rederiveBrandSettings(profileId: string): Promise<BrandSet
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/brand-settings/${profileId}/rederive`,
+  })
+  return data
+}
+
+export interface ExpertiseTopic {
+  topic: string
+  masteryScore: number
+  evidence: string[]
+}
+
+export interface SignaturePerspective {
+  belief: string
+  topics: string[]
+}
+
+export type AuthorityArtifactKind =
+  | 'metric'
+  | 'named_project'
+  | 'before_after'
+  | 'lesson_from_failure'
+  | 'citation'
+
+export interface AuthorityArtifact {
+  kind: AuthorityArtifactKind
+  topic: string
+  /**
+   * A tight rephrasable sentence the writer agent drops into a post — see
+   * AuthorityArtifactService.SYSTEM_PROMPT in the BE. Always a string.
+   */
+  payload: string
+}
+
+export type MasteryStatus = 'idle' | 'computing' | 'failed'
+
+export interface MasterySignals {
+  expertiseTopics: ExpertiseTopic[]
+  signaturePerspectives: SignaturePerspective[]
+  authorityArtifacts: AuthorityArtifact[]
+  computedAt: string | null
+  status: MasteryStatus
+  error: string | null
+}
+
+export interface MasteryRecomputeQueuedResponse {
+  status: MasteryStatus
+  queued: boolean
+}
+
+export async function getMasterySignals(profileId: string): Promise<MasterySignals> {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/post-generator/mastery/${profileId}`,
+  })
+  return data
+}
+
+export async function recomputeMasterySignals(
+  profileId: string,
+): Promise<MasteryRecomputeQueuedResponse> {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/mastery/${profileId}/recompute`,
   })
   return data
 }
@@ -455,7 +574,12 @@ export async function editCarouselSlide(
 export async function regenerateCarouselSlide(
   postId: string,
   slideIndex: number,
-  overrides: { title?: string; body?: string; accent?: string } = {},
+  overrides: {
+    title?: string
+    body?: string
+    accent?: string
+    slideTemplate?: SlideTemplateKey
+  } = {},
 ): Promise<CarouselSlideJobResponse> {
   const { data } = await axiosInstance({
     method: 'POST',

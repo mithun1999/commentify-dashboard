@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { IconCheck, IconExternalLink, IconLoader2, IconPlus, IconTrash, IconSparkles, IconUsers, IconRocket, IconRefresh, IconCalendarEvent, IconMessage2, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { VoiceChatPanel } from './voice-chat-panel'
 import { BrandSettingsPanel } from './brand-settings-panel'
+import { MasterySignalsPanel } from './mastery-signals-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -319,6 +320,9 @@ function CompletedSettingsView({
             </p>
           )}
         </div>
+
+        {/* What we know about you (mastery signals) */}
+        <MasterySignalsPanel profileId={profileId} />
 
         {/* Brand for Carousels */}
         <BrandSettingsPanel profileId={profileId} />

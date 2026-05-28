@@ -60,10 +60,33 @@ export function RegenerateImageDialog({
     if (file) onReplaceUpload(file)
   }
 
-  const kindLabel =
-    media?.aiKind === 'dashboard_screenshot'
-      ? 'dashboard screenshot'
-      : 'chat screenshot'
+  const kindLabel = (() => {
+    switch (media?.aiKind) {
+      case 'dashboard_screenshot':
+        return 'dashboard screenshot'
+      case 'concept_illustration':
+        return 'illustration'
+      case 'trending_meme':
+        return 'meme'
+      case 'chat_screenshot':
+      default:
+        return 'chat screenshot'
+    }
+  })()
+
+  const exampleHint = (() => {
+    switch (media?.aiKind) {
+      case 'dashboard_screenshot':
+        return '"show MRR dropping instead", "switch from a line chart to a bar chart", "make the metric bigger"'
+      case 'concept_illustration':
+        return '"flip the before/after", "add a third quadrant for ‘ignored’", "label the arrow ‘compounding’"'
+      case 'trending_meme':
+        return '"swap the caption to ‘Mondays at 6am’", "use the ‘distracted boyfriend’ template instead"'
+      case 'chat_screenshot':
+      default:
+        return '"switch to iMessage instead of WhatsApp", "the last message should say ‘on my way’", "redact the contact name with red marker"'
+    }
+  })()
 
   return (
     <Dialog open={open} onOpenChange={(o) => (busy ? null : onOpenChange(o))}>
@@ -89,9 +112,7 @@ export function RegenerateImageDialog({
         <div className='grid gap-2'>
           <Label htmlFor='regen-instruction'>What would you like to change?</Label>
           <p className='text-muted-foreground text-xs'>
-            Be specific — e.g. "switch to iMessage instead of WhatsApp", "the
-            last message should say 'on my way'", "show MRR dropping instead",
-            "redact the contact name with red marker".
+            Be specific — e.g. {exampleHint}.
           </p>
           <Textarea
             id='regen-instruction'

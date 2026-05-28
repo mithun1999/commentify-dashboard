@@ -11,9 +11,11 @@ import {
   unapprovePost,
   editPost,
   rejectPost,
+  deletePost,
   chatEditPost,
   chatUpdateVoice,
   publishPost,
+  reschedulePost,
   scheduleAll,
   getCalendarHistory,
   startOnboarding,
@@ -33,6 +35,8 @@ import {
   getBrandSettings,
   updateBrandSettings,
   rederiveBrandSettings,
+  getMasterySignals,
+  recomputeMasterySignals,
   editCarouselSlide,
   regenerateCarouselSlide,
   switchCarouselTemplate,
@@ -41,6 +45,7 @@ import {
   type FormatSuggestion,
   type BrandSettings,
   type CarouselStyleKey,
+  type SlideTemplateKey,
 } from '../api/post-generator.api'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 
@@ -57,6 +62,7 @@ export enum PostGeneratorQueryEnum {
   CREATORS = 'post-gen-creators',
   POSTING_PREFERENCES = 'post-gen-preferences',
   BRAND_SETTINGS = 'post-gen-brand-settings',
+  MASTERY_SIGNALS = 'post-gen-mastery-signals',
 }
 
 export const useCurrentCalendar = (profileId: string | undefined) => {
@@ -151,7 +157,6 @@ export const useCreateManualPost = () => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CALENDAR_HISTORY, payload.profileId],
       })
-      toast.success('Drafting your post with AI...')
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to create post'))
@@ -255,6 +260,28 @@ export const useRejectPost = (calendarId: string) => {
   })
 }
 
+export const useDeletePost = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ postId }: { postId: string }) => deletePost(calendarId, postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CURRENT_CALENDAR],
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS],
+      })
+      toast.success('Post deleted')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to delete post'))
+    },
+  })
+}
+
 export const useChatEditPost = (calendarId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -310,10 +337,33 @@ export const usePublishPost = (calendarId: string) => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
       })
-      toast.success('Post queued for publishing')
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS],
+      })
+      toast.success('Publishing now — your post will be live in a moment')
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to publish post'))
+    },
+  })
+}
+
+export const useReschedulePost = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ postId, scheduledAt }: { postId: string; scheduledAt: string }) =>
+      reschedulePost(calendarId, postId, scheduledAt),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS],
+      })
+      toast.success('Post rescheduled')
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to reschedule post'))
     },
   })
 }
@@ -543,7 +593,12 @@ export const useRegenerateCarouselSlide = (calendarId: string) => {
     }: {
       postId: string
       slideIndex: number
-      overrides?: { title?: string; body?: string; accent?: string }
+      overrides?: {
+        title?: string
+        body?: string
+        accent?: string
+        slideTemplate?: SlideTemplateKey
+      }
     }) => regenerateCarouselSlide(postId, slideIndex, overrides ?? {}),
     onSuccess: (data) => {
       invalidateCalendarQueries(queryClient, calendarId)
@@ -620,6 +675,7 @@ export const useUpdateBrandSettings = (profileId: string) => {
     mutationFn: (patch: {
       colors?: Partial<BrandSettings['colors']>
       lockedStyles?: CarouselStyleKey[]
+      allowMemes?: boolean
     }) => updateBrandSettings(profileId, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -645,6 +701,51 @@ export const useRederiveBrandSettings = (profileId: string) => {
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to re-derive brand'))
+    },
+  })
+}
+
+export const useMasterySignals = (profileId: string | undefined) => {
+  return useQuery({
+    queryKey: [PostGeneratorQueryEnum.MASTERY_SIGNALS, profileId],
+    queryFn: () => getMasterySignals(profileId!),
+    enabled: !!profileId,
+    staleTime: 5 * 60 * 1000,
+    // Recompute is queued (Bull) and runs 20-60s. While computing, the
+    // backend keeps `status: 'computing'` on the voice signature; poll
+    // every 20s and stop once it flips to idle/failed.
+    refetchInterval: (query) =>
+      query.state.data?.status === 'computing' ? 20000 : false,
+    refetchIntervalInBackground: false,
+  })
+}
+
+export const useRecomputeMasterySignals = (profileId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => recomputeMasterySignals(profileId),
+    onSuccess: (data) => {
+      // Optimistically flip the cached signal to `computing` so the UI
+      // switches to the skeleton on the very next render — the polling
+      // refetch will pick up the real result.
+      queryClient.setQueryData(
+        [PostGeneratorQueryEnum.MASTERY_SIGNALS, profileId],
+        (prev: any) =>
+          prev
+            ? { ...prev, status: data.status, error: null }
+            : prev,
+      )
+      queryClient.invalidateQueries({
+        queryKey: [PostGeneratorQueryEnum.MASTERY_SIGNALS, profileId],
+      })
+      toast.success(
+        data.queued
+          ? 'Re-analyzing your expertise — this takes ~30s'
+          : 'Already re-analyzing — please wait',
+      )
+    },
+    onError: (error: any) => {
+      toast.error(extractErrorMessage(error, 'Failed to refresh expertise'))
     },
   })
 }

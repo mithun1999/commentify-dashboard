@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import {
+  IconAlertTriangle,
   IconArrowBackUp,
   IconArrowLeft,
+  IconCalendar,
   IconCheck,
+  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconDeviceFloppy,
@@ -12,6 +16,7 @@ import {
   IconLoader2,
   IconPaperclip,
   IconRefresh,
+  IconRocket,
   IconSparkles,
   IconTrash,
   IconX,
@@ -19,6 +24,7 @@ import {
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Dialog,
   DialogContent,
@@ -27,6 +33,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -40,9 +57,12 @@ import {
   useEditCarouselSlide,
   useEditPost,
   useFormatSuggestions,
+  usePublishPost,
   useRegenerateAiImage,
   useRegenerateCarouselSlide,
   useRejectPost,
+  useDeletePost,
+  useReschedulePost,
   useSwitchCarouselTemplate,
   useUploadPostMedia,
 } from '../query/post-generator.query'
@@ -51,6 +71,7 @@ import { PostChatPanel } from './post-chat-panel'
 import { RegenerateImageDialog } from './regenerate-image-dialog'
 import { CarouselStrip } from './carousel-strip'
 import { RejectPostDialog } from './reject-post-dialog'
+import { DeletePostDialog } from './delete-post-dialog'
 
 function charCountColor(count: number) {
   if (count >= 1000 && count <= 1200) return 'text-green-600'
@@ -119,6 +140,9 @@ export function PostEditorPage() {
   const approvePost = useApprovePost(calendarId)
   const unapprovePost = useUnapprovePost(calendarId)
   const rejectPost = useRejectPost(calendarId)
+  const deletePost = useDeletePost(calendarId)
+  const publishPost = usePublishPost(calendarId)
+  const reschedulePost = useReschedulePost(calendarId)
   const uploadMedia = useUploadPostMedia(calendarId)
   const deleteMedia = useDeletePostMedia(calendarId)
   const regenerateAi = useRegenerateAiImage(calendarId)
@@ -148,7 +172,12 @@ export function PostEditorPage() {
       | { type?: string; error?: string | null }
       | undefined
     const t = fit?.type
-    if (t !== 'chat_screenshot' && t !== 'dashboard_screenshot') return false
+    const isAiImageKind =
+      t === 'chat_screenshot' ||
+      t === 'dashboard_screenshot' ||
+      t === 'concept_illustration' ||
+      t === 'trending_meme'
+    if (!isAiImageKind) return false
     if (fit?.error) return false
     return !media.some((m) => m.source === 'ai' && m.aiKind === t)
   })()
@@ -191,7 +220,9 @@ export function PostEditorPage() {
     imageFit?.type === 'none' && (imageFit?.confidence ?? 0) > 0
   const classifierPickedImage =
     imageFit?.type === 'chat_screenshot' ||
-    imageFit?.type === 'dashboard_screenshot'
+    imageFit?.type === 'dashboard_screenshot' ||
+    imageFit?.type === 'concept_illustration' ||
+    imageFit?.type === 'trending_meme'
   const suppressImageBannerByClassifier =
     classifierDecidedNoImage || classifierPickedImage
 
@@ -249,6 +280,7 @@ export function PostEditorPage() {
   }
 
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const handleReject = () => {
     if (!post) return
@@ -263,9 +295,61 @@ export function PostEditorPage() {
     )
   }
 
+  const handleDelete = () => {
+    if (!post) return
+    setDeleteOpen(true)
+  }
+
+  const submitDelete = () => {
+    if (!post) return
+    deletePost.mutate(
+      { postId: post._id },
+      {
+        onSuccess: () => {
+          setDeleteOpen(false)
+          goBack()
+        },
+      },
+    )
+  }
+
   const handleUnapprove = () => {
     if (!post) return
     unapprovePost.mutate(post._id)
+  }
+
+  const [publishNowOpen, setPublishNowOpen] = useState(false)
+  const handlePublishNowRequest = () => {
+    if (!post) return
+    setPublishNowOpen(true)
+  }
+  const confirmPublishNow = () => {
+    if (!post) return
+    if (hasUnsavedChanges) {
+      editPost.mutate(
+        { postId: post._id, content },
+        {
+          onSuccess: () => {
+            setHasUnsavedChanges(false)
+            publishPost.mutate(post._id, {
+              onSuccess: () => setPublishNowOpen(false),
+            })
+          },
+        },
+      )
+    } else {
+      publishPost.mutate(post._id, {
+        onSuccess: () => setPublishNowOpen(false),
+      })
+    }
+  }
+
+  const handleReschedule = (date: Date) => {
+    if (!post) return
+    reschedulePost.mutate({
+      postId: post._id,
+      scheduledAt: date.toISOString(),
+    })
   }
 
   const handleChatUpdate = useCallback((newContent: string) => {
@@ -456,6 +540,12 @@ export function PostEditorPage() {
           style={{ flex: '55 0 0' }}
         >
           <div className='min-w-0 flex-1 overflow-auto p-6'>
+            {(post as any).generationWarning && (
+              <GenerationWarningBanner
+                status={post.status}
+                message={(post as any).generationWarning}
+              />
+            )}
             {suggestion &&
               suggestion.suggestion !== 'none' &&
               !formatDismissed &&
@@ -595,6 +685,21 @@ export function PostEditorPage() {
                   </span>
                 </>
               )}
+              {post.scheduledAt && (
+                <>
+                  <Separator orientation='vertical' className='h-4' />
+                  <SchedulePill
+                    scheduledAt={post.scheduledAt}
+                    onChange={handleReschedule}
+                    disabled={
+                      reschedulePost.isPending ||
+                      post.status === 'published' ||
+                      post.status === 'rejected'
+                    }
+                    isPending={reschedulePost.isPending}
+                  />
+                </>
+              )}
               {hasUnsavedChanges && (
                 <>
                   <Separator orientation='vertical' className='h-4' />
@@ -617,6 +722,17 @@ export function PostEditorPage() {
                   Reject
                 </Button>
               )}
+              {post.status !== 'published' && (
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleDelete}
+                  disabled={deletePost.isPending}
+                >
+                  <IconTrash className='mr-1.5 size-3.5 text-red-500' />
+                  Delete
+                </Button>
+              )}
               <Button
                 variant='outline'
                 size='sm'
@@ -627,25 +743,47 @@ export function PostEditorPage() {
                 Save
               </Button>
               {post.status === 'approved' || post.status === 'scheduled' ? (
-                <Button
+                <SplitButton
+                  primary={
+                    <>
+                      <IconArrowBackUp className='mr-1.5 size-3.5 text-amber-600' />
+                      Unapprove
+                    </>
+                  }
                   variant='outline'
-                  size='sm'
-                  onClick={handleUnapprove}
-                  disabled={unapprovePost.isPending}
-                >
-                  <IconArrowBackUp className='mr-1.5 size-3.5 text-amber-600' />
-                  Unapprove
-                </Button>
-              ) : (
-                <Button
-                  size='sm'
-                  onClick={handleApprove}
-                  disabled={approvePost.isPending}
-                >
-                  <IconCheck className='mr-1.5 size-3.5' />
-                  Approve
-                </Button>
-              )}
+                  onPrimary={handleUnapprove}
+                  primaryDisabled={unapprovePost.isPending}
+                  menuItems={[
+                    {
+                      key: 'publish-now',
+                      icon: <IconRocket className='size-3.5' />,
+                      label: 'Publish now',
+                      onClick: handlePublishNowRequest,
+                      disabled: publishPost.isPending,
+                    },
+                  ]}
+                />
+              ) : post.status === 'ready' || post.status === 'needs_attention' ? (
+                <SplitButton
+                  primary={
+                    <>
+                      <IconCheck className='mr-1.5 size-3.5' />
+                      Approve
+                    </>
+                  }
+                  onPrimary={handleApprove}
+                  primaryDisabled={approvePost.isPending}
+                  menuItems={[
+                    {
+                      key: 'publish-now',
+                      icon: <IconRocket className='size-3.5' />,
+                      label: 'Publish now',
+                      onClick: handlePublishNowRequest,
+                      disabled: publishPost.isPending,
+                    },
+                  ]}
+                />
+              ) : null}
             </div>
           </div>
         </div>
@@ -665,6 +803,20 @@ export function PostEditorPage() {
         onOpenChange={setRejectOpen}
         onConfirm={submitReject}
         isPending={rejectPost.isPending}
+      />
+
+      <DeletePostDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={submitDelete}
+        isPending={deletePost.isPending}
+      />
+
+      <PublishNowConfirmDialog
+        open={publishNowOpen}
+        onOpenChange={setPublishNowOpen}
+        onConfirm={confirmPublishNow}
+        isPending={publishPost.isPending || editPost.isPending}
       />
     </div>
   )
@@ -707,6 +859,38 @@ function FormatSuggestionBanner({
       >
         <IconX className='size-3.5' />
       </Button>
+    </div>
+  )
+}
+
+function GenerationWarningBanner({
+  status,
+  message,
+}: {
+  status: string
+  message: string
+}) {
+  // `needs_attention` is a hard failure (post wasn't promoted); `ready` with a
+  // warning is a soft recovery (post was promoted with caveats). Color the
+  // banner accordingly so users learn to triage at a glance.
+  const isHardFail = status === 'needs_attention'
+  const palette = isHardFail
+    ? 'border-red-200 bg-red-50 text-red-900 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200'
+    : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200'
+  const iconColor = isHardFail ? 'text-red-500' : 'text-amber-500'
+  const title = isHardFail
+    ? 'This post needs your attention'
+    : 'Generation finished with a warning'
+
+  return (
+    <div
+      className={`mb-4 flex items-start gap-3 rounded-lg border px-3 py-2 text-xs ${palette}`}
+    >
+      <IconAlertTriangle className={`mt-0.5 size-4 shrink-0 ${iconColor}`} />
+      <div className='flex-1 min-w-0'>
+        <div className='font-medium'>{title}</div>
+        <div className='mt-0.5 break-words opacity-90'>{message}</div>
+      </div>
     </div>
   )
 }
@@ -1025,6 +1209,232 @@ function ImageLightboxDialog({
           >
             <IconTrash className='mr-1.5 size-3.5' />
             Remove
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function SchedulePill({
+  scheduledAt,
+  onChange,
+  disabled,
+  isPending,
+}: {
+  scheduledAt: string | Date
+  onChange: (next: Date) => void
+  disabled?: boolean
+  isPending?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const initial = useMemo(() => new Date(scheduledAt), [scheduledAt])
+
+  const [draftDate, setDraftDate] = useState<Date | undefined>(initial)
+  const [draftTime, setDraftTime] = useState<string>(() => format(initial, 'HH:mm'))
+
+  useEffect(() => {
+    if (!open) return
+    setDraftDate(initial)
+    setDraftTime(format(initial, 'HH:mm'))
+  }, [open, initial])
+
+  const dirty = useMemo(() => {
+    if (!draftDate) return false
+    const [h, m] = draftTime.split(':').map((v) => parseInt(v, 10))
+    const composed = new Date(draftDate)
+    composed.setHours(h || 0, m || 0, 0, 0)
+    return composed.getTime() !== initial.getTime()
+  }, [draftDate, draftTime, initial])
+
+  const handleSave = () => {
+    if (!draftDate) return
+    const [h, m] = draftTime.split(':').map((v) => parseInt(v, 10))
+    const composed = new Date(draftDate)
+    composed.setHours(h || 0, m || 0, 0, 0)
+    if (composed.getTime() === initial.getTime()) {
+      setOpen(false)
+      return
+    }
+    onChange(composed)
+    setOpen(false)
+  }
+
+  const display = format(initial, "EEE MMM d 'at' h:mm a")
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type='button'
+          disabled={disabled}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs font-medium text-muted-foreground transition-colors',
+            'hover:border-border hover:bg-muted/60 hover:text-foreground',
+            'disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-transparent disabled:hover:bg-transparent',
+          )}
+          aria-label='Reschedule post'
+        >
+          {isPending ? (
+            <IconLoader2 className='size-3 animate-spin' />
+          ) : (
+            <IconCalendar className='size-3.5' />
+          )}
+          <span>{display}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align='start' className='w-auto p-0'>
+        <Calendar
+          mode='single'
+          selected={draftDate}
+          onSelect={(d) => d && setDraftDate(d)}
+          disabled={(d) => {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            return d < today
+          }}
+        />
+        <div className='border-t p-3'>
+          <label className='mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground'>
+            <IconCalendar className='size-3.5' />
+            Time
+          </label>
+          <input
+            type='time'
+            value={draftTime}
+            onChange={(e) => setDraftTime(e.target.value)}
+            className='border-input focus-visible:ring-ring h-9 w-full rounded-md border bg-transparent px-2 text-sm shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-1'
+          />
+          <div className='mt-3 flex justify-end gap-2'>
+            <Button
+              size='sm'
+              variant='ghost'
+              onClick={() => setOpen(false)}
+              className='h-8 text-xs'
+            >
+              Cancel
+            </Button>
+            <Button
+              size='sm'
+              onClick={handleSave}
+              disabled={!dirty || !draftDate}
+              className='h-8 text-xs'
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+interface SplitButtonMenuItem {
+  key: string
+  icon?: React.ReactNode
+  label: string
+  onClick: () => void
+  disabled?: boolean
+}
+
+function SplitButton({
+  primary,
+  onPrimary,
+  primaryDisabled,
+  menuItems,
+  variant = 'default',
+}: {
+  primary: React.ReactNode
+  onPrimary: () => void
+  primaryDisabled?: boolean
+  menuItems: SplitButtonMenuItem[]
+  variant?: 'default' | 'outline'
+}) {
+  return (
+    <div className='inline-flex'>
+      <Button
+        size='sm'
+        variant={variant}
+        onClick={onPrimary}
+        disabled={primaryDisabled}
+        className='rounded-r-none'
+      >
+        {primary}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size='sm'
+            variant={variant}
+            disabled={primaryDisabled}
+            className='-ml-px rounded-l-none px-1.5'
+            aria-label='More actions'
+          >
+            <IconChevronDown className='size-3.5' />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align='end'>
+          {menuItems.map((item) => (
+            <DropdownMenuItem
+              key={item.key}
+              onClick={item.onClick}
+              disabled={item.disabled}
+            >
+              {item.icon}
+              {item.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
+function PublishNowConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  isPending,
+}: {
+  open: boolean
+  onOpenChange: (next: boolean) => void
+  onConfirm: () => void
+  isPending: boolean
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='sm:max-w-md'>
+        <DialogHeader>
+          <DialogTitle className='flex items-center gap-2'>
+            <IconRocket className='size-4 text-amber-600' />
+            Publish to LinkedIn now?
+          </DialogTitle>
+          <DialogDescription>
+            This skips the scheduled time and publishes immediately. Once it's
+            live on LinkedIn it can't be undone from here.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className='gap-2 sm:gap-2'>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button size='sm' onClick={onConfirm} disabled={isPending}>
+            {isPending ? (
+              <>
+                <IconLoader2 className='mr-1.5 size-3.5 animate-spin' />
+                Publishing…
+              </>
+            ) : (
+              <>
+                <IconRocket className='mr-1.5 size-3.5' />
+                Yes, publish now
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

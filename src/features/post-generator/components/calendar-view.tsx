@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useParams, useNavigate } from '@tanstack/react-router'
+import { useParams, useNavigate, useSearch } from '@tanstack/react-router'
 import {
   IconCalendarPlus,
   IconChevronLeft,
@@ -20,7 +20,21 @@ import {
 } from '../query/post-generator.query'
 import { PostCard } from './post-card'
 import { GenerateCalendarDialog } from './generate-calendar-dialog'
+import { ComposeBanner } from './compose-banner'
 import type { CalendarUserContextInput } from '../api/post-generator.api'
+
+// ISO yyyy-mm-dd Monday for "this week" — used as the empty-state composer's
+// weekStartDate fallback when no calendar exists yet for the profile. Local
+// timezone matches the backend's weekStartFor() helper.
+function currentMondayIso(): string {
+  const d = new Date()
+  const day = d.getDay()
+  const offsetToMonday = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + offsetToMonday)
+  d.setHours(0, 0, 0, 0)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
 
 function formatWeekRange(dateStr: string) {
   const start = new Date(dateStr)
@@ -81,11 +95,36 @@ export function CalendarView() {
     agentType: string
   }
   const navigate = useNavigate()
+  // `week` lives in the URL so navigating into a post and clicking back
+  // restores the same tab. `strict: false` because this component is
+  // also rendered from non-calendar contexts during onboarding loaders.
+  const search = useSearch({ strict: false }) as { week?: number }
   const { data: weeks, isPending } = useActiveCalendars(profileId)
   const generateCalendar = useGenerateCalendar()
   const scheduleAll = useScheduleAll()
-  const [activeWeekIndex, setActiveWeekIndex] = useState(0)
   const [pendingWeekOffset, setPendingWeekOffset] = useState<number | null>(null)
+
+  const weekList = useMemo(() => (weeks as any[]) ?? [], [weeks])
+
+  // Clamp the URL value to the available range — protects against stale
+  // links pointing at a week that's since been deleted.
+  const activeWeekIndex = Math.max(
+    0,
+    Math.min(weekList.length - 1, search.week ?? 0),
+  )
+
+  const setActiveWeekIndex = (next: number | ((prev: number) => number)) => {
+    const value = typeof next === 'function' ? next(activeWeekIndex) : next
+    const clamped = Math.max(0, Math.min(weekList.length - 1, value))
+    navigate({
+      to: '.',
+      search: (prev: any) => ({ ...prev, week: clamped }),
+      // `replace` keeps tab-click churn out of the back-button stack —
+      // the user's previous "real" page (e.g. post detail) stays one
+      // step back regardless of how many weeks they cycle through.
+      replace: true,
+    })
+  }
 
   const openGenerateDialog = (weekOffset: number) => {
     setPendingWeekOffset(weekOffset)
@@ -115,8 +154,6 @@ export function CalendarView() {
     (generateCalendar.error as any)?.message
       ?.toLowerCase()
       ?.includes('onboarding')
-
-  const weekList = useMemo(() => (weeks as any[]) ?? [], [weeks])
 
   const activeWeek = weekList[activeWeekIndex] ?? null
   const calendar = activeWeek?.calendar
@@ -230,35 +267,29 @@ export function CalendarView() {
             </div>
             <div className='text-center'>
               <h3 className='text-lg font-semibold'>No Content Calendar</h3>
-              <p className='text-muted-foreground mt-1 text-sm'>
-                Generate your first weekly content calendar to get started.
+              <p className='text-muted-foreground mt-1 max-w-sm text-sm'>
+                Drop an idea below for a single post, or generate a full week
+                of posts at once.
               </p>
             </div>
-            <div className='flex items-center gap-2'>
-              <Button
-                onClick={() => openGenerateDialog(0)}
-                disabled={generateCalendar.isPending}
-              >
-                {generateCalendar.isPending ? (
-                  <IconLoader2 className='mr-2 size-4 animate-spin' />
-                ) : (
-                  <IconCalendarPlus className='mr-2 size-4' />
-                )}
-                Generate Calendar
-              </Button>
-              <Button
-                variant='outline'
-                onClick={() =>
-                  navigate({
-                    to: '/agents/$profileId/$agentType/compose' as any,
-                    params: { profileId, agentType },
-                  } as any)
-                }
-              >
-                <IconPlus className='mr-2 size-4' />
-                Draft with AI
-              </Button>
+            <div className='w-full max-w-xl'>
+              <ComposeBanner
+                profileId={profileId}
+                weekStartDate={currentMondayIso()}
+              />
             </div>
+            <Button
+              variant='outline'
+              onClick={() => openGenerateDialog(0)}
+              disabled={generateCalendar.isPending}
+            >
+              {generateCalendar.isPending ? (
+                <IconLoader2 className='mr-2 size-4 animate-spin' />
+              ) : (
+                <IconCalendarPlus className='mr-2 size-4' />
+              )}
+              Or generate a full week
+            </Button>
           </>
         )}
       </div>
@@ -281,6 +312,11 @@ export function CalendarView() {
       />
       {calendar && (
         <>
+          <ComposeBanner
+            profileId={profileId}
+            calendarId={calendar._id}
+            className='mb-4'
+          />
           {/* Week navigation */}
           <div className='mb-6 rounded-xl border'>
             <div className='flex items-center justify-between border-b px-4 py-3'>
@@ -320,19 +356,6 @@ export function CalendarView() {
                     <IconLoader2 className='mr-2 size-3.5 animate-spin' />
                   )}
                   Approve & Schedule All
-                </Button>
-                <Button
-                  size='sm'
-                  variant='outline'
-                  onClick={() =>
-                    navigate({
-                      to: '/agents/$profileId/$agentType/compose' as any,
-                      params: { profileId, agentType },
-                    } as any)
-                  }
-                >
-                  <IconPlus className='mr-2 size-3.5' />
-                  New Post
                 </Button>
                 <Button
                   size='sm'

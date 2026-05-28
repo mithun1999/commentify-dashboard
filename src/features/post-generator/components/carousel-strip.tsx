@@ -41,7 +41,31 @@ import type {
   CarouselSlideState,
   CarouselStyleKey,
   PostMedia,
+  SlideTemplateKey,
 } from '../api/post-generator.api'
+
+const SLIDE_TEMPLATE_LABELS: Record<SlideTemplateKey, string> = {
+  generic: 'Generic (default)',
+  deck_cover: 'Deck cover',
+  deck_closer: 'Deck closer',
+  photo_metaphor: 'Photo metaphor',
+  process_flowchart: 'Process flowchart',
+  comparison_table: 'Comparison table',
+}
+
+const SLIDE_TEMPLATE_DESCRIPTIONS: Record<SlideTemplateKey, string> = {
+  generic: 'Standard headline + body slide. Use when no other template fits.',
+  deck_cover:
+    'Magazine-cover layout for slot 0 — kicker, hero headline, single metaphor object.',
+  deck_closer:
+    'Final-slide layout — numbered recap + optional CTA pill. Use only on the last slot.',
+  photo_metaphor:
+    'One giant rendered metaphor object + a short caption. Best when the slide is a single strong claim.',
+  process_flowchart:
+    'Connected step nodes (left-to-right or top-to-bottom). Use when the body describes a flow.',
+  comparison_table:
+    'Structured grid comparing 2-4 options across 1-5 criteria.',
+}
 
 const STYLE_LABELS: Record<CarouselStyleKey, string> = {
   gradient_modern: 'Gradient Modern',
@@ -67,7 +91,12 @@ export interface CarouselStripProps {
   onEditSlide: (slideIndex: number, instruction: string) => void
   onRegenerateSlide: (
     slideIndex: number,
-    overrides: { title?: string; body?: string; accent?: string },
+    overrides: {
+      title?: string
+      body?: string
+      accent?: string
+      slideTemplate?: SlideTemplateKey
+    },
   ) => void
   onSwitchTemplate: (styleKey: CarouselStyleKey) => void
   isMutating: boolean
@@ -186,6 +215,7 @@ export function CarouselStrip({
       {activeSlide && (
         <SlideActionsDialog
           slide={activeSlide}
+          slideCount={slides.length}
           onClose={() => setActiveSlide(null)}
           onEdit={(instruction) => {
             onEditSlide(activeSlide.index, instruction)
@@ -408,26 +438,52 @@ function SlideLightboxDialog({
 
 function SlideActionsDialog({
   slide,
+  slideCount,
   onClose,
   onEdit,
   onRegenerate,
   isMutating,
 }: {
   slide: CarouselSlideState
+  slideCount: number
   onClose: () => void
   onEdit: (instruction: string) => void
-  onRegenerate: (overrides: { title?: string; body?: string; accent?: string }) => void
+  onRegenerate: (overrides: {
+    title?: string
+    body?: string
+    accent?: string
+    slideTemplate?: SlideTemplateKey
+  }) => void
   isMutating: boolean
 }) {
   const [instruction, setInstruction] = useState('')
   const [title, setTitle] = useState(slide.title)
   const [body, setBody] = useState(slide.body || '')
   const [accent, setAccent] = useState(slide.accent || '')
+  const currentTemplate: SlideTemplateKey = slide.slideTemplate ?? 'generic'
+  const [template, setTemplate] = useState<SlideTemplateKey>(currentTemplate)
+
+  // Hook (slot 0) and close (last slot) are pinned to deck_cover/deck_closer
+  // by the backend regardless of UI selection — show the locked template and
+  // disable the dropdown so users aren't surprised.
+  const isHook = slide.index === 0
+  const isClose = slide.index === slideCount - 1
+  const templateLocked = isHook || isClose
+  const lockedReason = isHook
+    ? "The first slide is the deck cover and can't be swapped."
+    : isClose
+      ? "The final slide is the deck closer and can't be swapped."
+      : ''
+
+  const allowedTemplates: SlideTemplateKey[] = templateLocked
+    ? [currentTemplate]
+    : (['generic', 'photo_metaphor', 'process_flowchart', 'comparison_table'] as SlideTemplateKey[])
 
   const titleDirty = title !== slide.title
   const bodyDirty = body !== (slide.body || '')
   const accentDirty = accent !== (slide.accent || '')
-  const regenChanged = titleDirty || bodyDirty || accentDirty
+  const templateDirty = template !== currentTemplate
+  const regenChanged = titleDirty || bodyDirty || accentDirty || templateDirty
 
   return (
     <Dialog open onOpenChange={(o) => (o ? null : onClose())}>
@@ -483,6 +539,39 @@ function SlideActionsDialog({
           <TabsContent value='regenerate' className='space-y-3'>
             <div>
               <label className='mb-1 block text-xs font-medium text-muted-foreground'>
+                Slide template
+              </label>
+              <Select
+                value={template}
+                onValueChange={(v) => setTemplate(v as SlideTemplateKey)}
+                disabled={templateLocked}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {allowedTemplates.map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {SLIDE_TEMPLATE_LABELS[key]}
+                      {key === currentTemplate && ' (current)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className='mt-1 text-[11px] leading-snug text-muted-foreground'>
+                {templateLocked
+                  ? lockedReason
+                  : SLIDE_TEMPLATE_DESCRIPTIONS[template]}
+              </p>
+              {templateDirty && !templateLocked && (
+                <p className='mt-1 text-[11px] leading-snug text-amber-700'>
+                  Switching template will rewrite this slide's structured
+                  content (a quick AI pass) before regenerating the image.
+                </p>
+              )}
+            </div>
+            <div>
+              <label className='mb-1 block text-xs font-medium text-muted-foreground'>
                 Headline (3-7 words)
               </label>
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -510,6 +599,7 @@ function SlideActionsDialog({
                     title: titleDirty ? title : undefined,
                     body: bodyDirty ? body : undefined,
                     accent: accentDirty ? accent : undefined,
+                    slideTemplate: templateDirty ? template : undefined,
                   })
                 }
               >

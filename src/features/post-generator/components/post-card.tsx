@@ -5,18 +5,27 @@ import {
   IconSend,
   IconLoader2,
   IconArrowBackUp,
+  IconAlertTriangle,
+  IconTrash,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import {
   useApprovePost,
   useUnapprovePost,
   useRejectPost,
+  useDeletePost,
   usePublishPost,
 } from '../query/post-generator.query'
 import { RejectPostDialog } from './reject-post-dialog'
+import { DeletePostDialog } from './delete-post-dialog'
 
 interface PostCardProps {
   post: any
@@ -55,11 +64,23 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
   const approvePost = useApprovePost(calendarId)
   const unapprovePost = useUnapprovePost(calendarId)
   const rejectPost = useRejectPost(calendarId)
+  const deletePost = useDeletePost(calendarId)
   const publishPost = usePublishPost(calendarId)
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const isGenerating = post.status === 'generating'
   const charCount = post.content?.length ?? 0
+
+  // Action buttons live inside a card whose onClick navigates to the post
+  // editor. Without this guard, clicks on action buttons (or even on the
+  // backdrop after a modal closes) can bubble to the card and trigger
+  // navigation — which is especially bad after delete (user lands on a 404).
+  const stopAndRun = (fn: () => void) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    fn()
+  }
 
   const submitReject = (reason: string) => {
     rejectPost.mutate(
@@ -68,7 +89,15 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
     )
   }
 
+  const submitDelete = () => {
+    deletePost.mutate(
+      { postId: post._id },
+      { onSuccess: () => setDeleteOpen(false) },
+    )
+  }
+
   return (
+    <>
     <div
       className={cn(
         'group rounded-lg border p-4 transition-colors',
@@ -92,6 +121,13 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
           {post.status}
         </Badge>
       </div>
+
+      {post.status === 'needs_attention' && post.generationWarning && (
+        <div className='mb-2 flex items-start gap-1.5 rounded border border-red-200 bg-red-50 px-2 py-1.5 text-[11px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300'>
+          <IconAlertTriangle className='mt-0.5 size-3 shrink-0' />
+          <span className='line-clamp-2'>{post.generationWarning}</span>
+        </div>
+      )}
 
       <div className='flex items-center justify-between'>
         <div className='text-muted-foreground flex items-center gap-3 text-xs'>
@@ -130,27 +166,56 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
           <div
             className='flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100'
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <Button
-              variant='ghost'
-              size='icon'
-              className='size-7'
-              onClick={() => approvePost.mutate(post._id)}
-              disabled={approvePost.isPending}
-              title='Approve & Schedule'
-            >
-              <IconCheck className='size-3.5 text-green-600' />
-            </Button>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='size-7'
-              onClick={() => setRejectOpen(true)}
-              disabled={rejectPost.isPending}
-              title='Reject & Regenerate'
-            >
-              <IconX className='size-3.5 text-red-500' />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-7'
+                  onClick={stopAndRun(() => approvePost.mutate(post._id))}
+                  disabled={approvePost.isPending}
+                >
+                  <IconCheck className='size-3.5 text-green-600' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Approve & schedule for posting
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-7'
+                  onClick={stopAndRun(() => setRejectOpen(true))}
+                  disabled={rejectPost.isPending}
+                >
+                  <IconX className='size-3.5 text-red-500' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Reject & regenerate a replacement in this slot
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-7'
+                  onClick={stopAndRun(() => setDeleteOpen(true))}
+                  disabled={deletePost.isPending}
+                >
+                  <IconTrash className='size-3.5 text-red-500' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Permanently delete this post (no replacement)
+              </TooltipContent>
+            </Tooltip>
           </div>
         )}
 
@@ -158,12 +223,13 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
           <div
             className='flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100'
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             <Button
               variant='ghost'
               size='sm'
               className='h-7 text-xs'
-              onClick={() => publishPost.mutate(post._id)}
+              onClick={stopAndRun(() => publishPost.mutate(post._id))}
               disabled={publishPost.isPending}
             >
               {publishPost.isPending ? (
@@ -173,6 +239,22 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
               )}
               Retry Publish
             </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-7'
+                  onClick={stopAndRun(() => setDeleteOpen(true))}
+                  disabled={deletePost.isPending}
+                >
+                  <IconTrash className='size-3.5 text-red-500' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Permanently delete this post (no replacement)
+              </TooltipContent>
+            </Tooltip>
           </div>
         )}
 
@@ -180,36 +262,65 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
           <div
             className='flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100'
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <Button
-              variant='ghost'
-              size='icon'
-              className='size-7'
-              onClick={() => unapprovePost.mutate(post._id)}
-              disabled={unapprovePost.isPending}
-              title='Unapprove (move back to draft)'
-            >
-              {unapprovePost.isPending ? (
-                <IconLoader2 className='size-3.5 animate-spin' />
-              ) : (
-                <IconArrowBackUp className='size-3.5 text-amber-600' />
-              )}
-            </Button>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='size-7'
-              onClick={() => setRejectOpen(true)}
-              disabled={rejectPost.isPending}
-              title='Reject & Regenerate'
-            >
-              <IconX className='size-3.5 text-red-500' />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-7'
+                  onClick={stopAndRun(() => unapprovePost.mutate(post._id))}
+                  disabled={unapprovePost.isPending}
+                >
+                  {unapprovePost.isPending ? (
+                    <IconLoader2 className='size-3.5 animate-spin' />
+                  ) : (
+                    <IconArrowBackUp className='size-3.5 text-amber-600' />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Unapprove and move back to draft
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-7'
+                  onClick={stopAndRun(() => setRejectOpen(true))}
+                  disabled={rejectPost.isPending}
+                >
+                  <IconX className='size-3.5 text-red-500' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Reject & regenerate a replacement in this slot
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-7'
+                  onClick={stopAndRun(() => setDeleteOpen(true))}
+                  disabled={deletePost.isPending}
+                >
+                  <IconTrash className='size-3.5 text-red-500' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Permanently delete this post (no replacement)
+              </TooltipContent>
+            </Tooltip>
             <Button
               variant='ghost'
               size='sm'
               className='h-7 text-xs'
-              onClick={() => publishPost.mutate(post._id)}
+              onClick={stopAndRun(() => publishPost.mutate(post._id))}
               disabled={publishPost.isPending}
             >
               {publishPost.isPending ? (
@@ -221,7 +332,34 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
             </Button>
           </div>
         )}
+
+        {post.status === 'rejected' && (
+          <div
+            className='flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100'
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='size-7'
+                  onClick={stopAndRun(() => setDeleteOpen(true))}
+                  disabled={deletePost.isPending}
+                >
+                  <IconTrash className='size-3.5 text-red-500' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Permanently delete this post (no replacement)
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
       </div>
+
+    </div>
 
       <RejectPostDialog
         open={rejectOpen}
@@ -229,6 +367,13 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
         onConfirm={submitReject}
         isPending={rejectPost.isPending}
       />
-    </div>
+
+      <DeletePostDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={submitDelete}
+        isPending={deletePost.isPending}
+      />
+    </>
   )
 }
