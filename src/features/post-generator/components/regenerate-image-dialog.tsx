@@ -68,6 +68,8 @@ export function RegenerateImageDialog({
         return 'illustration'
       case 'trending_meme':
         return 'meme'
+      case 'handwritten_note':
+        return 'handwritten note'
       case 'chat_screenshot':
       default:
         return 'chat screenshot'
@@ -82,6 +84,8 @@ export function RegenerateImageDialog({
         return '"flip the before/after", "add a third quadrant for ‘ignored’", "label the arrow ‘compounding’"'
       case 'trending_meme':
         return '"swap the caption to ‘Mondays at 6am’", "use the ‘distracted boyfriend’ template instead"'
+      case 'handwritten_note':
+        return '"use blue ink instead of black", "add a ‘SAVE THIS’ badge", "drop the last item", "tighten item 3 to one line"'
       case 'chat_screenshot':
       default:
         return '"switch to iMessage instead of WhatsApp", "the last message should say ‘on my way’", "redact the contact name with red marker"'

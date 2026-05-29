@@ -176,7 +176,8 @@ export function PostEditorPage() {
       t === 'chat_screenshot' ||
       t === 'dashboard_screenshot' ||
       t === 'concept_illustration' ||
-      t === 'trending_meme'
+      t === 'trending_meme' ||
+      t === 'handwritten_note'
     if (!isAiImageKind) return false
     if (fit?.error) return false
     return !media.some((m) => m.source === 'ai' && m.aiKind === t)
@@ -222,7 +223,8 @@ export function PostEditorPage() {
     imageFit?.type === 'chat_screenshot' ||
     imageFit?.type === 'dashboard_screenshot' ||
     imageFit?.type === 'concept_illustration' ||
-    imageFit?.type === 'trending_meme'
+    imageFit?.type === 'trending_meme' ||
+    imageFit?.type === 'handwritten_note'
   const suppressImageBannerByClassifier =
     classifierDecidedNoImage || classifierPickedImage
 

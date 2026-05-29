@@ -26,6 +26,7 @@ const OUTPUT_OPTIONS: Array<{ value: ComposerOutputType; label: string }> = [
   { value: 'chat_screenshot', label: 'Chat screenshot' },
   { value: 'dashboard_screenshot', label: 'Dashboard screenshot' },
   { value: 'trending_meme', label: 'Trending meme' },
+  { value: 'handwritten_note', label: 'Handwritten note' },
   { value: 'carousel_deck', label: 'Carousel deck' },
 ]
 

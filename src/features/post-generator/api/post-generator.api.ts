@@ -181,6 +181,7 @@ export type ComposerOutputType =
   | 'chat_screenshot'
   | 'dashboard_screenshot'
   | 'trending_meme'
+  | 'handwritten_note'
   | 'carousel_deck'
 
 export interface CreateManualPostPayload {
@@ -317,6 +318,7 @@ export interface PostMedia {
     | 'carousel_pdf'
     | 'concept_illustration'
     | 'trending_meme'
+    | 'handwritten_note'
   slideIndex?: number
   createdAt?: string
 }
