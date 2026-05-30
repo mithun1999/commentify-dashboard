@@ -210,6 +210,10 @@ export interface PostingPreferences {
   postsPerWeek: number
   preferredDays: string[]
   preferredTime: string
+  activeWindowEnabled?: boolean
+  // Read-only: true when the commenting agent (keywords + comment settings)
+  // is set up. The Active Window boost is inert without it.
+  commentingConfigured?: boolean
   aiSuggested?: {
     postsPerWeek: number
     preferredDays: string[]

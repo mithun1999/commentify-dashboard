@@ -5,6 +5,7 @@ import { BrandSettingsPanel } from './brand-settings-panel'
 import { MasterySignalsPanel } from './mastery-signals-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -64,6 +65,7 @@ function CompletedSettingsView({
   const [postsPerWeek, setPostsPerWeek] = useState(3)
   const [preferredDays, setPreferredDays] = useState<string[]>(['Monday', 'Wednesday', 'Friday'])
   const [preferredTime, setPreferredTime] = useState('09:00')
+  const [activeWindowEnabled, setActiveWindowEnabled] = useState(false)
   const [prefsDirty, setPrefsDirty] = useState(false)
   const [voiceChatOpen, setVoiceChatOpen] = useState(false)
 
@@ -72,6 +74,7 @@ function CompletedSettingsView({
       setPostsPerWeek(prefs.postsPerWeek ?? 3)
       setPreferredDays(prefs.preferredDays ?? ['Monday', 'Wednesday', 'Friday'])
       setPreferredTime(prefs.preferredTime ?? '09:00')
+      setActiveWindowEnabled(prefs.activeWindowEnabled ?? false)
       setPrefsDirty(false)
     }
   }, [prefs])
@@ -85,7 +88,7 @@ function CompletedSettingsView({
 
   const handleSavePrefs = () => {
     updatePrefs.mutate(
-      { profileId, prefs: { postsPerWeek, preferredDays, preferredTime } },
+      { profileId, prefs: { postsPerWeek, preferredDays, preferredTime, activeWindowEnabled } },
       { onSuccess: () => setPrefsDirty(false) }
     )
   }
@@ -441,6 +444,31 @@ function CompletedSettingsView({
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
+              </div>
+
+              <div className='flex items-start justify-between gap-4 border-t pt-5'>
+                <div className='space-y-0.5'>
+                  <p className='text-sm font-medium'>Active Window Boost</p>
+                  <p className='text-muted-foreground text-xs'>
+                    Auto-comment on relevant posts for 30 min before and after
+                    each scheduled post to look active when it goes live. Comments
+                    are shifted from your daily quota, not added on top.
+                  </p>
+                  {prefs && !prefs.commentingConfigured && (
+                    <p className='text-amber-600 dark:text-amber-500 mt-1 text-xs font-medium'>
+                      Requires the Commenting agent — set up your target keywords
+                      and comment style first.
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  checked={activeWindowEnabled && !!prefs?.commentingConfigured}
+                  disabled={!prefs?.commentingConfigured}
+                  onCheckedChange={(checked) => {
+                    setActiveWindowEnabled(checked)
+                    setPrefsDirty(true)
+                  }}
+                />
               </div>
             </div>
           )}
