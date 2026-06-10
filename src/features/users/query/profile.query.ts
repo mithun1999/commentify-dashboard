@@ -8,6 +8,7 @@ import { useProfileStore } from '@/stores/profile.store'
 import { detectExtension } from '@/lib/extension'
 import { getProfileDetailsFromExtension } from '@/utils/utils'
 import {
+  deactivateProfile,
   deleteProfile,
   getAllProfile,
   getLinkedInStats,
@@ -15,6 +16,7 @@ import {
   getPostingStats,
   linkProfile,
   linkTwitterProfile,
+  reactivateProfile,
 } from '../api/profile.api'
 import {
   ILinkedInStats,
@@ -73,6 +75,56 @@ export const useDeleteProfile = ({ onSuccess }: { onSuccess?: () => void }) => {
   })
 
   return { deleteProfile: mutate, isDeletingProfile: isPending }
+}
+
+export const useDeactivateProfile = ({
+  onSuccess,
+}: { onSuccess?: () => void } = {}) => {
+  const queryClient = useQueryClient()
+  const { mutate, isPending } = useMutation({
+    mutationFn: deactivateProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+      })
+      toast.success('Profile deactivated. The agent is paused.')
+      onSuccess?.()
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while deactivating the profile'
+      )
+    },
+  })
+  return { deactivateProfile: mutate, isDeactivatingProfile: isPending }
+}
+
+export const useReactivateProfile = ({
+  onSuccess,
+}: { onSuccess?: () => void } = {}) => {
+  const queryClient = useQueryClient()
+  const { mutate, isPending } = useMutation({
+    mutationFn: reactivateProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+      })
+      toast.success('Profile reactivated. The agent is running again.')
+      onSuccess?.()
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while reactivating the profile'
+      )
+    },
+  })
+  return { reactivateProfile: mutate, isReactivatingProfile: isPending }
 }
 
 export const useLinkProfile = (isOnboardingStep: boolean = false) => {

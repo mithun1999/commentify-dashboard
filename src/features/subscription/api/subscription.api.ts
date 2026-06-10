@@ -4,10 +4,16 @@ import {
   PaymentProvider,
 } from '../interfaces/subscription.interface'
 
+export interface ICartAddon {
+  productId: string
+  quantity?: number
+}
+
 export async function upgradeDowngradeSubscription(payload: {
   productId: string
   provider?: 'lemon_squeezy' | 'dodo_payments'
   quantity?: number
+  addons?: ICartAddon[]
 }) {
   const { data } = await axiosInstance({
     method: 'PATCH',
@@ -24,6 +30,8 @@ export async function createCheckoutUrl(payload: {
   quantity?: number
   email?: string
   name?: string
+  addons?: ICartAddon[]
+  discountCode?: string
 }) {
   const { data } = await axiosInstance({
     method: 'POST',
@@ -31,6 +39,36 @@ export async function createCheckoutUrl(payload: {
     data: payload,
   })
   return data as { url: string; expiryAt: string }
+}
+
+export interface IPostCreditSummary {
+  tier: 'starter' | 'pro'
+  monthlyAllowance: number
+  monthlyUsed: number
+  monthlyRemaining: number
+  lifetimeCredits: number
+  totalAvailable: number
+  enforced: boolean
+}
+
+export async function getPostCredits() {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/credits/post`,
+  })
+  return data as IPostCreditSummary
+}
+
+export async function createTopupCheckoutUrl(payload: {
+  productId: string
+  provider?: PaymentProvider
+}) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/subscription/topup/checkout`,
+    data: payload,
+  })
+  return data as { url: string; sessionId?: string }
 }
 
 export async function verifyCheckout(subscriptionId: string) {
@@ -51,4 +89,16 @@ export async function getCustomerPortalUrl() {
     customerPortal: string
     customerPortalUpdateSubscription: string
   }
+}
+
+export async function cancelSubscription(payload: {
+  reason?: string
+  comment?: string
+}) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/subscription/cancel`,
+    data: payload,
+  })
+  return data as { success: boolean; endsAt: string | null }
 }

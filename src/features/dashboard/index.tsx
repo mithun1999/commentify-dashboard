@@ -158,7 +158,7 @@ export default function Dashboard() {
             </p>
             <Button variant='destructive' size='sm' asChild>
               <Link
-                to='/pricing'
+                to='/plans'
                 onClick={() =>
                   posthog?.capture('upgrade_plan_dashboard_clicked')
                 }

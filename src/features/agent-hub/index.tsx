@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { usePostHog } from 'posthog-js/react'
-import { IconPencil } from '@tabler/icons-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Header } from '@/components/layout/header'
@@ -14,7 +13,7 @@ import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { AgentCard } from './components/agent-card'
 import { AddAgentCard } from './components/add-agent-card'
 import { AddAgentDialog } from './components/add-agent-dialog'
-import { BetaAgentCard, ComingSoonCards } from './components/coming-soon-card'
+import { ComingSoonCards } from './components/coming-soon-card'
 import { EmptyState } from './components/empty-state'
 
 export default function AgentHub() {
@@ -74,11 +73,6 @@ export default function AgentHub() {
             {agents.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />
             ))}
-            <BetaAgentCard
-              name='LinkedIn Posting'
-              icon={IconPencil}
-              onClick={() => openAddDialog('linkedin-posting')}
-            />
             <AddAgentCard onClick={() => openAddDialog()} />
             <ComingSoonCards />
           </div>

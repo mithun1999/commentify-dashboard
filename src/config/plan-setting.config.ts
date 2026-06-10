@@ -54,3 +54,30 @@ export const planSetting: Record<
     premium: 30,
   },
 }
+
+// Posting-agent limits (Starter/Pro only). Values marked CONFIRM are placeholders
+// pending product sign-off; keep in sync with backend `postPlanMapper`.
+export const postPlanSetting: Record<
+  string,
+  {
+    starter: PlanSettingValue
+    pro: PlanSettingValue
+  }
+> = {
+  postsPerWeek: {
+    starter: 3, // CONFIRM
+    pro: 5, // CONFIRM
+  },
+  trackedCreators: {
+    starter: 3, // CONFIRM
+    pro: 15, // CONFIRM
+  },
+  aiCarousels: {
+    starter: false, // CONFIRM
+    pro: true, // CONFIRM
+  },
+  aiImageGeneration: {
+    starter: true, // CONFIRM
+    pro: true, // CONFIRM
+  },
+}

@@ -18,6 +18,22 @@ export async function deleteProfile(profileId: string) {
   return data as { deleted: number }
 }
 
+export async function deactivateProfile(profileId: string) {
+  const { data } = await axiosInstance({
+    method: 'PATCH',
+    url: `/profile/${profileId}/deactivate`,
+  })
+  return data as { success: boolean }
+}
+
+export async function reactivateProfile(profileId: string) {
+  const { data } = await axiosInstance({
+    method: 'PATCH',
+    url: `/profile/${profileId}/reactivate`,
+  })
+  return data as { success: boolean }
+}
+
 export async function linkProfile(payload: ILinkProfilePayload) {
   const { data } = await axiosInstance({
     method: 'POST',

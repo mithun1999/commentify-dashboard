@@ -7,13 +7,17 @@ import { toast } from 'sonner'
 import type { IUser } from '@/features/auth/interface/user.interface'
 import { UserQueryEnum } from '@/features/auth/query/user.query'
 import {
+  cancelSubscription,
   createCheckoutUrl,
+  createTopupCheckoutUrl,
   getCustomerPortalUrl,
+  getPostCredits,
   upgradeDowngradeSubscription,
 } from '../api/subscription.api'
 
 export enum SubscriptionQueryEnum {
   GET_CUSTOMER_PORTAL_URL = 'get-customer-portal-url',
+  GET_POST_CREDITS = 'get-post-credits',
 }
 
 export const useUpdateSubscriptionPlan = () => {
@@ -47,6 +51,34 @@ export const useUpdateSubscriptionPlan = () => {
   }
 }
 
+export const useCancelSubscription = ({
+  cb,
+}: {
+  cb?: (data: { success: boolean; endsAt: string | null }) => void
+} = {}) => {
+  const queryClient = useQueryClient()
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: cancelSubscription,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [UserQueryEnum.GET_USER] })
+      cb?.(data)
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: any) => {
+      toast.error(
+        error.message ||
+          'Something went wrong while cancelling. Please contact support.'
+      )
+    },
+  })
+
+  return {
+    cancelSubscription: mutate,
+    isCancellingSubscription: isPending,
+  }
+}
+
 export const useCreateCheckoutUrl = ({ cb }: { cb: (url: string) => void }) => {
   const { mutate, isPending } = useMutation({
     mutationFn: createCheckoutUrl,
@@ -66,6 +98,46 @@ export const useCreateCheckoutUrl = ({ cb }: { cb: (url: string) => void }) => {
   return {
     createCheckoutUrl: mutate,
     isCreatingCheckoutUrl: isPending,
+  }
+}
+
+export const useGetPostCreditsQuery = ({ enabled = true }: { enabled?: boolean } = {}) => {
+  const { data, isLoading } = useQuery({
+    queryKey: [SubscriptionQueryEnum.GET_POST_CREDITS],
+    queryFn: () => getPostCredits(),
+    enabled,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60,
+  })
+
+  return { data, isLoading }
+}
+
+export const useCreateTopupCheckoutUrl = ({
+  cb,
+}: {
+  cb: (url: string) => void
+}) => {
+  const { mutate, isPending, variables } = useMutation({
+    mutationFn: createTopupCheckoutUrl,
+    onSuccess: (data) => {
+      if (data?.url) cb(data.url)
+      else toast.error("Couldn't start the top-up checkout")
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: any) => {
+      toast.error(
+        error.message ||
+          'Something went wrong starting checkout. Please contact support'
+      )
+    },
+  })
+
+  return {
+    createTopupCheckoutUrl: mutate,
+    isCreatingTopupCheckoutUrl: isPending,
+    pendingProductId: variables?.productId,
   }
 }
 

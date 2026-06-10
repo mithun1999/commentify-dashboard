@@ -14,6 +14,7 @@ import {
   Filter,
   Globe,
   Info,
+  Loader2,
   PlusCircle,
   X,
 } from 'lucide-react'
@@ -57,10 +58,12 @@ import {
 } from '@/components/ui/tooltip'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { getAgentPlanTier } from '@/features/agent-system/registry'
 import {
   useCreateScrapeSettingQuery,
   useUpdateScrapeSettingQuery,
 } from '@/features/settings/query/setting.query'
+import { useValidateOnboardingKeywords } from '@/features/onboarding/query/onboarding.query'
 import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { UnlockWrapper } from '../components/UnlockWrapper'
@@ -123,15 +126,14 @@ export function PostForm() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
-  // Extract base plan from SKU (e.g., "premium_monthly" → "premium")
-  const basePlanName = user?.subscribedProduct?.sku
-    ?.split('_')[0]
-    ?.toLowerCase()
-  const userPlan = (basePlanName as 'starter' | 'pro' | 'premium') ?? 'starter'
+  const userPlan = getAgentPlanTier(user, 'comment')
   const { createScrapeSetting, isCreatingScrapeSetting } =
     useCreateScrapeSettingQuery()
   const { updateScrapeSetting, isUpdatingScrapeSetting } =
     useUpdateScrapeSettingQuery()
+  const { validateOnboardingKeywordsAsync, isValidatingKeywords } =
+    useValidateOnboardingKeywords()
+  const [lowYieldKeywords, setLowYieldKeywords] = useState<string[]>([])
   const [showCustomKeywordInput, setShowCustomKeywordInput] = useState(false)
   const [customKeyword, setCustomKeyword] = useState('')
   const [customKeywords, setCustomKeywords] = useState<string[]>([])
@@ -295,10 +297,33 @@ export function PostForm() {
       createScrapeSetting(payload)
     }
 
+    // Flag keywords that surface few/no LinkedIn posts so the user can swap
+    // them out — settings save doesn't block on this slow LinkedIn check.
+    setLowYieldKeywords([])
+    if (values.keywords.length) {
+      validateOnboardingKeywordsAsync({
+        keywords: values.keywords,
+        profileId: activeProfile._id,
+      })
+        .then(({ invalid }) => setLowYieldKeywords(invalid ?? []))
+        .catch(() => {})
+    }
+
     posthog?.capture('post_settings_submitted', {
       hasExisting,
       ...values,
     })
+  }
+
+  const removeLowYieldKeywords = () => {
+    if (!lowYieldKeywords.length) return
+    const dead = new Set(lowYieldKeywords)
+    form.setValue(
+      'keywords',
+      form.getValues('keywords').filter((k) => !dead.has(k))
+    )
+    setCustomKeywords((prev) => prev.filter((k) => !dead.has(k)))
+    setLowYieldKeywords([])
   }
 
   const handleKeywordSelect = (keyword: string) => {
@@ -480,6 +505,35 @@ export function PostForm() {
                 <AlertCircle className='h-3.5 w-3.5' />
                 {form.formState.errors.keywords.message as string}
               </p>
+            )}
+
+            {isValidatingKeywords && (
+              <p className='text-muted-foreground flex items-center gap-2 text-sm'>
+                <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                Checking these keywords surface enough LinkedIn posts…
+              </p>
+            )}
+
+            {!isValidatingKeywords && lowYieldKeywords.length > 0 && (
+              <div className='rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-500/40 dark:bg-amber-500/10'>
+                <p className='flex items-start gap-2 text-amber-700 dark:text-amber-400'>
+                  <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
+                  <span>
+                    These keywords surface very few or no LinkedIn posts, so your
+                    agent may run out of posts to comment on:{' '}
+                    <span className='font-medium'>
+                      {lowYieldKeywords.join(', ')}
+                    </span>
+                  </span>
+                </p>
+                <button
+                  type='button'
+                  onClick={removeLowYieldKeywords}
+                  className='mt-2 font-medium text-amber-800 underline underline-offset-2 hover:text-amber-900 dark:text-amber-300'
+                >
+                  Remove them
+                </button>
+              </div>
             )}
           </div>
 

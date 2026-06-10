@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -33,12 +33,18 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Info } from 'lucide-react'
-import { useOnboarding } from '@/stores/onboarding.store'
+import { useOnboarding, useOnboardingStore } from '@/stores/onboarding.store'
+import { useProfileStore } from '@/stores/profile.store'
 import {
   useUpdateOnboardingStatus,
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
+import {
+  useAnalyzeOnboardingProfile,
+  useRefineOnboardingKeywords,
+} from '@/features/onboarding/query/onboarding.query'
 import { useExtractFromWebsite } from '../query/sales.query'
 
 const salesProductSchema = z.object({
@@ -64,12 +70,79 @@ export function SalesProductSetupStep() {
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
   const { extractAsync, isExtracting } = useExtractFromWebsite()
+  const { analyzeOnboardingProfileAsync } = useAnalyzeOnboardingProfile()
+  const { refineOnboardingKeywordsAsync } = useRefineOnboardingKeywords()
+  const activeProfile = useProfileStore((s) => s.activeProfile)
+  const { data: profiles } = useGetAllProfileQuery()
+  const resolvedProfileId =
+    onboardingData.linkedProfileId ??
+    activeProfile?._id ??
+    profiles?.[profiles.length - 1]?._id
+  const analyzedRef = useRef(false)
 
   const [urlInput, setUrlInput] = useState(
     onboardingData.salesSetting.websiteUrl
   )
   const [painPointInput, setPainPointInput] = useState('')
   const [valuePropInput, setValuePropInput] = useState('')
+
+  // Seed the shared About blurb + a fallback keyword list from the LinkedIn
+  // profile so sales users start with something even before pasting a website.
+  // Website extraction (if used) overrides these. Validation runs in background.
+  useEffect(() => {
+    if (analyzedRef.current || !resolvedProfileId) return
+    const hasAbout = !!onboardingData.commentSetting?.aboutProfile
+    const hasKeywords = !!onboardingData.salesSetting.keywordsToTarget?.length
+    if (hasAbout && hasKeywords) return
+    analyzedRef.current = true
+    analyzeOnboardingProfileAsync({ profileId: resolvedProfileId, mode: 'sales' })
+      .then((res) => {
+        if (res.aboutProfile && !useOnboardingStore.getState().data.commentSetting?.aboutProfile) {
+          updateData({
+            commentSetting: {
+              ...useOnboardingStore.getState().data.commentSetting,
+              aboutProfile: res.aboutProfile,
+            },
+          })
+        }
+        const kws = (res.keywords ?? []).slice(0, 6)
+        const stillNoKeywords =
+          !useOnboardingStore.getState().data.salesSetting.keywordsToTarget?.length
+        if (kws.length && stillNoKeywords) {
+          updateData({
+            salesSetting: {
+              ...useOnboardingStore.getState().data.salesSetting,
+              keywordsToTarget: kws,
+            },
+          })
+          refineOnboardingKeywordsAsync({
+            profileId: resolvedProfileId,
+            existing: kws,
+            mode: 'sales',
+          })
+            .then(({ keywords }) => {
+              const refined = (keywords ?? []).slice(0, 6)
+              if (!refined.length) return
+              // Read the freshest store state — website extraction may have run
+              // during the ~30s validation. Only swap in the validated set if
+              // the seeded GPT keywords are still untouched, so we never clobber
+              // richer website-extracted keywords.
+              const latest = useOnboardingStore.getState().data.salesSetting
+              const current = latest.keywordsToTarget ?? []
+              const untouched =
+                current.length === kws.length &&
+                [...current].sort().join('|') === [...kws].sort().join('|')
+              if (!untouched) return
+              updateData({
+                salesSetting: { ...latest, keywordsToTarget: refined },
+              })
+            })
+            .catch(() => {})
+        }
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedProfileId])
 
   const form = useForm<SalesProductValues>({
     resolver: zodResolver(salesProductSchema),

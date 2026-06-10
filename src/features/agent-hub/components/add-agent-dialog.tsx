@@ -3,7 +3,6 @@ import { useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { IconBrandLinkedin, IconBrandX, IconPlus } from '@tabler/icons-react'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,8 +12,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { getAllAgentTypes } from '@/features/agent-system/registry'
-import type { AgentTypeDefinition } from '@/features/agent-system/types/agent.types'
+import {
+  getAgentType,
+  getAgentTypeFor,
+} from '@/features/agent-system/registry'
+import {
+  PlatformCapabilityPicker,
+  type PlatformCapabilitySelection,
+} from '@/features/agent-system/components/platform-capability-picker'
+import type { Platform } from '@/features/agent-system/types/agent.types'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import {
   useGetAllProfileQuery,
@@ -23,7 +29,6 @@ import {
 } from '@/features/users/query/profile.query'
 import { useActivateAgentType } from '@/features/post-generator/query/post-generator.query'
 import { getTwitterProfileDetailsFromExtension } from '@/features/twitter-commenting/utils/extension'
-import { getAgentType } from '@/features/agent-system/registry'
 
 interface AddAgentDialogProps {
   open: boolean
@@ -33,12 +38,10 @@ interface AddAgentDialogProps {
 
 const PLATFORM_CONFIG = {
   linkedin: {
-    buttonLabel: 'Connect LinkedIn',
     connectingLabel: 'Connecting LinkedIn...',
     icon: IconBrandLinkedin,
   },
   twitter: {
-    buttonLabel: 'Connect X',
     connectingLabel: 'Connecting X...',
     icon: IconBrandX,
   },
@@ -46,18 +49,23 @@ const PLATFORM_CONFIG = {
 
 type Step = 'select' | 'connect'
 
+const emptySelection: PlatformCapabilitySelection = {
+  platform: null,
+  capabilities: [],
+  commentGoal: 'branding',
+}
+
 export function AddAgentDialog({
   open,
   onOpenChange,
   initialAgentSlug,
 }: AddAgentDialogProps) {
   const [step, setStep] = useState<Step>('select')
-  const [selected, setSelected] = useState<AgentTypeDefinition | null>(null)
+  const [selection, setSelection] = useState<PlatformCapabilitySelection>(emptySelection)
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
   const { data: user } = useGetUserQuery()
   const { data: profiles } = useGetAllProfileQuery()
   const navigate = useNavigate()
-  const agentTypes = getAllAgentTypes()
 
   const { linkProfile, isLinkingProfile } = useLinkProfile(false)
   const { linkTwitterProfile, isLinkingTwitterProfile } = useLinkTwitterProfile(false)
@@ -68,35 +76,63 @@ export function AddAgentDialog({
     if (!open || !initialAgentSlug) return
     const preset = getAgentType(initialAgentSlug)
     if (preset) {
-      setSelected(preset)
+      setSelection({
+        platform: preset.platform,
+        capabilities: [preset.capability],
+        commentGoal: 'branding',
+      })
       setStep('connect')
     }
   }, [open, initialAgentSlug])
 
   const isConnecting = isLinking || isLinkingProfile || isLinkingTwitterProfile
 
-  const existingProfiles = (profiles ?? []).filter(
-    (p) => (selected?.platform === 'twitter' ? p.platform === 'twitter' : p.platform !== 'twitter')
+  const platform: Platform = selection.platform ?? 'linkedin'
+  const config = PLATFORM_CONFIG[platform]
+  const PlatformIcon = config.icon
+
+  const selectedSlugs = selection.platform
+    ? selection.capabilities
+        .map((c) => getAgentTypeFor(platform, c)?.slug)
+        .filter((s): s is string => Boolean(s))
+    : []
+
+  const primarySlug = selection.capabilities.includes('comment')
+    ? getAgentTypeFor(platform, 'comment')?.slug
+    : getAgentTypeFor(platform, 'post')?.slug
+
+  const existingProfiles = (profiles ?? []).filter((p) =>
+    platform === 'twitter' ? p.platform === 'twitter' : p.platform !== 'twitter'
   )
 
   const resetAndClose = () => {
     onOpenChange(false)
     setStep('select')
-    setSelected(null)
+    setSelection(emptySelection)
     setSelectedProfileId(null)
   }
 
-  const defaultTabForAgent = (slug: string) =>
+  const defaultTabForAgent = (slug?: string) =>
     slug === 'linkedin-posting' ? 'calendar' : 'settings'
 
-  const handleConnect = async () => {
-    if (!selected) return
+  const activateAllAndNavigate = async (profileId: string) => {
+    for (const slug of selectedSlugs) {
+      await activateAgentType.mutateAsync({ profileId, agentType: slug })
+    }
+    resetAndClose()
+    if (primarySlug) {
+      navigate({
+        to: `/agents/$profileId/$agentType/${defaultTabForAgent(primarySlug)}` as string,
+        params: { profileId, agentType: primarySlug },
+      })
+    }
+  }
+
+  const handleConnectNew = async () => {
+    if (!selectedSlugs.length) return
     setIsLinking(true)
-
     try {
-      const platform = selected.platform
       let profileId: string | undefined
-
       if (platform === 'twitter') {
         const details = await getTwitterProfileDetailsFromExtension()
         if (!details?.authToken) {
@@ -110,18 +146,7 @@ export function AddAgentDialog({
         const result = await linkProfile()
         profileId = result?.profile?._id
       }
-
-      if (profileId) {
-        await activateAgentType.mutateAsync({
-          profileId,
-          agentType: selected.slug,
-        })
-        resetAndClose()
-        navigate({
-          to: `/agents/$profileId/$agentType/${defaultTabForAgent(selected.slug)}` as string,
-          params: { profileId, agentType: selected.slug },
-        })
-      }
+      if (profileId) await activateAllAndNavigate(profileId)
     } catch (error) {
       console.error('Error connecting profile:', error)
     } finally {
@@ -129,15 +154,10 @@ export function AddAgentDialog({
     }
   }
 
-  const isEligible = (type: AgentTypeDefinition) => {
-    if (type.access === 'open') return true
-    if (!user || !type.isEligible) return false
-    return type.isEligible(user)
+  const goToBilling = () => {
+    resetAndClose()
+    navigate({ to: '/billing' })
   }
-
-  const platform = selected?.platform ?? 'linkedin'
-  const config = PLATFORM_CONFIG[platform]
-  const PlatformIcon = config.icon
 
   return (
     <Dialog
@@ -153,62 +173,23 @@ export function AddAgentDialog({
             <DialogHeader>
               <DialogTitle>Add Agent</DialogTitle>
               <DialogDescription>
-                Choose an agent type to get started.
+                Pick a platform and what you want the agent to do.
               </DialogDescription>
             </DialogHeader>
-            <div className='grid gap-3 py-4'>
-              {agentTypes.map((type) => {
-                const eligible = isEligible(type)
-                const Icon = type.icon
-                const isSelected = selected?.slug === type.slug
-
-                return (
-                  <button
-                    key={type.slug}
-                    type='button'
-                    disabled={!eligible}
-                    onClick={() => setSelected(type)}
-                    className={cn(
-                      'flex items-start gap-3 rounded-lg border p-4 text-left transition-colors',
-                      isSelected && 'ring-primary border-primary ring-1',
-                      eligible
-                        ? 'hover:bg-muted cursor-pointer'
-                        : 'cursor-not-allowed opacity-60'
-                    )}
-                  >
-                    <div className='bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg'>
-                      <Icon className='size-5' />
-                    </div>
-                    <div className='min-w-0 flex-1'>
-                      <div className='flex items-center gap-2'>
-                        <span className='text-sm font-semibold'>
-                          {type.name}
-                        </span>
-                        {type.badge && (
-                          <Badge variant='secondary' className='text-xs'>
-                            {type.badge}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className='text-muted-foreground mt-1 text-xs'>
-                        {type.description}
-                      </p>
-                      {!eligible && (
-                        <p className='mt-1 text-xs text-amber-600'>
-                          Available by invitation for paid customers.
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
+            <div className='py-4'>
+              <PlatformCapabilityPicker
+                value={selection}
+                onChange={setSelection}
+                user={user}
+                onUpgrade={goToBilling}
+              />
             </div>
             <div className='flex justify-end gap-2'>
               <Button variant='outline' onClick={resetAndClose}>
                 Cancel
               </Button>
               <Button
-                disabled={!selected}
+                disabled={!selectedSlugs.length}
                 onClick={() => setStep('connect')}
               >
                 Continue
@@ -217,12 +198,13 @@ export function AddAgentDialog({
           </>
         )}
 
-        {step === 'connect' && selected && (
+        {step === 'connect' && selectedSlugs.length > 0 && (
           <>
             <DialogHeader>
               <DialogTitle>Choose Account</DialogTitle>
               <DialogDescription>
-                Select an existing {platform === 'twitter' ? 'X' : 'LinkedIn'} account or connect a new one.
+                Select an existing {platform === 'twitter' ? 'X' : 'LinkedIn'} account or
+                connect a new one.
               </DialogDescription>
             </DialogHeader>
             <div className='grid max-h-[50vh] gap-2 overflow-y-auto py-4'>
@@ -265,7 +247,7 @@ export function AddAgentDialog({
                 type='button'
                 onClick={() => {
                   setSelectedProfileId(null)
-                  handleConnect()
+                  handleConnectNew()
                 }}
                 disabled={isConnecting}
                 className={cn(
@@ -303,17 +285,7 @@ export function AddAgentDialog({
               {selectedProfileId && (
                 <Button
                   disabled={activateAgentType.isPending}
-                  onClick={async () => {
-                    await activateAgentType.mutateAsync({
-                      profileId: selectedProfileId,
-                      agentType: selected.slug,
-                    })
-                    resetAndClose()
-                    navigate({
-                      to: `/agents/$profileId/$agentType/${defaultTabForAgent(selected.slug)}` as string,
-                      params: { profileId: selectedProfileId, agentType: selected.slug },
-                    })
-                  }}
+                  onClick={() => activateAllAndNavigate(selectedProfileId)}
                 >
                   {activateAgentType.isPending ? (
                     <Loader2 className='mr-2 size-4 animate-spin' />

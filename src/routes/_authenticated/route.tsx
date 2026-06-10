@@ -48,7 +48,7 @@ function RouteComponent() {
 
   const isCoreFeaturePage = () => {
     const pathname = location.pathname
-    const nonCorePages = ['/pricing', '/billing', '/agents', '/']
+    const nonCorePages = ['/pricing', '/plans', '/billing', '/agents', '/']
     return !nonCorePages.some((page) =>
       page === '/' ? pathname === '/' : pathname.startsWith(page)
     )
@@ -72,14 +72,14 @@ function RouteComponent() {
   const isPending = user?.status === UserSubscriptionStatus.PENDING
   const isOnboardingCompleted =
     user?.metadata?.onboarding?.status === 'completed'
-  const allowedPendingPaths = ['/pricing', '/billing']
+  const allowedPendingPaths = ['/plans', '/billing']
   const isOnAllowedPath = allowedPendingPaths.some((p) =>
     location.pathname.startsWith(p)
   )
 
   useEffect(() => {
     if (isPending && isOnboardingCompleted && !isOnAllowedPath) {
-      navigate({ to: '/pricing' })
+      navigate({ to: '/plans' })
     }
   }, [isPending, isOnboardingCompleted, isOnAllowedPath, navigate])
 

@@ -9,6 +9,16 @@ export enum UserSubscriptionStatus {
   INACTIVE = 'inactive',
 }
 
+export type PlanTier = 'starter' | 'pro' | 'premium'
+export type AgentType = 'comment' | 'post'
+
+export interface IAgentEntitlement {
+  tier: PlanTier
+  active: boolean
+  /** Profile (connected-account) slots for this agent. Independent per agent. */
+  profiles?: number
+}
+
 export interface IUser {
   _id: string
   firstName: string
@@ -23,6 +33,7 @@ export interface IUser {
   subscribedProductId: string
   status: UserSubscriptionStatus
   subscription?: ISubscription | null
+  agents?: Partial<Record<AgentType, IAgentEntitlement>>
   trialEndsAt?: string | null
   metadata: {
     onboarding: {

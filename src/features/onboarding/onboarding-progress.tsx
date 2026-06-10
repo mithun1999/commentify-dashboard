@@ -11,40 +11,27 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-
-const STEPS = [
-  { path: '/onboarding/extension', label: 'Install Extension' },
-  { path: '/onboarding/agent-type', label: 'Choose Agent' },
-  { path: '/onboarding/connect-account', label: 'Connect Account' },
-  { path: '/onboarding/post-settings', label: 'Scrape Settings' },
-  { path: '/onboarding/comment-settings', label: 'Comment Settings' },
-]
-
-const STAGE_MESSAGES = [
-  'Kick things off by installing the extension',
-  'Pick the platform you want to engage on',
-  'Connect your social account to get started',
-  'Configure what posts your agent should target',
-  'Define your comment style and tone',
-]
+import { getProgressSteps } from './onboarding-flow'
 
 export function OnboardingProgress() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { completedSteps } = useOnboarding()
+  const { completedSteps, data } = useOnboarding()
   const { data: user } = useGetUserQuery()
   const backendStep = user?.metadata?.onboarding?.step ?? 0
 
+  const steps = getProgressSteps(data.selectedCapabilities)
+
   const pathname = location.pathname
-  const currentStepIndex = STEPS.findIndex((step) =>
+  const currentStepIndex = steps.findIndex((step) =>
     pathname.includes(step.path)
   )
   const progress =
-    currentStepIndex >= 0 ? (currentStepIndex / (STEPS.length - 1)) * 100 : 0
+    currentStepIndex >= 0 ? (currentStepIndex / (steps.length - 1)) * 100 : 0
 
   const currentMessage =
-    currentStepIndex >= 0 && currentStepIndex < STAGE_MESSAGES.length
-      ? STAGE_MESSAGES[currentStepIndex]
+    currentStepIndex >= 0
+      ? steps[currentStepIndex].message
       : 'Complete your agent setup'
 
   const handleStepClick = (stepPath: string, index: number) => {
@@ -81,8 +68,8 @@ export function OnboardingProgress() {
         </div>
 
         <div className='absolute top-1 right-0 left-0 flex -translate-y-1/2 justify-between'>
-          {STEPS.map((step, index) => {
-            const stepName = step.path.split('/').pop() || ''
+          {steps.map((step, index) => {
+            const stepName = step.key
             const isActive = index === currentStepIndex
             const isCompleted =
               index < currentStepIndex || completedSteps.includes(stepName)

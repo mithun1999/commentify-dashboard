@@ -44,7 +44,7 @@ export function TrialBanner({
           asChild
         >
           <Link
-            to='/pricing'
+            to='/plans'
             onClick={() =>
               posthog?.capture('trial_banner_activate_clicked')
             }
@@ -71,7 +71,7 @@ export function TrialBanner({
           asChild
         >
           <Link
-            to='/pricing'
+            to='/plans'
             onClick={() => posthog?.capture('trial_banner_upgrade_clicked')}
           >
             <Sparkles className='h-3.5 w-3.5' />
@@ -111,7 +111,7 @@ export function TrialBanner({
         asChild
       >
         <Link
-          to='/pricing'
+          to='/plans'
           onClick={() => posthog?.capture('trial_banner_upgrade_clicked')}
         >
           <Sparkles className='h-3.5 w-3.5' />

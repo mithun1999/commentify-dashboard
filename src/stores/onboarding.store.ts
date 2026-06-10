@@ -1,5 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { AgentType } from '@/features/auth/interface/user.interface'
+
+export type OnboardingPlatform = 'linkedin' | 'twitter'
 
 export interface OnboardingSalesSetting {
   websiteUrl: string
@@ -16,6 +19,14 @@ export interface OnboardingSalesSetting {
 export interface OnboardingData {
   isExtensionInstalled: boolean
   isLinkedInConnected: boolean
+  /** Platform chosen in the platform-first picker. */
+  selectedPlatform: OnboardingPlatform | null
+  /** Capabilities the user wants on that platform (e.g. ['comment','post']). */
+  selectedCapabilities: AgentType[]
+  /**
+   * Primary agent slug, derived from platform + capabilities (commenting wins
+   * when both are selected). Kept for back-compat with existing step logic.
+   */
   selectedAgentType: string | null
   selectedAgentMode: 'branding' | 'sales' | null
   linkedProfileId: string | null
@@ -44,6 +55,8 @@ export interface OnboardingData {
 const defaultOnboardingData: OnboardingData = {
   isExtensionInstalled: false,
   isLinkedInConnected: false,
+  selectedPlatform: null,
+  selectedCapabilities: [],
   selectedAgentType: null,
   selectedAgentMode: null,
   linkedProfileId: null,
@@ -111,17 +124,31 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
     }),
     {
       name: 'commentify-onboarding',
-      version: 2,
+      version: 3,
       migrate: (persisted: unknown, version: number) => {
         const state = persisted as OnboardingStoreState
         if (version === 1) {
-          return {
-            ...state,
-            data: {
-              ...state.data,
-              selectedAgentMode: null,
-              salesSetting: defaultOnboardingData.salesSetting,
-            },
+          state.data = {
+            ...state.data,
+            selectedAgentMode: null,
+            salesSetting: defaultOnboardingData.salesSetting,
+          }
+        }
+        if (version < 3) {
+          // Backfill platform-first fields from the legacy single agent slug.
+          const slug = state.data?.selectedAgentType
+          state.data = {
+            ...state.data,
+            selectedPlatform:
+              state.data?.selectedPlatform ??
+              (slug
+                ? slug.startsWith('twitter')
+                  ? 'twitter'
+                  : 'linkedin'
+                : null),
+            selectedCapabilities:
+              state.data?.selectedCapabilities ??
+              (slug ? [slug.includes('posting') ? 'post' : 'comment'] : []),
           }
         }
         return state

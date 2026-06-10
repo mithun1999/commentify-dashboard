@@ -32,6 +32,14 @@ export interface IProviderData {
   }
 }
 
+export type ProductAgentType = 'comment' | 'post'
+export type ProductTier = 'starter' | 'pro'
+export type ProductKind = 'plan' | 'addon' | 'topup'
+// `slot` is the unified add-on family (one agent × tier profile instance).
+// `agent`/`platform` remain only for reading legacy (retired) add-on docs.
+export type ProductAddonType = 'slot' | 'agent' | 'platform'
+export type ProductVariant = 'standard' | 'discounted'
+
 export interface IProduct {
   _id: string
   name: string
@@ -48,6 +56,14 @@ export interface IProduct {
   createdAt: string
   updatedAt: string
   features: string[]
+  // Two-agent catalog fields (present on the new catalog; absent on legacy docs).
+  agentType?: ProductAgentType
+  tier?: ProductTier
+  kind?: ProductKind
+  addonType?: ProductAddonType
+  variant?: ProductVariant
+  // Post-generation credits granted by a one-time top-up product.
+  creditAmount?: number
   __v?: number
 }
 

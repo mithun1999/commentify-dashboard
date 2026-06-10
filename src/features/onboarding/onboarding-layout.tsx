@@ -15,6 +15,7 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const isDemoStep = location.pathname === '/onboarding/demo'
+  const isTrialStep = location.pathname === '/onboarding/activate-trial'
   // Prime profiles data during onboarding like in the main app
   useGetAllProfileQuery()
   const { data: user } = useGetUserQuery()
@@ -33,7 +34,11 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
         <main
           className={cn(
             'flex-1 px-4 py-8 md:px-8',
-            isDemoStep ? 'container max-w-6xl' : 'container max-w-4xl'
+            isDemoStep
+              ? 'container max-w-6xl'
+              : isTrialStep
+                ? 'container max-w-5xl'
+                : 'container max-w-4xl'
           )}
         >
           {!isDemoStep ? (

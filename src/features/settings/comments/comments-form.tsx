@@ -42,6 +42,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { getAgentPlanTier } from '@/features/agent-system/registry'
 import { CommentLengthEnum } from '@/features/settings/enum/setting.enum'
 import {
   useCreateCommentSettingQuery,
@@ -89,11 +90,7 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
   const { data: user } = useGetUserQuery()
-  // Extract base plan from SKU (e.g., "premium_monthly" → "premium")
-  const basePlanName = user?.subscribedProduct?.sku
-    ?.split('_')[0]
-    ?.toLowerCase()
-  const userPlan = (basePlanName as 'starter' | 'pro' | 'premium') ?? 'starter'
+  const userPlan = getAgentPlanTier(user, 'comment')
   const { createCommentSetting, isCreatingCommentSetting } =
     useCreateCommentSettingQuery()
   const { updateCommentSetting, isUpdatingCommentSetting } =

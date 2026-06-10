@@ -4,9 +4,13 @@ import { toast } from 'sonner'
 import { showSubmittedData } from '@/utils/show-submitted-data'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 import {
+  analyzeOnboardingProfile,
   createOnboardingCommentSetting,
   createOnboardingPostSetting,
   createOnboardingTwitterPostSetting,
+  refineOnboardingKeywords,
+  validateOnboardingKeywords,
+  type IAnalyzeProfileResult,
 } from '../api/onboarding.api'
 import {
   IOnboardingCommentPayload,
@@ -74,6 +78,51 @@ export const useCreateOnboardingCommentQuery = () => {
     createOnboardingCommentSetting: mutate,
     createOnboardingCommentSettingAsync: mutateAsync,
     isCreatingOnboardingComment: isPending,
+  }
+}
+
+export const useAnalyzeOnboardingProfile = () => {
+  const { mutateAsync, isPending } = useMutation<
+    IAnalyzeProfileResult,
+    AxiosError<{ message?: string }>,
+    { profileId: string; mode: 'branding' | 'sales' }
+  >({
+    mutationFn: analyzeOnboardingProfile,
+  })
+
+  return {
+    analyzeOnboardingProfileAsync: mutateAsync,
+    isAnalyzingProfile: isPending,
+  }
+}
+
+export const useValidateOnboardingKeywords = () => {
+  const { mutateAsync, isPending } = useMutation<
+    { valid: string[]; invalid: string[] },
+    AxiosError<{ message?: string }>,
+    { keywords: string[]; profileId?: string }
+  >({
+    mutationFn: validateOnboardingKeywords,
+  })
+
+  return {
+    validateOnboardingKeywordsAsync: mutateAsync,
+    isValidatingKeywords: isPending,
+  }
+}
+
+export const useRefineOnboardingKeywords = () => {
+  const { mutateAsync, isPending } = useMutation<
+    { keywords: string[]; invalid: string[] },
+    AxiosError<{ message?: string }>,
+    { profileId: string; existing: string[]; mode: 'branding' | 'sales' }
+  >({
+    mutationFn: refineOnboardingKeywords,
+  })
+
+  return {
+    refineOnboardingKeywordsAsync: mutateAsync,
+    isRefiningKeywords: isPending,
   }
 }
 

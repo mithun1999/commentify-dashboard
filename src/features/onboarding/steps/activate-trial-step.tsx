@@ -1,98 +1,166 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, CheckCircle2, CreditCard, Loader2, Minus, Plus, Shield, XCircle, Zap } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Linkedin,
+  Loader2,
+  MessageSquare,
+  PenLine,
+  Shield,
+  Twitter,
+  XCircle,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { paymentConfig } from '@/config/payment.config'
 import { Button } from '@/components/ui/button'
 import { LoadingButton } from '@/components/ui/LoadingButton'
 import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
+import {
+  UserSubscriptionStatus,
+  type PlanTier,
+} from '@/features/auth/interface/user.interface'
 import { useGetUserQuery, UserQueryEnum } from '@/features/auth/query/user.query'
-import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import type { PaymentProvider } from '@/features/subscription/interfaces/subscription.interface'
-import { useCreateCheckoutUrl } from '@/features/subscription/query/subscription.query'
+import {
+  useCreateCheckoutUrl,
+  useUpdateSubscriptionPlan,
+} from '@/features/subscription/query/subscription.query'
 import { verifyCheckout } from '@/features/subscription/api/subscription.api'
 import { useGetPlans } from '@/features/pricing/query/pricing.query'
-import type { IDisplayProduct } from '@/features/pricing/interfaces/price.interface'
+import type {
+  ProductAgentType,
+  ProductTier,
+} from '@/features/pricing/interfaces/price.interface'
 import { getCurrencySymbol } from '@/features/pricing/utils/prices.util'
-import { useOnboarding } from '@/stores/onboarding.store'
+import {
+  buildPlanCatalog,
+  getPlan,
+  getSlot,
+  type Interval,
+} from '@/features/plans/utils/plan-catalog.util'
+import {
+  computeCartOrder,
+  type AgentSelection,
+} from '@/features/plans/utils/cart.util'
+import {
+  useOnboarding,
+  type OnboardingPlatform,
+} from '@/stores/onboarding.store'
 import { OnboardingCard } from '../onboarding-card'
-import { OnboardingNavigation } from '../onboarding-navigation'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 
 const activateTrialRoute = getRouteApi('/onboarding/activate-trial')
 
-type PlanTier = 'pro' | 'premium'
 type CheckoutState = 'selecting' | 'processing' | 'success' | 'failed'
 
 const POLL_INTERVAL_MS = 3000
 const POLL_TIMEOUT_MS = 10000
 
-const CONTEXTUAL_FEATURES: Record<string, Record<PlanTier, string[]>> = {
-  'linkedin-sales': {
-    pro: [
-      'Up to 50 AI comments per day targeting prospects',
-      'Auto-find posts mentioning your product niche',
-      'Personalized sales-focused tone',
-      'Filter out hiring & job-update posts',
-    ],
-    premium: [
-      'Up to 100 AI comments per day targeting prospects',
-      'Auto-find posts mentioning your product niche',
-      'Personalized sales-focused tone',
-      'Filter out hiring & job-update posts',
-      'Target by prospect job titles (CEO, VP, etc.)',
-      'Tag post authors for direct engagement',
-      'Custom post skipping rules',
-    ],
+const AGENTS: {
+  key: ProductAgentType
+  name: string
+  blurb: string
+  icon: LucideIcon
+}[] = [
+  {
+    key: 'comment',
+    name: 'Commenting agent',
+    blurb: 'Find and comment on relevant posts to grow reach and visibility.',
+    icon: MessageSquare,
   },
-  'linkedin-branding': {
-    pro: [
-      'Up to 50 AI comments per day to grow your brand',
-      'Keyword-based post targeting',
-      'Personalized tone matching your voice',
-      'Filter out hiring & job-update posts',
-    ],
-    premium: [
-      'Up to 100 AI comments per day to grow your brand',
-      'Keyword-based post targeting',
-      'Personalized tone matching your voice',
-      'Filter out hiring & job-update posts',
-      'Target by author job titles',
-      'Tag post authors for direct engagement',
-      'Custom post skipping rules',
-    ],
+  {
+    key: 'post',
+    name: 'Posting agent',
+    blurb: 'AI content calendar that drafts, refines, and publishes posts.',
+    icon: PenLine,
   },
-  'twitter': {
-    pro: [
-      'Up to 50 AI replies per day',
-      'Keyword & hashtag targeting',
-      'Personalized reply tone',
-    ],
-    premium: [
-      'Up to 100 AI replies per day',
-      'Keyword & hashtag targeting',
-      'Personalized reply tone',
-      'Tag tweet authors',
-      'Advanced engagement filters',
-    ],
+]
+
+const TIERS: { key: ProductTier; label: string }[] = [
+  { key: 'starter', label: 'Starter' },
+  { key: 'pro', label: 'Pro' },
+]
+
+type TierCopy = { blurb: string; popular?: boolean; features: string[] }
+
+// What each plan unlocks, shown per tier so a new user can compare before they
+// commit. Mirrors the marketing site's canonical copy (commentify-nextjs-website
+// AGENT_PRICING) — keep the two in sync. Prices still come from the live catalog.
+const PLAN_FEATURES: Record<ProductAgentType, Record<ProductTier, TierCopy>> = {
+  comment: {
+    starter: {
+      blurb: 'One agent, commenting on autopilot.',
+      features: [
+        '1 commenting agent (LinkedIn or X)',
+        'Up to 50 posts analyzed per day',
+        'AI comments generated in your voice',
+        'Personal Branding + Sales modes',
+        'Smart queue — review, edit, approve',
+      ],
+    },
+    pro: {
+      blurb: 'Scale across profiles & geographies.',
+      popular: true,
+      features: [
+        'Everything in Starter, plus:',
+        'Up to 100 posts analyzed per day',
+        'Monitor up to 10 specific profiles',
+        'Advanced targeting — geography & engagement',
+        'Tag original author in comments',
+        'Growth analytics dashboard',
+        'Priority support',
+      ],
+    },
+  },
+  post: {
+    starter: {
+      blurb: 'Your content calendar, on autopilot.',
+      features: [
+        '1 posting agent (LinkedIn)',
+        '3 posts per week',
+        'AI drafts written in your voice',
+        'AI-generated images per post',
+        'Review, edit, schedule, or auto-publish',
+      ],
+    },
+    pro: {
+      blurb: 'Publish more, sourced from the best.',
+      popular: true,
+      features: [
+        'Everything in Starter, plus:',
+        '5 posts per week',
+        'Track up to 15 creators for inspiration',
+        'AI carousels',
+        'Priority support',
+      ],
+    },
   },
 }
 
-function getContextKey(agentType: string | null, agentMode: string | null): string {
-  if (agentType === 'twitter-commenting') return 'twitter'
-  if (agentMode === 'sales') return 'linkedin-sales'
-  return 'linkedin-branding'
+const TRIAL_DAYS = 5
+
+const PLATFORM_META: Record<
+  OnboardingPlatform,
+  { label: string; Icon: LucideIcon }
+> = {
+  linkedin: { label: 'LinkedIn', Icon: Linkedin },
+  twitter: { label: 'X (Twitter)', Icon: Twitter },
 }
 
-function getFeaturesForPlan(planName: string, contextKey: string): string[] | null {
-  const tier = planName.toLowerCase() as PlanTier
-  return CONTEXTUAL_FEATURES[contextKey]?.[tier] ?? null
+const toCartTier = (tier?: PlanTier | string): ProductTier =>
+  tier === 'pro' || tier === 'premium' ? 'pro' : 'starter'
+
+function formatCents(cents: number, symbol: string) {
+  return `${symbol}${(cents / 100).toFixed(2)}`
 }
 
 function useCheckoutReturn() {
@@ -168,7 +236,11 @@ function useCheckoutReturn() {
   }, [checkoutState, user?.status, navigate, queryClient, subscription_id, posthog])
 
   useEffect(() => {
-    if (checkoutState === 'processing' && user?.status && user.status !== UserSubscriptionStatus.PENDING) {
+    if (
+      checkoutState === 'processing' &&
+      user?.status &&
+      user.status !== UserSubscriptionStatus.PENDING
+    ) {
       setCheckoutState('success')
       if (pollRef.current) clearInterval(pollRef.current)
       posthog?.capture('onboarding_trial_activated', {
@@ -190,7 +262,7 @@ function useCheckoutReturn() {
     verifyCalledRef.current = false
   }
 
-  return { checkoutState, timedOut, retryCheckout, subscriptionId: subscription_id }
+  return { checkoutState, timedOut, retryCheckout }
 }
 
 export function ActivateTrialStep() {
@@ -198,15 +270,56 @@ export function ActivateTrialStep() {
   const posthog = usePostHog()
   const navigate = useNavigate()
   const { data: user } = useGetUserQuery()
-  const { agents } = useAgents()
   const { data: plans, isLoading: isFetchingPlans } = useGetPlans()
   const { data: onboardingData } = useOnboarding()
-  const contextKey = getContextKey(onboardingData.selectedAgentType, onboardingData.selectedAgentMode)
   const { checkoutState, timedOut, retryCheckout } = useCheckoutReturn()
 
-  const minQuantity = Math.max(agents.length, 1)
-  const [subscriptionType, setSubscriptionType] = useState<'monthly' | 'yearly'>('monthly')
-  const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [interval, setBillingInterval] = useState<Interval>('monthly')
+  const [selection, setSelection] = useState<AgentSelection>(() => {
+    const initial: AgentSelection = {}
+    for (const cap of onboardingData.selectedCapabilities ?? []) {
+      if (cap === 'comment' || cap === 'post') initial[cap] = 'pro'
+    }
+    // Resuming subscribers: seed from existing entitlements.
+    if (user?.agents?.comment?.tier) initial.comment = toCartTier(user.agents.comment.tier)
+    if (user?.agents?.post?.tier) initial.post = toCartTier(user.agents.post.tier)
+    if (!initial.comment && !initial.post) {
+      const slug = onboardingData.selectedAgentType ?? ''
+      if (slug.includes('post')) initial.post = 'pro'
+      else initial.comment = 'pro'
+    }
+    return initial
+  })
+  // Opt-in: run the commenting agent on a second platform (e.g. X alongside
+  // LinkedIn) as a 20%-off bundle slot on the same subscription.
+  const [secondPlatform, setSecondPlatform] = useState(false)
+
+  const catalog = useMemo(
+    () => buildPlanCatalog(Array.isArray(plans) ? plans : []),
+    [plans]
+  )
+
+  const isExistingSubscriber =
+    user?.status === UserSubscriptionStatus.ACTIVE && Boolean(user?.subscription)
+
+  // Extra profiles are added later from the dashboard, so the cart carries the
+  // agent plan(s) plus the optional second-platform add-on (passing 0 for the
+  // extra-profile quantity keeps that path untouched here).
+  const order = useMemo(
+    () =>
+      computeCartOrder(
+        catalog,
+        selection,
+        interval,
+        {},
+        isExistingSubscriber,
+        secondPlatform && !!selection.comment
+      ),
+    [catalog, selection, interval, isExistingSubscriber, secondPlatform]
+  )
+
+  const currency = order.lines[0]?.product.currency ?? 'usd'
+  const symbol = getCurrencySymbol(currency)
 
   const handleCheckoutUrl = (url: string) => {
     const provider = paymentConfig.defaultPaymentProvider as PaymentProvider
@@ -224,46 +337,182 @@ export function ActivateTrialStep() {
   const { createCheckoutUrl, isCreatingCheckoutUrl } = useCreateCheckoutUrl({
     cb: handleCheckoutUrl,
   })
+  const { updateSubscriptionPlan, isUpdatingSubscriptionPlan } =
+    useUpdateSubscriptionPlan()
 
-  const updatedPlans: IDisplayProduct[] = useMemo(() => {
-    const safePlans = Array.isArray(plans) ? plans : []
-    return safePlans
-      .filter((plan) => plan.interval === subscriptionType && plan.status === 'active')
-      .map((plan) => {
-        const currencySymbol = getCurrencySymbol(plan.currency)
-        const displayPrice = `${currencySymbol}${plan.defaultDisplayPrice}`
-        const basePlanName = plan.name.replace(/\s+(Monthly|Yearly)$/i, '').toLowerCase()
-        return { ...plan, displayPrice, popular: basePlanName === 'premium' }
-      })
-  }, [plans, subscriptionType])
+  const isSubmitting = isCreatingCheckoutUrl || isUpdatingSubscriptionPlan
+  const canCheckout =
+    !!order.baseProduct && order.missing.length === 0 && !isSubmitting
 
-  const getQuantity = useCallback(
-    (productId: string) => quantities[productId] ?? minQuantity,
-    [quantities, minQuantity]
-  )
+  const toggleAgent = (agent: ProductAgentType) => {
+    setSelection((prev) => {
+      const next = { ...prev }
+      if (next[agent]) delete next[agent]
+      else next[agent] = 'pro'
+      return next
+    })
+    // The second platform is a commenting add-on; drop it if commenting is off.
+    if (agent === 'comment' && selection.comment) setSecondPlatform(false)
+  }
 
-  const handlePlanSelect = (product: IDisplayProduct) => {
-    const quantity = getQuantity(product._id)
+  const setTier = (agent: ProductAgentType, tier: ProductTier) => {
+    setSelection((prev) => ({ ...prev, [agent]: tier }))
+  }
+
+  // Always present a clean monthly figure: yearly plans show their per-month
+  // equivalent so the cards read "$X/mo" regardless of the billing interval.
+  const monthlyCents = (agent: ProductAgentType, tier: ProductTier) => {
+    const plan = getPlan(catalog, agent, tier, interval)
+    if (!plan) return null
+    return interval === 'yearly'
+      ? Math.round(plan.defaultPrice / 12)
+      : plan.defaultPrice
+  }
+  const perMo = (cents: number) =>
+    interval === 'yearly' ? Math.round(cents / 12) : cents
+
+  const handleSubmit = () => {
+    if (!order.baseProduct) return
+    const provider = paymentConfig.defaultPaymentProvider as PaymentProvider
     posthog?.capture('onboarding_checkout_started', {
-      product_id: product._id,
-      plan_name: product.name,
-      subscription_type: subscriptionType,
-      quantity,
-      price: product.defaultDisplayPrice,
-      currency: product.currency,
+      base_product_id: order.baseProduct._id,
+      addon_ids: order.addons.map((a) => a.productId),
+      interval,
+      is_bundle: !!order.discountCode,
+      agents: Object.keys(selection),
     })
-    createCheckoutUrl({
-      productId: product._id,
-      provider: paymentConfig.defaultPaymentProvider as PaymentProvider,
-      embed: false,
-      quantity,
-    })
+    if (isExistingSubscriber) {
+      updateSubscriptionPlan({
+        productId: order.baseProduct._id,
+        addons: order.addons,
+      })
+    } else {
+      createCheckoutUrl({
+        productId: order.baseProduct._id,
+        provider,
+        embed: false,
+        addons: order.addons,
+        discountCode: order.discountCode,
+      })
+    }
   }
 
   if (user?.status && user.status !== UserSubscriptionStatus.PENDING) {
-    if (checkoutState !== 'success') {
+    if (checkoutState !== 'success' && !isExistingSubscriber) {
       navigate({ to: '/' })
     }
+  }
+
+  const connectedPlatform: OnboardingPlatform =
+    onboardingData.selectedPlatform ?? 'linkedin'
+  const secondPlatformType: OnboardingPlatform =
+    connectedPlatform === 'linkedin' ? 'twitter' : 'linkedin'
+  const selectedAgentKeys = AGENTS.map((a) => a.key).filter((k) => selection[k])
+  const secondAgent = selectedAgentKeys[1]
+  const hasBundle = order.discountCents > 0
+  const agentTitle = (a: ProductAgentType, t: ProductTier) =>
+    `${t === 'pro' ? 'Pro' : 'Starter'} ${a === 'comment' ? 'Comment' : 'Post'} Agent`
+
+  // The bundle (20% off) commenting slot, sized to the commenting tier — a second
+  // platform is just another commenting instance. Only available once
+  // provisioned; falls back to an informational row otherwise.
+  const secondPlatformProduct = selection.comment
+    ? getSlot(catalog, 'comment', selection.comment, interval, 'discounted')
+    : undefined
+  const secondPlatformStdProduct = selection.comment
+    ? getSlot(catalog, 'comment', selection.comment, interval, 'standard')
+    : undefined
+
+  const platformRow = (platform: OnboardingPlatform, connected: boolean) => {
+    const meta = PLATFORM_META[platform]
+    const PlatformIcon = meta.Icon
+    return (
+      <div
+        className={cn(
+          'flex items-center gap-3 rounded-xl border p-3',
+          connected ? 'border-border' : 'border-dashed'
+        )}
+      >
+        <span className='bg-muted text-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-lg'>
+          <PlatformIcon className='h-4 w-4' />
+        </span>
+        <div className='min-w-0 flex-1'>
+          <p className='text-sm font-medium'>{meta.label}</p>
+          <p className='text-muted-foreground text-[11px] tracking-wide uppercase'>
+            {connected ? 'Connected in setup' : 'Connect later from your dashboard'}
+          </p>
+        </div>
+        {connected ? (
+          <Check className='text-primary h-4 w-4' />
+        ) : (
+          <span className='text-muted-foreground rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase'>
+            Later
+          </span>
+        )}
+      </div>
+    )
+  }
+
+  const renderSecondPlatform = () => {
+    if (!secondPlatformProduct) return platformRow(secondPlatformType, false)
+    const meta = PLATFORM_META[secondPlatformType]
+    const PlatformIcon = meta.Icon
+    const price = perMo(secondPlatformProduct.defaultPrice)
+    const stdPrice = secondPlatformStdProduct
+      ? perMo(secondPlatformStdProduct.defaultPrice)
+      : null
+    return (
+      <button
+        type='button'
+        aria-pressed={secondPlatform}
+        onClick={() => setSecondPlatform((v) => !v)}
+        className={cn(
+          'flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors',
+          secondPlatform
+            ? 'border-primary bg-primary/5'
+            : 'hover:border-muted-foreground/40 border-dashed'
+        )}
+      >
+        <span className='bg-muted text-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-lg'>
+          <PlatformIcon className='h-4 w-4' />
+        </span>
+        <div className='min-w-0 flex-1'>
+          <p className='text-sm font-medium'>
+            {meta.label}
+            <span className='text-muted-foreground ml-1.5 text-[11px] font-normal'>
+              · 2nd platform
+            </span>
+          </p>
+          <p className='mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-[11px]'>
+            <span className='text-foreground font-semibold'>
+              {formatCents(price, symbol)}/mo
+            </span>
+            {stdPrice && stdPrice !== price && (
+              <span className='text-muted-foreground line-through'>
+                {formatCents(stdPrice, symbol)}
+              </span>
+            )}
+            <span className='text-primary font-semibold'>20% off</span>
+          </p>
+        </div>
+        <span
+          className={cn(
+            'flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold tracking-wide uppercase',
+            secondPlatform
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground border'
+          )}
+        >
+          {secondPlatform ? (
+            <>
+              <Check className='h-3 w-3' /> Added
+            </>
+          ) : (
+            'Add'
+          )}
+        </span>
+      </button>
+    )
   }
 
   if (checkoutState === 'processing') {
@@ -335,143 +584,344 @@ export function ActivateTrialStep() {
   }
 
   return (
-    <OnboardingCard
-      title='Start your free trial'
-      description="You're all set up! Add a payment method to activate your trial. You won't be charged until it ends."
-      className='max-w-3xl'
-    >
-      <div className='space-y-6'>
-        <div className='bg-primary/5 border-primary/20 flex items-start gap-3 rounded-xl border p-4'>
-          <Shield className='text-primary mt-0.5 h-5 w-5 flex-shrink-0' />
-          <div className='text-sm'>
-            <p className='text-foreground font-medium'>100% risk-free trial</p>
-            <p className='text-muted-foreground'>
-              Cancel anytime during your trial - no charges, no questions asked. We'll notify you a few days before your trial ends. Takes less than 2 minutes to set up.
-            </p>
+    <div className='space-y-6'>
+      <div className='flex flex-wrap items-center justify-between gap-4'>
+        <button
+          type='button'
+          onClick={() => navigate({ to: '/onboarding/identity' })}
+          className='text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase transition-colors'
+        >
+          <ArrowLeft className='h-3.5 w-3.5' />
+          From your setup
+        </button>
+        <div className='flex items-center gap-3'>
+          <div className='bg-muted/50 inline-flex items-center rounded-full border p-1'>
+            {(['monthly', 'yearly'] as Interval[]).map((opt) => (
+              <button
+                key={opt}
+                type='button'
+                onClick={() => setBillingInterval(opt)}
+                className={cn(
+                  'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                  interval === opt
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {opt === 'monthly' ? 'Monthly' : 'Annual'}
+              </button>
+            ))}
           </div>
-        </div>
-
-        <div className='flex items-center justify-center gap-3'>
-          <Label htmlFor='trial-billing-toggle' className='text-sm font-medium'>Monthly</Label>
-          <Switch
-            id='trial-billing-toggle'
-            checked={subscriptionType === 'yearly'}
-            onCheckedChange={() => setSubscriptionType((p) => p === 'monthly' ? 'yearly' : 'monthly')}
-          />
-          <Label htmlFor='trial-billing-toggle' className='text-sm font-medium'>
-            Yearly <span className='text-primary font-semibold'>(Save 20%)</span>
-          </Label>
-        </div>
-
-        {isFetchingPlans ? (
-          <div className='flex items-center justify-center py-12'>
-            <div className='border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent' />
-          </div>
-        ) : (
-          <div className='flex flex-col items-center gap-4 md:flex-row md:items-stretch md:justify-center'>
-            {updatedPlans.map((plan) => {
-              const qty = getQuantity(plan._id)
-              const unitPrice = parseFloat(plan.defaultDisplayPrice) || 0
-              const totalPrice = unitPrice * qty
-              const intervalLabel = plan.interval === 'yearly' ? '/yr' : '/mo'
-              const currencySymbol = getCurrencySymbol(plan.currency)
-              const baseName = plan.name.replace(/\s+(Monthly|Yearly)$/i, '')
-
-              return (
-                <div
-                  key={plan._id}
-                  className={`border-border bg-card relative flex w-full flex-col rounded-xl border shadow-sm transition-shadow hover:shadow-md md:w-64 ${
-                    plan.popular ? 'ring-primary ring-2' : ''
-                  }`}
-                >
-                  {plan.popular && (
-                    <div className='absolute -top-3 left-1/2 -translate-x-1/2'>
-                      <span className='bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs font-semibold'>
-                        MOST POPULAR
-                      </span>
-                    </div>
-                  )}
-
-                  <div className='flex flex-1 flex-col p-5 pt-6'>
-                    <h3 className='text-center text-lg font-semibold'>{baseName}</h3>
-                    <div className='mt-2 flex items-baseline justify-center gap-1'>
-                      <span className='text-3xl font-bold'>{plan.displayPrice}</span>
-                      <span className='text-muted-foreground text-sm'>{intervalLabel}</span>
-                    </div>
-
-                    <div className='mt-3 flex items-center justify-center gap-2'>
-                      <Button
-                        variant='outline'
-                        size='icon'
-                        className='h-7 w-7 rounded-full'
-                        onClick={() => setQuantities((prev) => ({ ...prev, [plan._id]: Math.max(minQuantity, qty - 1) }))}
-                        disabled={qty <= minQuantity}
-                      >
-                        <Minus className='h-3 w-3' />
-                      </Button>
-                      <span className='w-6 text-center text-sm font-semibold'>{qty}</span>
-                      <Button
-                        variant='outline'
-                        size='icon'
-                        className='h-7 w-7 rounded-full'
-                        onClick={() => setQuantities((prev) => ({ ...prev, [plan._id]: Math.min(50, qty + 1) }))}
-                        disabled={qty >= 50}
-                      >
-                        <Plus className='h-3 w-3' />
-                      </Button>
-                      <span className='text-muted-foreground text-xs'>agents</span>
-                    </div>
-                    {qty > 1 && (
-                      <p className='text-muted-foreground mt-1 text-center text-xs'>
-                        Total: {currencySymbol}{totalPrice}{intervalLabel}
-                      </p>
-                    )}
-
-                    <ul className='mt-4 flex-1 space-y-2'>
-                      {(getFeaturesForPlan(baseName, contextKey) ?? plan.features)?.map((feat, idx) => (
-                        <li key={idx} className='flex items-start gap-2 text-sm'>
-                          <Check className='mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-green-500' />
-                          <span dangerouslySetInnerHTML={{ __html: feat }} />
-                        </li>
-                      ))}
-                    </ul>
-
-                    <LoadingButton
-                      className='mt-4 w-full'
-                      onClick={() => handlePlanSelect(plan)}
-                      disabled={isCreatingCheckoutUrl}
-                      loading={isCreatingCheckoutUrl}
-                    >
-                      <CreditCard className='mr-2 h-4 w-4' />
-                      Start Free Trial
-                    </LoadingButton>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        <div className='flex items-center justify-center gap-6 pt-2'>
-          <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
-            <Zap className='h-3.5 w-3.5' />
-            <span>Instant activation</span>
-          </div>
-          <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
-            <Shield className='h-3.5 w-3.5' />
-            <span>Cancel anytime</span>
-          </div>
-          <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
-            <CreditCard className='h-3.5 w-3.5' />
-            <span>Secure payment</span>
-          </div>
+          <span className='border-primary/40 text-primary rounded-full border px-3 py-1 text-[11px] font-semibold tracking-wide uppercase'>
+            Save 20%
+          </span>
         </div>
       </div>
 
-      <OnboardingNavigation
-        prevStep='/onboarding/identity'
-        currentStep='activate-trial'
-      />
-    </OnboardingCard>
+      <div className='border-border bg-card flex items-start gap-3 rounded-2xl border p-4'>
+        <Shield className='text-primary mt-0.5 h-5 w-5 flex-shrink-0' />
+        <div className='text-sm'>
+          <p className='text-foreground font-medium'>100% risk-free trial</p>
+          <p className='text-muted-foreground'>
+            No charge for {TRIAL_DAYS} days. We'll remind you 2 days before it
+            ends — cancel in one click, no questions asked.
+          </p>
+        </div>
+      </div>
+
+      {isFetchingPlans ? (
+        <div className='flex items-center justify-center py-12'>
+          <div className='border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent' />
+        </div>
+      ) : (
+        <div className='grid items-start gap-6 lg:grid-cols-[1fr_minmax(300px,340px)]'>
+          <div className='flex flex-col gap-5'>
+            {AGENTS.map((agent) => {
+              const selected = !!selection[agent.key]
+              const Icon = agent.icon
+              const activeTier = selection[agent.key] ?? 'pro'
+              const headerCents = monthlyCents(agent.key, activeTier)
+              const isSecond = secondAgent === agent.key && hasBundle
+              const copy = PLAN_FEATURES[agent.key][activeTier]
+              return (
+                <section
+                  key={agent.key}
+                  className={cn(
+                    'rounded-2xl border p-5 transition-colors sm:p-6',
+                    selected
+                      ? 'border-primary bg-primary/[0.03]'
+                      : 'border-border bg-card'
+                  )}
+                >
+                  <div className='flex items-start justify-between gap-4'>
+                    <div className='flex items-start gap-3'>
+                      <span
+                        className={cn(
+                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+                          selected
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        <Icon className='h-5 w-5' />
+                      </span>
+                      <div>
+                        <div className='flex flex-wrap items-center gap-2'>
+                          <h3 className='font-semibold'>{agent.name}</h3>
+                          {isSecond && (
+                            <span className='bg-primary/15 text-primary rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase'>
+                              2nd agent −20%
+                            </span>
+                          )}
+                        </div>
+                        <p className='text-muted-foreground mt-0.5 text-sm'>
+                          {agent.blurb}
+                        </p>
+                      </div>
+                    </div>
+                    <div className='flex items-center gap-3'>
+                      {selected && headerCents != null && (
+                        <div className='whitespace-nowrap text-right'>
+                          <span className='text-xl font-bold'>
+                            {formatCents(headerCents, symbol)}
+                          </span>
+                          <span className='text-muted-foreground text-xs'>
+                            /mo
+                          </span>
+                        </div>
+                      )}
+                      <Switch
+                        checked={selected}
+                        onCheckedChange={() => toggleAgent(agent.key)}
+                        aria-label={`Enable ${agent.name}`}
+                      />
+                    </div>
+                  </div>
+
+                  {selected && (
+                    <div className='mt-5 grid gap-6 md:grid-cols-2'>
+                      <div>
+                        <p className='text-muted-foreground text-[11px] font-semibold tracking-wider uppercase'>
+                          Plan
+                        </p>
+                        <div
+                          role='radiogroup'
+                          aria-label={`${agent.name} plan`}
+                          className='bg-muted/40 mt-2 inline-flex rounded-full border p-1'
+                        >
+                          {TIERS.map((tier) => {
+                            const active = selection[agent.key] === tier.key
+                            const cents = monthlyCents(agent.key, tier.key)
+                            return (
+                              <button
+                                key={tier.key}
+                                type='button'
+                                role='radio'
+                                aria-checked={active}
+                                onClick={() => setTier(agent.key, tier.key)}
+                                className={cn(
+                                  'rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
+                                  active
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                )}
+                              >
+                                {tier.label}
+                                {cents != null &&
+                                  ` · ${formatCents(cents, symbol)}`}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <ul className='mt-4 space-y-2'>
+                          {copy.features.map((feat, i) =>
+                            /^everything in/i.test(feat) ? (
+                              <li
+                                key={i}
+                                className='text-foreground pt-1 text-xs font-semibold'
+                              >
+                                {feat}
+                              </li>
+                            ) : (
+                              <li
+                                key={i}
+                                className='flex items-start gap-2 text-sm'
+                              >
+                                <Check className='text-primary mt-0.5 h-4 w-4 flex-shrink-0' />
+                                <span className='text-muted-foreground'>
+                                  {feat}
+                                </span>
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <div className='flex items-center justify-between'>
+                          <p className='text-muted-foreground text-[11px] font-semibold tracking-wider uppercase'>
+                            {agent.key === 'comment'
+                              ? 'Platforms'
+                              : 'Publishes to'}
+                          </p>
+                          <span className='text-muted-foreground text-[11px] tracking-wide uppercase'>
+                            From your setup
+                          </span>
+                        </div>
+                        <div className='mt-2 space-y-2'>
+                          {agent.key === 'comment' ? (
+                            <>
+                              {platformRow(connectedPlatform, true)}
+                              {renderSecondPlatform()}
+                            </>
+                          ) : (
+                            platformRow('linkedin', true)
+                          )}
+                        </div>
+                        {agent.key === 'post' && (
+                          <div className='border-border bg-muted/30 mt-3 rounded-xl border p-3'>
+                            <p className='text-primary text-[11px] font-semibold tracking-wide uppercase'>
+                              Good to know
+                            </p>
+                            <p className='text-muted-foreground mt-1 text-xs'>
+                              Your plan includes a monthly generation allowance
+                              that resets each cycle. Running low? Top up anytime
+                              from your dashboard — packs carry forward and never
+                              expire.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )
+            })}
+          </div>
+
+          <aside className='border-border bg-card h-fit rounded-2xl border p-5 sm:p-6 lg:sticky lg:top-6'>
+            <div className='flex items-center justify-between gap-2'>
+              <h3 className='font-semibold'>Your subscription</h3>
+              {hasBundle && (
+                <span className='bg-primary/15 text-primary rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase'>
+                  Bundle · 20% off
+                </span>
+              )}
+            </div>
+            <div className='bg-border my-4 h-px' />
+
+            {order.lines.length === 0 ? (
+              <p className='text-muted-foreground text-sm'>
+                Select at least one agent to continue.
+              </p>
+            ) : (
+              <div className='space-y-4'>
+                {order.lines.map((line, idx) => {
+                  const a = line.product.agentType
+                  const t = (line.product.tier ?? 'starter') as ProductTier
+                  const isPlatform = line.label === 'Second platform'
+                  const title = isPlatform
+                    ? 'Second platform'
+                    : a
+                      ? agentTitle(a, t)
+                      : line.label
+                  const subtitle = isPlatform
+                    ? `${PLATFORM_META[secondPlatformType].label} · 20% off`
+                    : a === 'comment'
+                      ? `on ${PLATFORM_META[connectedPlatform].label} · connected`
+                      : a === 'post'
+                        ? 'Drafts & publishes for you'
+                        : undefined
+                  return (
+                    <div
+                      key={idx}
+                      className='flex items-start justify-between gap-3'
+                    >
+                      <div>
+                        <p className='text-sm font-medium'>{title}</p>
+                        {subtitle && (
+                          <p className='text-muted-foreground text-xs'>
+                            {subtitle}
+                          </p>
+                        )}
+                      </div>
+                      <p className='whitespace-nowrap text-sm font-medium'>
+                        {formatCents(perMo(line.amountCents), symbol)}
+                        <span className='text-muted-foreground'>/mo</span>
+                      </p>
+                    </div>
+                  )
+                })}
+                {hasBundle && (
+                  <div className='flex items-center justify-between gap-3'>
+                    <p className='text-primary text-sm'>
+                      Bundle discount (2nd agent −20%)
+                    </p>
+                    <p className='text-primary whitespace-nowrap text-sm font-medium'>
+                      −{formatCents(perMo(order.discountCents), symbol)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {order.missing.length > 0 && (
+              <p className='text-destructive mt-4 text-sm'>
+                Not yet available: {order.missing.join(', ')}.
+              </p>
+            )}
+
+            <div className='bg-border my-5 h-px' />
+
+            {isExistingSubscriber ? (
+              <div className='flex items-baseline justify-between'>
+                <span className='text-sm font-semibold'>New total</span>
+                <span className='text-2xl font-bold'>
+                  {formatCents(perMo(order.totalCents), symbol)}
+                  <span className='text-muted-foreground text-sm font-normal'>
+                    /mo
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className='flex items-baseline justify-between'>
+                  <span className='text-sm font-semibold'>Due today</span>
+                  <span className='text-3xl font-bold'>
+                    {formatCents(0, symbol)}
+                  </span>
+                </div>
+                {order.totalCents > 0 && (
+                  <p className='text-muted-foreground mt-1 text-xs'>
+                    After your {TRIAL_DAYS}-day trial:{' '}
+                    {formatCents(perMo(order.totalCents), symbol)}/mo
+                    {interval === 'yearly' ? ', billed annually' : ''}.
+                  </p>
+                )}
+              </>
+            )}
+
+            <LoadingButton
+              size='lg'
+              className='mt-5 w-full'
+              loading={isSubmitting}
+              disabled={!canCheckout}
+              onClick={handleSubmit}
+            >
+              {isExistingSubscriber
+                ? 'Update subscription'
+                : 'Start free trial & go to dashboard'}
+              {!isExistingSubscriber && <ArrowRight className='ml-2 h-4 w-4' />}
+            </LoadingButton>
+
+            <p className='text-muted-foreground mt-3 text-center text-xs'>
+              {isExistingSubscriber
+                ? 'Changes apply immediately'
+                : `${TRIAL_DAYS}-day free trial · Cancel anytime`}
+            </p>
+          </aside>
+        </div>
+      )}
+    </div>
   )
 }

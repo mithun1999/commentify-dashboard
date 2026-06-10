@@ -13,6 +13,7 @@ AGENT_TYPES['twitter-commenting'] = {
     'Automatically find and reply to relevant tweets to build your presence on X.',
   icon: IconBrandX,
   platform: 'twitter',
+  capability: 'comment',
   access: 'open',
   scrapeSettingsComponent: TwitterScrapeSettings,
   commentSettingsComponent: TwitterCommentSettings,

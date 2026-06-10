@@ -45,6 +45,7 @@ import { planSetting } from '@/config/plan-setting.config'
 import { useProfileStore } from '@/stores/profile.store'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { getAgentPlanTier } from '@/features/agent-system/registry'
 import { useCreateSalesSetting, useExtractFromWebsite } from '../query/sales.query'
 import {
   MonitoredProfiles,
@@ -99,8 +100,7 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
   const { createSalesSettingAsync, isCreatingSalesSetting } = useCreateSalesSetting()
   const { extractAsync, isExtracting } = useExtractFromWebsite()
 
-  const basePlanName = user?.subscribedProduct?.sku?.split('_')[0]?.toLowerCase()
-  const userPlan = (basePlanName as 'starter' | 'pro' | 'premium') ?? 'starter'
+  const userPlan = getAgentPlanTier(user, 'comment')
   const maxMentionsPerDay = (planSetting['salesMentionsPerDay']?.[userPlan] as number) ?? 15
 
   const profile = profiles?.find((p) => p._id === profileId)

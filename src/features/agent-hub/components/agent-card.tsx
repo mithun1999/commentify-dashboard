@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   IconDotsVertical,
@@ -5,7 +6,19 @@ import {
   IconRefresh,
   IconMessageCheck,
   IconSend,
+  IconPlayerPause,
+  IconPlayerPlay,
 } from '@tabler/icons-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,8 +37,10 @@ import { getAgentType } from '@/features/agent-system/registry'
 import type { DerivedAgent } from '@/features/agent-system/types/agent.types'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import {
+  useDeactivateProfile,
   useGetPostStats,
   useGetPostingStats,
+  useReactivateProfile,
 } from '@/features/users/query/profile.query'
 
 function statusConfig(status: ProfileStatusEnum) {
@@ -48,6 +63,9 @@ interface AgentCardProps {
 export function AgentCard({ agent }: AgentCardProps) {
   const typeDef = getAgentType(agent.type)
   const isPosting = agent.type === 'linkedin-posting'
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false)
+  const { deactivateProfile, isDeactivatingProfile } = useDeactivateProfile()
+  const { reactivateProfile } = useReactivateProfile()
   const { data: commentingStats } = useGetPostStats(
     !isPosting ? agent.profileId : undefined,
   )
@@ -55,6 +73,8 @@ export function AgentCard({ agent }: AgentCardProps) {
     isPosting ? agent.profileId : undefined,
   )
   if (!typeDef) return null
+
+  const isDeactivated = agent.status === ProfileStatusEnum.DEACTIVATED
 
   const Icon = typeDef.icon
   const status = statusConfig(agent.status)
@@ -78,6 +98,7 @@ export function AgentCard({ agent }: AgentCardProps) {
       : null
 
   return (
+    <>
     <Card className='group relative transition-shadow hover:shadow-md'>
       <Link to={agentUrl as string} className='absolute inset-0 z-0' />
       <CardHeader className='flex flex-row items-start justify-between gap-2 pb-3'>
@@ -134,6 +155,24 @@ export function AgentCard({ agent }: AgentCardProps) {
                 </Link>
               </DropdownMenuItem>
             )}
+            {isDeactivated ? (
+              <DropdownMenuItem
+                onSelect={() => reactivateProfile(agent.profileId)}
+              >
+                <IconPlayerPlay className='mr-2 size-4' />
+                Reactivate
+              </DropdownMenuItem>
+            ) : (
+              agent.status === ProfileStatusEnum.OK && (
+                <DropdownMenuItem
+                  onSelect={() => setConfirmDeactivate(true)}
+                  className='text-amber-600 focus:text-amber-600'
+                >
+                  <IconPlayerPause className='mr-2 size-4' />
+                  Deactivate
+                </DropdownMenuItem>
+              )
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
@@ -156,5 +195,28 @@ export function AgentCard({ agent }: AgentCardProps) {
         </div>
       </CardContent>
     </Card>
+
+      <AlertDialog open={confirmDeactivate} onOpenChange={setConfirmDeactivate}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate this agent?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {typeDef.name} for {agent.profileName} will stop running until you
+              reactivate it. You can reactivate anytime, as long as your plan
+              still has room.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep active</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deactivateProfile(agent.profileId)}
+              disabled={isDeactivatingProfile}
+            >
+              Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

@@ -115,7 +115,11 @@ function BrandingCommentSettingsStep() {
 
   const form = useForm<CommentSettingsValues>({
     resolver: zodResolver(commentSettingsSchema),
-    defaultValues,
+    defaultValues: {
+      ...defaultValues,
+      aboutProfile:
+        onboardingData.commentSetting?.aboutProfile || defaultValues.aboutProfile,
+    },
     mode: 'onChange',
   })
 

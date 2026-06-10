@@ -1,6 +1,6 @@
 'use client'
 
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,6 +14,8 @@ import {
   ChevronUp,
   X,
   CircleSlash,
+  Loader2,
+  Sparkles,
 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { useOnboarding } from '@/stores/onboarding.store'
@@ -44,8 +46,10 @@ import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 import {
+  useAnalyzeOnboardingProfile,
   useCreateOnboardingPostQuery,
   useCreateOnboardingTwitterPostQuery,
+  useRefineOnboardingKeywords,
 } from '../query/onboarding.query'
 
 // ── LinkedIn schema & defaults ───────────────────────────────────────────────
@@ -163,7 +167,7 @@ function LinkedInPostSettings() {
   const [customTitle, setCustomTitle] = useState('')
   const [isEngagementExpanded, setIsEngagementExpanded] = useState(false)
 
-  const { data: onboardingData, markStepCompleted } = useOnboarding()
+  const { data: onboardingData, markStepCompleted, updateData } = useOnboarding()
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const { data: profiles } = useGetAllProfileQuery()
   const resolvedProfileId =
@@ -172,8 +176,13 @@ function LinkedInPostSettings() {
     profiles?.[profiles.length - 1]?._id
   const { createOnboardingPostSettingAsync, isCreatingOnboardingPost } =
     useCreateOnboardingPostQuery()
+  const { analyzeOnboardingProfileAsync } = useAnalyzeOnboardingProfile()
+  const { refineOnboardingKeywordsAsync } = useRefineOnboardingKeywords()
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
+  const [isAutoFilling, setIsAutoFilling] = useState(false)
+  const [isVerifyingKeywords, setIsVerifyingKeywords] = useState(false)
+  const autoFilledRef = useRef(false)
 
   const form = useForm<LinkedInValues>({
     resolver: zodResolver(linkedinSchema),
@@ -183,8 +192,66 @@ function LinkedInPostSettings() {
   const {
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = form
+
+  // Analyze the connected profile once on entry and auto-fill broad, in-domain
+  // keywords + an About blurb so commenting setup is near-zero-input. The
+  // GPT-generated keywords show instantly; the server then validates them
+  // against LinkedIn and backfills any low-yield ones, returning a full set we
+  // swap in — unless the user has already edited the keywords by hand.
+  useEffect(() => {
+    if (autoFilledRef.current || !resolvedProfileId) return
+    autoFilledRef.current = true
+    setIsAutoFilling(true)
+    const sameSet = (a: string[], b: string[]) =>
+      a.length === b.length &&
+      [...a].sort().join('|') === [...b].sort().join('|')
+    analyzeOnboardingProfileAsync({ profileId: resolvedProfileId, mode: 'branding' })
+      .then((res) => {
+        const kws = (res.keywords ?? []).slice(0, 6)
+        if (kws.length) {
+          setValue(
+            'customKeywords',
+            kws.filter((k) => !predefinedKeywords.includes(k))
+          )
+          setValue('selectedKeywords', kws)
+
+          setIsVerifyingKeywords(true)
+          refineOnboardingKeywordsAsync({
+            profileId: resolvedProfileId,
+            existing: kws,
+            mode: 'branding',
+          })
+            .then(({ keywords }) => {
+              const refined = (keywords ?? []).slice(0, 6)
+              // Don't clobber manual edits made while validation ran.
+              if (!refined.length || !sameSet(getValues('selectedKeywords'), kws))
+                return
+              setValue(
+                'customKeywords',
+                refined.filter((k) => !predefinedKeywords.includes(k))
+              )
+              setValue('selectedKeywords', refined)
+            })
+            .catch(() => {})
+            .finally(() => setIsVerifyingKeywords(false))
+        }
+        if (res.aboutProfile) {
+          updateData({
+            commentSetting: {
+              ...onboardingData.commentSetting,
+              aboutProfile: res.aboutProfile,
+            },
+          })
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsAutoFilling(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedProfileId])
+
   const selectedKeywords = watch('selectedKeywords')
   const customKeywords = watch('customKeywords')
   const authorTitles = watch('authorTitles')
@@ -277,6 +344,24 @@ function LinkedInPostSettings() {
           title='Choose posts that matter'
           description="We'll only comment on posts that match your interests."
         >
+          {isAutoFilling ? (
+            <div className='text-muted-foreground mb-4 flex items-center gap-2 text-sm'>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              Analyzing your profile to suggest keywords…
+            </div>
+          ) : isVerifyingKeywords ? (
+            <div className='text-muted-foreground mb-4 flex items-center gap-2 text-sm'>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              Suggested from your profile — finding keywords that surface posts…
+            </div>
+          ) : (
+            selectedKeywords.length > 0 && (
+              <div className='text-muted-foreground mb-4 flex items-center gap-2 text-sm'>
+                <Sparkles className='h-4 w-4 text-violet-500' />
+                Suggested from your profile — tweak anytime.
+              </div>
+            )
+          )}
           <KeywordChipSection
             selectedKeywords={selectedKeywords}
             allKeywords={allKeywords}

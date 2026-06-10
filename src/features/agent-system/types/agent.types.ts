@@ -1,10 +1,13 @@
 import { type ComponentType, type ReactNode } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { type IUser } from '@/features/auth/interface/user.interface'
+import { type AgentType, type IUser } from '@/features/auth/interface/user.interface'
 import { type ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 
 export type Platform = 'linkedin' | 'twitter'
 export type AccessLevel = 'open' | 'invite-only'
+
+/** What an agent does on a platform. Mirrors the billable agents. */
+export type AgentCapability = AgentType
 
 export interface AgentTypeDefinition {
   slug: string
@@ -12,6 +15,7 @@ export interface AgentTypeDefinition {
   description: string
   icon: ComponentType<{ className?: string }>
   platform: Platform
+  capability: AgentCapability
   access: AccessLevel
   badge?: string
   recommended?: boolean

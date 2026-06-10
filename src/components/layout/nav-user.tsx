@@ -21,12 +21,38 @@ import {
 } from '@/components/ui/sidebar'
 import { signOut } from '@/features/auth/utils/auth.util'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import type { IUser } from '@/features/auth/interface/user.interface'
+import { getAgentPlanTier } from '@/features/agent-system/registry'
 
-function getUpgradeInfo(planSku?: string) {
-  const plan = (planSku ?? '').toLowerCase()
-  if (plan.includes('premium')) return null
-  if (plan.includes('pro')) return { label: 'Upgrade to Premium', to: '/pricing' as const }
-  return { label: 'Upgrade to Pro', to: '/pricing' as const }
+type UpgradeInfo = { label: string; to: '/plans' }
+
+/**
+ * Next upgrade step for the navbar CTA, read from the per-agent entitlements
+ * (`user.agents`) rather than naively parsing the base-product SKU. Commenting
+ * climbs starter→pro→premium; posting tops out at pro. Falls back to the
+ * commenting tier parsed from the base product for legacy subscribers synced
+ * before per-agent entitlements existed.
+ */
+function getUpgradeInfo(user?: IUser): UpgradeInfo | null {
+  if (!user) return null
+
+  const agents = user.agents
+  if (!agents || Object.keys(agents).length === 0) {
+    const tier = getAgentPlanTier(user, 'comment')
+    if (tier === 'premium') return null
+    return { label: tier === 'pro' ? 'Upgrade to Premium' : 'Upgrade to Pro', to: '/plans' }
+  }
+
+  if (agents.comment && agents.comment.tier !== 'premium') {
+    return {
+      label: agents.comment.tier === 'pro' ? 'Upgrade to Premium' : 'Upgrade to Pro',
+      to: '/plans',
+    }
+  }
+  if (agents.post && agents.post.tier !== 'pro') {
+    return { label: 'Upgrade to Pro', to: '/plans' }
+  }
+  return null
 }
 
 export function NavUser() {
@@ -42,10 +68,7 @@ export function NavUser() {
   } | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const upgradeInfo = useMemo(
-    () => getUpgradeInfo(appUser?.subscribedProduct?.sku),
-    [appUser?.subscribedProduct?.sku]
-  )
+  const upgradeInfo = useMemo(() => getUpgradeInfo(appUser), [appUser])
 
   useEffect(() => {
     if (session?.user) {

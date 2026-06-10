@@ -39,6 +39,7 @@ import { Route as authForgotPasswordImport } from './routes/(auth)/forgot-passwo
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedUsersIndexImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedPricingIndexImport } from './routes/_authenticated/pricing/index'
+import { Route as AuthenticatedPlansIndexImport } from './routes/_authenticated/plans/index'
 import { Route as AuthenticatedHistoryIndexImport } from './routes/_authenticated/history/index'
 import { Route as AuthenticatedHelpCenterIndexImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedSettingsPostImport } from './routes/_authenticated/settings/post'
@@ -219,6 +220,12 @@ const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexImport.update({
 const AuthenticatedPricingIndexRoute = AuthenticatedPricingIndexImport.update({
   id: '/pricing/',
   path: '/pricing/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
+const AuthenticatedPlansIndexRoute = AuthenticatedPlansIndexImport.update({
+  id: '/plans/',
+  path: '/plans/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -511,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoryIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/plans/': {
+      id: '/_authenticated/plans/'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof AuthenticatedPlansIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/pricing/': {
       id: '/_authenticated/pricing/'
       path: '/pricing'
@@ -631,6 +645,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
+  AuthenticatedPlansIndexRoute: typeof AuthenticatedPlansIndexRoute
   AuthenticatedPricingIndexRoute: typeof AuthenticatedPricingIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
   AuthenticatedAgentsProfileIdAgentTypeRouteRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
@@ -642,6 +657,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
+  AuthenticatedPlansIndexRoute: AuthenticatedPlansIndexRoute,
   AuthenticatedPricingIndexRoute: AuthenticatedPricingIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedAgentsProfileIdAgentTypeRouteRoute:
@@ -712,6 +728,7 @@ export interface FileRoutesByFullPath {
   '/settings/post': typeof AuthenticatedSettingsPostRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/history': typeof AuthenticatedHistoryIndexRoute
+  '/plans': typeof AuthenticatedPlansIndexRoute
   '/pricing': typeof AuthenticatedPricingIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
@@ -752,6 +769,7 @@ export interface FileRoutesByTo {
   '/settings/post': typeof AuthenticatedSettingsPostRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/history': typeof AuthenticatedHistoryIndexRoute
+  '/plans': typeof AuthenticatedPlansIndexRoute
   '/pricing': typeof AuthenticatedPricingIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
@@ -795,6 +813,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/post': typeof AuthenticatedSettingsPostRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
+  '/_authenticated/plans/': typeof AuthenticatedPlansIndexRoute
   '/_authenticated/pricing/': typeof AuthenticatedPricingIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
@@ -839,6 +858,7 @@ export interface FileRouteTypes {
     | '/settings/post'
     | '/help-center'
     | '/history'
+    | '/plans'
     | '/pricing'
     | '/users'
     | '/agents/$profileId/$agentType'
@@ -878,6 +898,7 @@ export interface FileRouteTypes {
     | '/settings/post'
     | '/help-center'
     | '/history'
+    | '/plans'
     | '/pricing'
     | '/users'
     | '/agents/$profileId/$agentType'
@@ -919,6 +940,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/post'
     | '/_authenticated/help-center/'
     | '/_authenticated/history/'
+    | '/_authenticated/plans/'
     | '/_authenticated/pricing/'
     | '/_authenticated/users/'
     | '/_authenticated/agents/$profileId/$agentType'
@@ -996,6 +1018,7 @@ export const routeTree = rootRoute
         "/_authenticated/",
         "/_authenticated/help-center/",
         "/_authenticated/history/",
+        "/_authenticated/plans/",
         "/_authenticated/pricing/",
         "/_authenticated/users/",
         "/_authenticated/agents/$profileId/$agentType"
@@ -1119,6 +1142,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/history/": {
       "filePath": "_authenticated/history/index.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/plans/": {
+      "filePath": "_authenticated/plans/index.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/pricing/": {

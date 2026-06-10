@@ -9,7 +9,8 @@ import { useOnboarding } from '@/stores/onboarding.store'
 import { useProfileStore } from '@/stores/profile.store'
 import { detectExtension } from '@/lib/extension'
 import { getProfileDetailsFromExtension } from '@/lib/utils'
-import { getAgentType } from '@/features/agent-system/registry'
+import { getAgentType, getAgentTypeFor } from '@/features/agent-system/registry'
+import { useActivateAgentType } from '@/features/post-generator/query/post-generator.query'
 import {
   getTwitterProfileDetailsFromExtension,
   type ITwitterProfileFromExtension,
@@ -27,6 +28,7 @@ import {
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
+import { getStepNav } from '@/features/onboarding/onboarding-flow'
 import { useExtensionGuard } from '@/features/onboarding/hooks/useExtensionGuard'
 import { useTrackStepView } from '@/features/onboarding/hooks/useTrackStepView'
 import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
@@ -86,6 +88,7 @@ export function LinkedInStep() {
   const hasLinkedRef = useRef(false)
   const hasCollectedRef = useRef(false)
 
+  const activateAgentType = useActivateAgentType()
   const selectedSlug = onboardingData.selectedAgentType
     ?? user?.metadata?.onboarding?.selectedAgentType
     ?? null
@@ -93,6 +96,14 @@ export function LinkedInStep() {
   const platform = agentDef?.platform ?? 'linkedin'
   const config = PLATFORM_CONFIG[platform]
   const PlatformIcon = config.icon
+
+  const capabilities = onboardingData.selectedCapabilities ?? []
+  const wantsPost = capabilities.includes('post')
+  // Next step is derived from the capability-aware flow (post-only skips the
+  // commenting config and jumps straight to "About You").
+  const connectNextStep =
+    getStepNav(capabilities, '/onboarding/connect-account').next ??
+    '/onboarding/identity'
 
   const checkIfExtensionIsInstalled = async () => {
     const { installed } = await detectExtension()
@@ -427,13 +438,29 @@ export function LinkedInStep() {
 
         {hasProfileInfo && (
           <OnboardingNavigation
-            nextStep='/onboarding/post-settings'
+            nextStep={connectNextStep}
             currentStep='connect-account'
             loading={isUpdatingOnboardingStatus}
             onNext={async () => {
               const resolvedId = activeProfile?._id ?? profiles?.[profiles.length - 1]?._id
               if (resolvedId) {
                 updateData({ linkedProfileId: resolvedId })
+                // Activate the posting agent up front so it shows in the hub and
+                // runs its own voice-analysis onboarding when opened. Commenting
+                // is activated later via its settings step.
+                if (wantsPost && platform === 'linkedin') {
+                  const postingSlug = getAgentTypeFor('linkedin', 'post')?.slug
+                  if (postingSlug) {
+                    try {
+                      await activateAgentType.mutateAsync({
+                        profileId: resolvedId,
+                        agentType: postingSlug,
+                      })
+                    } catch {
+                      // Non-fatal: user can add it from the hub later.
+                    }
+                  }
+                }
               }
               if (!isConnectStepCompleted) {
                 await updateOnboardingStatusAsync({
