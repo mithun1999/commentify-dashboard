@@ -8,6 +8,7 @@ import {
 import { Overview } from '@/features/dashboard/components/overview'
 import { ProfileOverview } from '@/features/dashboard/components/profile-overview'
 import type { ILinkedInStats } from '@/features/users/interface/profile.interface'
+import { AgentRunStatusCard } from './agent-run-status-card'
 
 const formatNumber = (n?: number | string | null) => {
   if (n === undefined || n === null) return '--'
@@ -373,9 +374,13 @@ export function AgentStats() {
 }
 
 function LinkedInAgentStats({ profileId }: { profileId: string }) {
+  const { profile } = useCurrentAgent()
   const { data: linkedInStats, isLoading } = useGetLinkedInStats(profileId)
 
   return (
-    <LinkedInStatsView linkedInStats={linkedInStats} isLoading={isLoading} />
+    <>
+      <AgentRunStatusCard profileId={profileId} profile={profile} />
+      <LinkedInStatsView linkedInStats={linkedInStats} isLoading={isLoading} />
+    </>
   )
 }

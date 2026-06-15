@@ -11,6 +11,7 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { useCurrentAgent } from '../hooks/use-current-agent'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { AgentReconnectBanner } from './agent-reconnect-banner'
+import { AgentApprovalBanner } from './agent-approval-banner'
 import { useOnboardingStatus } from '@/features/post-generator/query/post-generator.query'
 import { PostingOnboarding } from '@/features/post-generator/components/posting-onboarding'
 import {
@@ -227,6 +228,12 @@ export function AgentLayout({ children }: { children: ReactNode }) {
           </TabsList>
         </Tabs>
         {profile && <AgentReconnectBanner profile={profile} />}
+        {!isPostingAgent && (
+          <AgentApprovalBanner
+            profileId={agent.profileId}
+            queueHref={`${basePath}/queue`}
+          />
+        )}
         {children}
       </Main>
     </>
