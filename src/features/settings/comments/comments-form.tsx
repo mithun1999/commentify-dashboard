@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { planSetting } from '@/config/plan-setting.config'
+import { resolvePlanSetting } from '@/config/plan-setting.config'
 import {
   MessageSquare,
   Settings,
@@ -97,10 +97,10 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
     useUpdateCommentSettingQuery()
 
   const shouldDisplayTagAuthorSetting = Boolean(
-    planSetting['tagAuthor']?.[userPlan]
+    resolvePlanSetting('tagAuthor', user)
   )
   const shouldDisplayCommentRulesSetting = Boolean(
-    planSetting['commentRules']?.[userPlan]
+    resolvePlanSetting('commentRules', user)
   )
 
   const form = useForm<CommentSettingsValues>({

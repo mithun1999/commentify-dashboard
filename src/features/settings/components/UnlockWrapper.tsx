@@ -28,7 +28,7 @@ export function UnlockWrapper({
           </div>
         </TooltipTrigger>
         <TooltipContent side='bottom' align='center' className='max-w-xs'>
-          <p>Upgrade to Premium to unlock this feature</p>
+          <p>Upgrade your plan to unlock this feature</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

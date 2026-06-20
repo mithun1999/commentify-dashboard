@@ -2,7 +2,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
 import { Info, PlusCircle, UserSearch, X } from 'lucide-react'
-import { planSetting } from '@/config/plan-setting.config'
+import { resolvePlanSetting } from '@/config/plan-setting.config'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,7 +16,6 @@ import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import { useUpdateMonitoredProfilesQuery } from '@/features/settings/query/setting.query'
 import { UnlockWrapper } from '@/features/settings/components/UnlockWrapper'
-import { getAgentPlanTier } from '@/features/agent-system/registry'
 
 function normalizeLinkedInUrl(input: string): string | null {
   let url = input.trim()
@@ -52,9 +51,7 @@ export const MonitoredProfiles = forwardRef<
   const { data: profiles } = useGetAllProfileQuery()
   const { updateMonitoredProfiles } = useUpdateMonitoredProfilesQuery()
 
-  const userPlan = getAgentPlanTier(user, 'comment')
-
-  const limit = (planSetting['monitoredProfiles']?.[userPlan] as number) ?? 0
+  const limit = (resolvePlanSetting('monitoredProfiles', user) as number) ?? 0
   const isUnlocked = limit > 0
 
   const profile = profiles?.find((p) => p._id === profileId)

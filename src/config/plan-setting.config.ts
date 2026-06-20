@@ -1,3 +1,7 @@
+import type { IUser } from '@/features/auth/interface/user.interface'
+import { getAgentPlanTier } from '@/features/agent-system/registry'
+import { isLegacyProduct } from '@/features/pricing/utils/prices.util'
+
 type PlanSettingValue = number | string | boolean
 
 export const planSetting: Record<
@@ -53,6 +57,47 @@ export const planSetting: Record<
     pro: 10,
     premium: 30,
   },
+}
+
+// New two-agent catalog (Starter $39 / Pro $59). Distinct from the legacy
+// 3-tier matrix above: New Pro carries the full former-Premium toggle set but
+// its own numeric limits (80/40/30), and New Starter is its own mix
+// (30 posts/day, 15 sales/day, 10 monitored, no advanced toggles).
+export const newPlanSetting: Record<
+  string,
+  {
+    starter: PlanSettingValue
+    pro: PlanSettingValue
+  }
+> = {
+  numberOfPostsToScrapePerDay: { starter: 30, pro: 80 },
+  salesMentionsPerDay: { starter: 15, pro: 40 },
+  tagAuthor: { starter: false, pro: true },
+  engagementThreshold: { starter: false, pro: true },
+  scrapeRules: { starter: false, pro: true },
+  commentRules: { starter: false, pro: true },
+  geography: { starter: false, pro: true },
+  authorTitles: { starter: false, pro: true },
+  monitoredProfiles: { starter: 10, pro: 30 },
+}
+
+/**
+ * Resolve a plan-gated setting value for a user, accounting for which catalog
+ * they subscribed under. Legacy subscribers use the 3-tier `planSetting`;
+ * new two-agent catalog subscribers use `newPlanSetting`. Catalog is detected
+ * via the product SKU (`isLegacyProduct`), so a legacy Pro stays gated to the
+ * old Pro feature set even though a new Pro unlocks the former Premium filters.
+ */
+export function resolvePlanSetting(
+  feature: string,
+  user: IUser | undefined
+): PlanSettingValue | undefined {
+  const tier = getAgentPlanTier(user, 'comment')
+  if (isLegacyProduct(user?.subscribedProduct)) {
+    return planSetting[feature]?.[tier]
+  }
+  const newTier = tier === 'premium' ? 'pro' : tier
+  return newPlanSetting[feature]?.[newTier]
 }
 
 // Posting-agent limits (Starter/Pro only). Values marked CONFIRM are placeholders

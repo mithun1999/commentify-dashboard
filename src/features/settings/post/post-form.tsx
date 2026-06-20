@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
-import { planSetting } from '@/config/plan-setting.config'
+import { resolvePlanSetting } from '@/config/plan-setting.config'
 import {
   AlertCircle,
   ChevronDown,
@@ -144,15 +144,18 @@ export function PostForm() {
   const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
 
   const shouldDisplayEngagementThresholdSetting = Boolean(
-    planSetting['engagementThreshold']?.[userPlan]
+    resolvePlanSetting('engagementThreshold', user)
   )
 
   const shouldDisplayGeographySetting = Boolean(
-    planSetting['geography']?.[userPlan]
+    resolvePlanSetting('geography', user)
   )
   const shouldDisplayAuthorTitlesSetting = Boolean(
-    planSetting['authorTitles']?.[userPlan]
+    resolvePlanSetting('authorTitles', user)
   )
+
+  const maxPostsPerDay =
+    (resolvePlanSetting('numberOfPostsToScrapePerDay', user) as number) ?? 100
 
   const form = useForm<NotificationsFormValues>({
     resolver: zodResolver(notificationsFormSchema),
@@ -575,12 +578,12 @@ export function PostForm() {
                     <Input
                       type='number'
                       min={1}
-                      max={100}
+                      max={maxPostsPerDay}
                       className='mt-2 w-32'
                       {...field}
                       onChange={(e) => {
                         const val = Math.min(
-                          100,
+                          maxPostsPerDay,
                           Math.max(1, Number(e.target.value))
                         )
                         field.onChange(val)
@@ -591,7 +594,7 @@ export function PostForm() {
                     <span className='border-border flex h-4 w-4 items-center justify-center rounded-full border'>
                       <Info className='text-muted-foreground h-3 w-3' />
                     </span>
-                    Max. 100 posts per day
+                    Max. {maxPostsPerDay} posts per day
                   </p>
                   {form.formState.errors.numberOfPostsToScrapePerDay && (
                     <p className='text-destructive mt-1 flex items-center gap-1 text-sm'>
