@@ -126,3 +126,18 @@ export const postPlanSetting: Record<
     pro: true, // CONFIRM
   },
 }
+
+/**
+ * Resolve a posting-agent limit for a user from their `post` agent tier. The
+ * posting catalog only has Starter/Pro, so a premium tier maps to Pro. Keep in
+ * sync with the backend `resolvePostTier` / `postTierLimit` so the UI never
+ * advertises a cap the API will reject (or under-reports one it would allow).
+ */
+export function resolvePostPlanSetting(
+  feature: string,
+  user: IUser | undefined
+): PlanSettingValue | undefined {
+  const tier = getAgentPlanTier(user, 'post')
+  const postTier = tier === 'premium' ? 'pro' : tier
+  return postPlanSetting[feature]?.[postTier]
+}

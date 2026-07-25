@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { resolvePostPlanSetting } from '@/config/plan-setting.config'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import {
   useStartOnboarding,
   useOnboardingStatus,
@@ -93,8 +95,9 @@ function CompletedSettingsView({
     )
   }
 
+  const { data: user } = useGetUserQuery()
   const voice = onboardingStatus?.voiceSignature
-  const maxCreators = 3
+  const maxCreators = (resolvePostPlanSetting('trackedCreators', user) as number) ?? 3
   const canAddMore = creators.length < maxCreators
 
   const handleAddCreator = () => {
@@ -496,11 +499,13 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
 
   const currentStepIndex = STEPS.findIndex((s) => s.id === currentStep)
 
+  const { data: user } = useGetUserQuery()
+
   const handleAnalyze = () => {
     startOnboarding.mutate(profileId)
   }
 
-  const maxCreators = 3
+  const maxCreators = (resolvePostPlanSetting('trackedCreators', user) as number) ?? 3
   const canAddMore = creators.length < maxCreators
 
   const handleAddCreator = () => {
