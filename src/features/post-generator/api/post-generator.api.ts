@@ -210,6 +210,9 @@ export interface PostingPreferences {
   postsPerWeek: number
   preferredDays: string[]
   preferredTime: string
+  // IANA timezone the preferredTime is expressed in (e.g. "Australia/Sydney").
+  // Captured from the browser so posts fire at the user's local wall-clock time.
+  timezone?: string
   activeWindowEnabled?: boolean
   // Read-only: true when the commenting agent (keywords + comment settings)
   // is set up. The Active Window boost is inert without it.

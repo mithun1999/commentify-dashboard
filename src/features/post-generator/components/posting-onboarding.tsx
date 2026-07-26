@@ -64,9 +64,12 @@ function CompletedSettingsView({
   const { data: prefs, isLoading: isLoadingPrefs } = usePostingPreferences(profileId)
   const updatePrefs = useUpdatePostingPreferences()
 
+  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+
   const [postsPerWeek, setPostsPerWeek] = useState(3)
   const [preferredDays, setPreferredDays] = useState<string[]>(['Monday', 'Wednesday', 'Friday'])
   const [preferredTime, setPreferredTime] = useState('09:00')
+  const [timezone, setTimezone] = useState(browserTimezone)
   const [activeWindowEnabled, setActiveWindowEnabled] = useState(false)
   const [prefsDirty, setPrefsDirty] = useState(false)
   const [voiceChatOpen, setVoiceChatOpen] = useState(false)
@@ -77,8 +80,17 @@ function CompletedSettingsView({
       setPreferredDays(prefs.preferredDays ?? ['Monday', 'Wednesday', 'Friday'])
       setPreferredTime(prefs.preferredTime ?? '09:00')
       setActiveWindowEnabled(prefs.activeWindowEnabled ?? false)
-      setPrefsDirty(false)
+      // The backend defaults a never-set timezone to "UTC". If the browser
+      // reports a real zone, prefer it and flag prefs dirty so the user saves
+      // it — otherwise their "9 AM" slots keep firing at 9 AM UTC.
+      const stored = prefs.timezone
+      const needsDetectedTz = !stored || stored === 'UTC'
+      const resolvedTz = needsDetectedTz ? browserTimezone : stored
+      setTimezone(resolvedTz)
+      setPrefsDirty(resolvedTz !== stored)
     }
+    // browserTimezone is stable for the session; prefs is the real trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs])
 
   const toggleDay = (day: string) => {
@@ -90,7 +102,7 @@ function CompletedSettingsView({
 
   const handleSavePrefs = () => {
     updatePrefs.mutate(
-      { profileId, prefs: { postsPerWeek, preferredDays, preferredTime, activeWindowEnabled } },
+      { profileId, prefs: { postsPerWeek, preferredDays, preferredTime, timezone, activeWindowEnabled } },
       { onSuccess: () => setPrefsDirty(false) }
     )
   }
@@ -447,6 +459,10 @@ function CompletedSettingsView({
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
+                <p className='text-muted-foreground mt-2 text-xs'>
+                  Times are in your timezone ({timezone.replace(/_/g, ' ')}).
+                  Posts publish at this local time.
+                </p>
               </div>
 
               <div className='flex items-start justify-between gap-4 border-t pt-5'>
