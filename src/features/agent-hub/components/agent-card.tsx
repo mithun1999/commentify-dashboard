@@ -51,6 +51,8 @@ function statusConfig(status: ProfileStatusEnum) {
       return { label: 'Action Required', variant: 'destructive' as const, dot: 'bg-amber-500' }
     case ProfileStatusEnum.DEACTIVATED:
       return { label: 'Deactivated', variant: 'secondary' as const, dot: 'bg-gray-400' }
+    case ProfileStatusEnum.NEEDS_ATTENTION:
+      return { label: 'Needs Attention', variant: 'outline' as const, dot: 'bg-amber-500' }
     default:
       return { label: status, variant: 'outline' as const, dot: 'bg-gray-400' }
   }

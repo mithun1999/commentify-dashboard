@@ -20,7 +20,8 @@ function StatusDot({ status }: { status: ProfileStatusEnum }) {
         'inline-block size-2 shrink-0 rounded-full',
         status === ProfileStatusEnum.OK && 'bg-green-500',
         status === ProfileStatusEnum.ACTION_REQUIRED && 'bg-amber-500',
-        status === ProfileStatusEnum.DEACTIVATED && 'bg-gray-400'
+        status === ProfileStatusEnum.DEACTIVATED && 'bg-gray-400',
+        status === ProfileStatusEnum.NEEDS_ATTENTION && 'bg-amber-500'
       )}
     />
   )

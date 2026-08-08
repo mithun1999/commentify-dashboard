@@ -1,5 +1,8 @@
 import { ISetting } from '@/features/settings/interface/setting.interface'
-import { ProfileStatusEnum } from '../../users/enum/profile.enum'
+import {
+  ProfileBlockedReasonEnum,
+  ProfileStatusEnum,
+} from '../../users/enum/profile.enum'
 
 export interface IProfile {
   _id: string
@@ -12,6 +15,7 @@ export interface IProfile {
   csrfToken: string
   ownerId: string
   status: ProfileStatusEnum
+  blockedReason?: ProfileBlockedReasonEnum
   createdAt: Date
   setting?: ISetting
   platform?: 'linkedin' | 'twitter'

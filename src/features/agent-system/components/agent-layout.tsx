@@ -11,6 +11,7 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { useCurrentAgent } from '../hooks/use-current-agent'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { AgentReconnectBanner } from './agent-reconnect-banner'
+import { AgentNeedsAttentionBanner } from './agent-needs-attention-banner'
 import { AgentApprovalBanner } from './agent-approval-banner'
 import { useOnboardingStatus } from '@/features/post-generator/query/post-generator.query'
 import { PostingOnboarding } from '@/features/post-generator/components/posting-onboarding'
@@ -40,6 +41,8 @@ function statusLabel(status: ProfileStatusEnum) {
       return 'Action Required'
     case ProfileStatusEnum.DEACTIVATED:
       return 'Deactivated'
+    case ProfileStatusEnum.NEEDS_ATTENTION:
+      return 'Needs Attention'
     default:
       return status
   }
@@ -55,6 +58,8 @@ function statusVariant(
       return 'destructive'
     case ProfileStatusEnum.DEACTIVATED:
       return 'secondary'
+    case ProfileStatusEnum.NEEDS_ATTENTION:
+      return 'outline'
     default:
       return 'outline'
   }
@@ -228,6 +233,12 @@ export function AgentLayout({ children }: { children: ReactNode }) {
           </TabsList>
         </Tabs>
         {profile && <AgentReconnectBanner profile={profile} />}
+        {profile && (
+          <AgentNeedsAttentionBanner
+            profile={profile}
+            settingsPath={`${basePath}/settings`}
+          />
+        )}
         {!isPostingAgent && (
           <AgentApprovalBanner
             profileId={agent.profileId}
