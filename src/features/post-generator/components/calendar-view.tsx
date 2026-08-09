@@ -163,7 +163,7 @@ export function CalendarView() {
     () => weekList.find((w: any) => w?.calendar?.status === 'generating'),
     [weekList],
   )
-  useCalendarStream(generatingWeek?.calendar?._id, profileId)
+  const stages = useCalendarStream(generatingWeek?.calendar?._id, profileId)
 
   const scheduledCount = posts.filter(
     (p) =>
@@ -430,6 +430,7 @@ export function CalendarView() {
                       key={post._id}
                       post={post}
                       calendarId={calendar._id}
+                      stage={stages[post._id]}
                       onClick={() =>
                         navigate({
                           to: '/agents/$profileId/$agentType/post/$postId',

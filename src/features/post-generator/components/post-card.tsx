@@ -23,6 +23,7 @@ import {
   useRejectPost,
   useDeletePost,
   usePublishPost,
+  type PostStage,
 } from '../query/post-generator.query'
 import { RejectPostDialog } from './reject-post-dialog'
 import { DeletePostDialog } from './delete-post-dialog'
@@ -31,6 +32,15 @@ interface PostCardProps {
   post: any
   calendarId: string
   onClick: () => void
+  stage?: PostStage
+}
+
+const STAGE_LABEL: Record<PostStage, string> = {
+  researching: 'Researching sources',
+  planning: 'Planning the angle',
+  writing: 'Writing the draft',
+  reviewing: 'Reviewing the draft',
+  revising: 'Applying edits',
 }
 
 function postStatusVariant(
@@ -60,7 +70,7 @@ function getHookPreview(content: string | undefined) {
   return firstLine.length > 120 ? firstLine.slice(0, 120) + '...' : firstLine
 }
 
-export function PostCard({ post, calendarId, onClick }: PostCardProps) {
+export function PostCard({ post, calendarId, onClick, stage }: PostCardProps) {
   const approvePost = useApprovePost(calendarId)
   const unapprovePost = useUnapprovePost(calendarId)
   const rejectPost = useRejectPost(calendarId)
@@ -118,7 +128,7 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
           <p className='text-sm leading-relaxed'>{getHookPreview(post.content)}</p>
         )}
         <Badge variant={postStatusVariant(post.status)} className='shrink-0'>
-          {post.status}
+          {isGenerating && stage ? STAGE_LABEL[stage] : post.status}
         </Badge>
       </div>
 

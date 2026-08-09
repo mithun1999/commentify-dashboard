@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -98,11 +98,19 @@ export const useActiveCalendars = (profileId: string | undefined) => {
   })
 }
 
+export type PostStage =
+  | 'researching'
+  | 'planning'
+  | 'writing'
+  | 'reviewing'
+  | 'revising'
+
 export const useCalendarStream = (
   calendarId: string | undefined,
   profileId: string | undefined,
 ) => {
   const queryClient = useQueryClient()
+  const [stages, setStages] = useState<Record<string, PostStage>>({})
 
   useEffect(() => {
     if (!calendarId || !profileId) return
@@ -128,6 +136,14 @@ export const useCalendarStream = (
       }
       if (!payload?.type || payload.type === 'ping') return
 
+      // Progress is display-only and fires several times per post. Refetching
+      // on it would multiply calendar requests for data that has not changed —
+      // nothing is written to the post until it is ready.
+      if (payload.type === 'post_progress') {
+        setStages((prev) => ({ ...prev, [payload.postId]: payload.stage }))
+        return
+      }
+
       refetch()
 
       if (payload.type === 'complete' || payload.type === 'error') {
@@ -144,6 +160,8 @@ export const useCalendarStream = (
       es.close()
     }
   }, [calendarId, profileId, queryClient])
+
+  return stages
 }
 
 export const useCreateManualPost = () => {
