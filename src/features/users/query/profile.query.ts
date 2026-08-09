@@ -8,7 +8,6 @@ import { useProfileStore } from '@/stores/profile.store'
 import { detectExtension } from '@/lib/extension'
 import { getProfileDetailsFromExtension } from '@/utils/utils'
 import {
-  deactivateProfile,
   deleteProfile,
   getAllProfile,
   getLinkedInStats,
@@ -16,7 +15,8 @@ import {
   getPostingStats,
   linkProfile,
   linkTwitterProfile,
-  reactivateProfile,
+  pauseAgent,
+  resumeAgent,
 } from '../api/profile.api'
 import {
   ILinkedInStats,
@@ -29,6 +29,8 @@ export enum ProfileQueryEnum {
   GET_ALL_PROFILE = 'get-all-profile',
   GET_LINKEDIN_STATS = 'get-linkedin-stats',
 }
+
+type AgentToggleVariables = { profileId: string; agentType: string }
 
 export const useGetAllProfileQuery = () => {
   const activeProfile = useProfileStore((s) => s.activeProfile)
@@ -77,17 +79,23 @@ export const useDeleteProfile = ({ onSuccess }: { onSuccess?: () => void }) => {
   return { deleteProfile: mutate, isDeletingProfile: isPending }
 }
 
-export const useDeactivateProfile = ({
+export const usePauseAgent = ({
   onSuccess,
-}: { onSuccess?: () => void } = {}) => {
+  pausedWorkLabel,
+}: { onSuccess?: () => void; pausedWorkLabel?: string } = {}) => {
   const queryClient = useQueryClient()
   const { mutate, isPending } = useMutation({
-    mutationFn: deactivateProfile,
+    mutationFn: ({ profileId, agentType }: AgentToggleVariables) =>
+      pauseAgent(profileId, agentType),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
       })
-      toast.success('Profile deactivated. The agent is paused.')
+      toast.success(
+        pausedWorkLabel
+          ? `Agent paused. ${pausedWorkLabel} is stopped.`
+          : 'Agent paused.'
+      )
       onSuccess?.()
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,24 +103,32 @@ export const useDeactivateProfile = ({
       toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          'Something went wrong while deactivating the profile'
+          'Something went wrong while pausing the agent'
       )
     },
   })
-  return { deactivateProfile: mutate, isDeactivatingProfile: isPending }
+  return { pauseAgent: mutate, isPausingAgent: isPending }
 }
 
-export const useReactivateProfile = ({
+export const useResumeAgent = ({
   onSuccess,
-}: { onSuccess?: () => void } = {}) => {
+  nextRunLabel,
+}: { onSuccess?: () => void; nextRunLabel?: string | null } = {}) => {
   const queryClient = useQueryClient()
   const { mutate, isPending } = useMutation({
-    mutationFn: reactivateProfile,
+    mutationFn: ({ profileId, agentType }: AgentToggleVariables) =>
+      resumeAgent(profileId, agentType),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
       })
-      toast.success('Profile reactivated. The agent is running again.')
+      // Resuming recreates a daily cron at the configured slot rather than
+      // running now, so say when — otherwise it reads as a no-op.
+      toast.success(
+        nextRunLabel
+          ? `Agent resumed. Next run ${nextRunLabel}.`
+          : 'Agent resumed.'
+      )
       onSuccess?.()
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,11 +136,11 @@ export const useReactivateProfile = ({
       toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          'Something went wrong while reactivating the profile'
+          'Something went wrong while resuming the agent'
       )
     },
   })
-  return { reactivateProfile: mutate, isReactivatingProfile: isPending }
+  return { resumeAgent: mutate, isResumingAgent: isPending }
 }
 
 export const useLinkProfile = (isOnboardingStep: boolean = false) => {

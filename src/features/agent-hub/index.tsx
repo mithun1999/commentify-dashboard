@@ -17,7 +17,7 @@ import { ComingSoonCards } from './components/coming-soon-card'
 import { EmptyState } from './components/empty-state'
 
 export default function AgentHub() {
-  const { agents, isLoading } = useAgents()
+  const { agents, isLoading, profiles } = useAgents()
   const { data: user } = useGetUserQuery()
   const posthog = usePostHog()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -71,7 +71,11 @@ export default function AgentHub() {
         ) : (
           <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
             {agents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
+              <AgentCard
+                key={agent.id}
+                agent={agent}
+                profile={profiles?.find((p) => p._id === agent.profileId)}
+              />
             ))}
             <AddAgentCard onClick={() => openAddDialog()} />
             <ComingSoonCards />

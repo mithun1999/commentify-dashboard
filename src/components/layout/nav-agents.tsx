@@ -13,15 +13,25 @@ import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { getAgentType } from '@/features/agent-system/registry'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 
-function StatusDot({ status }: { status: ProfileStatusEnum }) {
+function StatusDot({
+  status,
+  isPaused,
+}: {
+  status: ProfileStatusEnum
+  isPaused: boolean
+}) {
+  const showsPaused = isPaused && status !== ProfileStatusEnum.ACTION_REQUIRED
   return (
     <span
       className={cn(
         'inline-block size-2 shrink-0 rounded-full',
-        status === ProfileStatusEnum.OK && 'bg-green-500',
+        showsPaused && 'bg-gray-400',
+        !showsPaused && status === ProfileStatusEnum.OK && 'bg-green-500',
         status === ProfileStatusEnum.ACTION_REQUIRED && 'bg-amber-500',
         status === ProfileStatusEnum.DEACTIVATED && 'bg-gray-400',
-        status === ProfileStatusEnum.NEEDS_ATTENTION && 'bg-amber-500'
+        !showsPaused &&
+          status === ProfileStatusEnum.NEEDS_ATTENTION &&
+          'bg-amber-500'
       )}
     />
   )
@@ -61,7 +71,7 @@ export function NavAgents() {
                       {agent.type.includes('posting') ? 'Posting' : 'Commenting'}
                     </span>
                   </span>
-                  <StatusDot status={agent.status} />
+                  <StatusDot status={agent.status} isPaused={agent.isPaused} />
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

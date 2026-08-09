@@ -168,7 +168,7 @@ export function TeamSwitcher() {
                       ? 'Connected'
                       : profile.status === ProfileStatusEnum.ACTION_REQUIRED
                         ? 'Disconnected'
-                        : 'Deactivated'}
+                        : 'Inactive'}
                   </div>
                 </div>
                 <div className='ml-auto flex items-center'>

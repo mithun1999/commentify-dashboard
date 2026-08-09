@@ -40,5 +40,8 @@ export interface DerivedAgent {
   profileAvatar?: string
   platform: Platform
   agentMode: AgentMode
+  /** The profile's health. Shared by every agent on the profile. */
   status: ProfileStatusEnum
+  /** This agent alone was switched off by the owner. */
+  isPaused: boolean
 }

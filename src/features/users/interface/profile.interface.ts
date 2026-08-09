@@ -22,6 +22,8 @@ export interface IProfile {
   twitterUserId?: string
   screenName?: string
   activeAgentTypes?: string[]
+  /** Agent slugs the owner switched off. Independent of `status`. */
+  pausedAgentTypes?: string[]
 }
 
 export interface IProfileResponseFromExtension {

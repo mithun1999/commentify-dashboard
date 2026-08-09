@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   IconDotsVertical,
@@ -6,19 +5,7 @@ import {
   IconRefresh,
   IconMessageCheck,
   IconSend,
-  IconPlayerPause,
-  IconPlayerPlay,
 } from '@tabler/icons-react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,24 +20,30 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { AgentPauseButton } from '@/features/agent-system/components/agent-pause-button'
 import { getAgentType } from '@/features/agent-system/registry'
 import type { DerivedAgent } from '@/features/agent-system/types/agent.types'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import type { IProfile } from '@/features/users/interface/profile.interface'
 import {
-  useDeactivateProfile,
   useGetPostStats,
   useGetPostingStats,
-  useReactivateProfile,
 } from '@/features/users/query/profile.query'
 
-function statusConfig(status: ProfileStatusEnum) {
+function statusConfig(status: ProfileStatusEnum, isPaused: boolean) {
+  // An owner's pause outranks the profile's own state in the badge: it's the
+  // thing they did, and it's the thing the button next to it undoes.
+  if (isPaused && status !== ProfileStatusEnum.ACTION_REQUIRED) {
+    return { label: 'Paused', variant: 'secondary' as const, dot: 'bg-gray-400' }
+  }
+
   switch (status) {
     case ProfileStatusEnum.OK:
       return { label: 'Active', variant: 'default' as const, dot: 'bg-green-500' }
     case ProfileStatusEnum.ACTION_REQUIRED:
       return { label: 'Action Required', variant: 'destructive' as const, dot: 'bg-amber-500' }
     case ProfileStatusEnum.DEACTIVATED:
-      return { label: 'Deactivated', variant: 'secondary' as const, dot: 'bg-gray-400' }
+      return { label: 'Inactive', variant: 'secondary' as const, dot: 'bg-gray-400' }
     case ProfileStatusEnum.NEEDS_ATTENTION:
       return { label: 'Needs Attention', variant: 'outline' as const, dot: 'bg-amber-500' }
     default:
@@ -60,14 +53,12 @@ function statusConfig(status: ProfileStatusEnum) {
 
 interface AgentCardProps {
   agent: DerivedAgent
+  profile?: IProfile
 }
 
-export function AgentCard({ agent }: AgentCardProps) {
+export function AgentCard({ agent, profile }: AgentCardProps) {
   const typeDef = getAgentType(agent.type)
   const isPosting = agent.type === 'linkedin-posting'
-  const [confirmDeactivate, setConfirmDeactivate] = useState(false)
-  const { deactivateProfile, isDeactivatingProfile } = useDeactivateProfile()
-  const { reactivateProfile } = useReactivateProfile()
   const { data: commentingStats } = useGetPostStats(
     !isPosting ? agent.profileId : undefined,
   )
@@ -76,10 +67,8 @@ export function AgentCard({ agent }: AgentCardProps) {
   )
   if (!typeDef) return null
 
-  const isDeactivated = agent.status === ProfileStatusEnum.DEACTIVATED
-
   const Icon = typeDef.icon
-  const status = statusConfig(agent.status)
+  const status = statusConfig(agent.status, agent.isPaused)
   const defaultTab = isPosting ? 'calendar' : 'stats'
   const agentUrl = `/agents/${agent.profileId}/${agent.type}/${defaultTab}`
   const settingsUrl = `/agents/${agent.profileId}/${agent.type}/settings`
@@ -100,7 +89,6 @@ export function AgentCard({ agent }: AgentCardProps) {
       : null
 
   return (
-    <>
     <Card className='group relative transition-shadow hover:shadow-md'>
       <Link to={agentUrl as string} className='absolute inset-0 z-0' />
       <CardHeader className='flex flex-row items-start justify-between gap-2 pb-3'>
@@ -132,51 +120,41 @@ export function AgentCard({ agent }: AgentCardProps) {
             </p>
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='relative z-10 size-8'
-            >
-              <IconDotsVertical className='size-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuItem asChild>
-              <Link to={settingsUrl as string}>
-                <IconSettings className='mr-2 size-4' />
-                Settings
-              </Link>
-            </DropdownMenuItem>
-            {agent.status === ProfileStatusEnum.ACTION_REQUIRED && (
+        <div className='relative z-10 flex items-center gap-1'>
+          <AgentPauseButton
+            profileId={agent.profileId}
+            profileName={agent.profileName}
+            agentType={agent.type}
+            status={agent.status}
+            isPaused={agent.isPaused}
+            platform={agent.platform}
+            profile={profile}
+            className='size-8'
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='ghost' size='icon' className='size-8'>
+                <IconDotsVertical className='size-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
               <DropdownMenuItem asChild>
-                <Link to={agentUrl as string}>
-                  <IconRefresh className='mr-2 size-4' />
-                  Reconnect
+                <Link to={settingsUrl as string}>
+                  <IconSettings className='mr-2 size-4' />
+                  Settings
                 </Link>
               </DropdownMenuItem>
-            )}
-            {isDeactivated ? (
-              <DropdownMenuItem
-                onSelect={() => reactivateProfile(agent.profileId)}
-              >
-                <IconPlayerPlay className='mr-2 size-4' />
-                Reactivate
-              </DropdownMenuItem>
-            ) : (
-              agent.status === ProfileStatusEnum.OK && (
-                <DropdownMenuItem
-                  onSelect={() => setConfirmDeactivate(true)}
-                  className='text-amber-600 focus:text-amber-600'
-                >
-                  <IconPlayerPause className='mr-2 size-4' />
-                  Deactivate
+              {agent.status === ProfileStatusEnum.ACTION_REQUIRED && (
+                <DropdownMenuItem asChild>
+                  <Link to={agentUrl as string}>
+                    <IconRefresh className='mr-2 size-4' />
+                    Reconnect
+                  </Link>
                 </DropdownMenuItem>
-              )
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
       <CardContent className='pt-0'>
         <div className='flex items-center justify-between'>
@@ -197,28 +175,5 @@ export function AgentCard({ agent }: AgentCardProps) {
         </div>
       </CardContent>
     </Card>
-
-      <AlertDialog open={confirmDeactivate} onOpenChange={setConfirmDeactivate}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Deactivate this agent?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {typeDef.name} for {agent.profileName} will stop running until you
-              reactivate it. You can reactivate anytime, as long as your plan
-              still has room.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep active</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deactivateProfile(agent.profileId)}
-              disabled={isDeactivatingProfile}
-            >
-              Deactivate
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
   )
 }

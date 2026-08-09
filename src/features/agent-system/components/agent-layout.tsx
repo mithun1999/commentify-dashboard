@@ -10,6 +10,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { useCurrentAgent } from '../hooks/use-current-agent'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { AgentPauseButton } from './agent-pause-button'
 import { AgentReconnectBanner } from './agent-reconnect-banner'
 import { AgentNeedsAttentionBanner } from './agent-needs-attention-banner'
 import { AgentApprovalBanner } from './agent-approval-banner'
@@ -33,14 +34,22 @@ const POSTING_TABS = [
   { value: 'settings', label: 'Settings' },
 ]
 
-function statusLabel(status: ProfileStatusEnum) {
+// A pause the owner made outranks the profile's own state, except a broken
+// session - that one has to stay visible because it needs a reconnect.
+function isShownAsPaused(status: ProfileStatusEnum, isPaused: boolean) {
+  return isPaused && status !== ProfileStatusEnum.ACTION_REQUIRED
+}
+
+function statusLabel(status: ProfileStatusEnum, isPaused: boolean) {
+  if (isShownAsPaused(status, isPaused)) return 'Paused'
+
   switch (status) {
     case ProfileStatusEnum.OK:
       return 'Active'
     case ProfileStatusEnum.ACTION_REQUIRED:
       return 'Action Required'
     case ProfileStatusEnum.DEACTIVATED:
-      return 'Deactivated'
+      return 'Inactive'
     case ProfileStatusEnum.NEEDS_ATTENTION:
       return 'Needs Attention'
     default:
@@ -49,8 +58,11 @@ function statusLabel(status: ProfileStatusEnum) {
 }
 
 function statusVariant(
-  status: ProfileStatusEnum
+  status: ProfileStatusEnum,
+  isPaused: boolean
 ): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (isShownAsPaused(status, isPaused)) return 'secondary'
+
   switch (status) {
     case ProfileStatusEnum.OK:
       return 'default'
@@ -101,9 +113,10 @@ export function AgentLayout({ children }: { children: ReactNode }) {
   const jobTiming = getJobTiming(profile?.setting, agent.platform)
   const nextRunLabel = useMemo(() => {
     if (isPostingAgent) return null
-    if (agent.status !== ProfileStatusEnum.OK || !jobTiming) return null
+    if (agent.status !== ProfileStatusEnum.OK || agent.isPaused || !jobTiming)
+      return null
     return formatNextRunRelative(getNextRunTime(jobTiming))
-  }, [agent.status, jobTiming, isPostingAgent])
+  }, [agent.status, agent.isPaused, jobTiming, isPostingAgent])
   const tabs = isPostingAgent ? POSTING_TABS : COMMENTING_TABS
   const defaultTab = isPostingAgent ? 'calendar' : 'queue'
 
@@ -205,8 +218,8 @@ export function AgentLayout({ children }: { children: ReactNode }) {
               {agent.profileName}
             </p>
           </div>
-          <Badge variant={statusVariant(agent.status)}>
-            {statusLabel(agent.status)}
+          <Badge variant={statusVariant(agent.status, agent.isPaused)}>
+            {statusLabel(agent.status, agent.isPaused)}
           </Badge>
           {nextRunLabel && (
             <span className='text-muted-foreground flex items-center gap-1 text-xs'>
@@ -216,6 +229,16 @@ export function AgentLayout({ children }: { children: ReactNode }) {
           )}
         </div>
         <div className='ml-auto flex items-center space-x-4'>
+          <AgentPauseButton
+            profileId={agent.profileId}
+            profileName={agent.profileName}
+            agentType={agent.type}
+            status={agent.status}
+            isPaused={agent.isPaused}
+            platform={agent.platform}
+            profile={profile}
+            showLabel
+          />
           <ThemeSwitch />
           <ProfileDropdown />
         </div>

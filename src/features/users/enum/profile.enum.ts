@@ -1,6 +1,11 @@
 export enum ProfileStatusEnum {
   ACTION_REQUIRED = 'action-required',
   OK = 'ok',
+  /**
+   * Billing stopped it - trial expired or subscription gone. Needs a plan, not
+   * a button. An owner-initiated pause is per agent (`pausedAgentTypes`) and
+   * never touches status.
+   */
   DEACTIVATED = 'deactivated',
   NEEDS_ATTENTION = 'needs-attention',
 }

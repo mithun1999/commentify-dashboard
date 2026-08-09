@@ -18,18 +18,18 @@ export async function deleteProfile(profileId: string) {
   return data as { deleted: number }
 }
 
-export async function deactivateProfile(profileId: string) {
+export async function pauseAgent(profileId: string, agentType: string) {
   const { data } = await axiosInstance({
     method: 'PATCH',
-    url: `/profile/${profileId}/deactivate`,
+    url: `/profile/${profileId}/agents/${agentType}/pause`,
   })
   return data as { success: boolean }
 }
 
-export async function reactivateProfile(profileId: string) {
+export async function resumeAgent(profileId: string, agentType: string) {
   const { data } = await axiosInstance({
     method: 'PATCH',
-    url: `/profile/${profileId}/reactivate`,
+    url: `/profile/${profileId}/agents/${agentType}/resume`,
   })
   return data as { success: boolean }
 }

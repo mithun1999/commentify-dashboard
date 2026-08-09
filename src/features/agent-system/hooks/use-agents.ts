@@ -15,6 +15,14 @@ function defaultAgentTypes(platform: Platform): string[] {
   return platform === 'twitter' ? ['twitter-commenting'] : ['linkedin-commenting']
 }
 
+export function commentingAgentType(profile: IProfile): string {
+  return defaultAgentTypes(inferPlatform(profile))[0]
+}
+
+export function isAgentPaused(profile: IProfile, agentType: string): boolean {
+  return profile.pausedAgentTypes?.includes(agentType) ?? false
+}
+
 export function deriveAgentFromProfile(profile: IProfile, overrideType?: string): DerivedAgent {
   const platform = inferPlatform(profile)
   const agentType = overrideType || defaultAgentTypes(platform)[0]
@@ -31,6 +39,7 @@ export function deriveAgentFromProfile(profile: IProfile, overrideType?: string)
     platform,
     agentMode,
     status: profile.status,
+    isPaused: isAgentPaused(profile, agentType),
   }
 }
 
