@@ -1,0 +1,43 @@
+---
+description: Never push to master or main branch without explicit user approval
+alwaysApply: true
+---
+
+# Do Not Push to master/main
+
+Never push code to the `master` or `main` branch unless the user explicitly instructs you to do so in the current request.
+
+## Rules
+
+- Do NOT run `git push origin main`, `git push origin master`, `git push` (when current branch is main/master), or any equivalent command targeting these branches.
+- Do NOT force-push to main/master under any circumstance.
+- Do NOT merge feature branches into main/master locally and push the result without explicit approval.
+- If the user asks you to "push" without specifying a branch and the current branch IS main/master, STOP and ask for confirmation first.
+- If work needs to be shared, push to a feature branch instead and (if appropriate) open a PR.
+
+## What counts as "explicit approval"
+
+Only a direct instruction in the current turn like:
+
+- "push to main"
+- "push to master"
+- "yes, push it to main"
+
+A prior instruction in an earlier session does NOT carry over. Ask again.
+
+## Examples
+
+```bash
+# ❌ BAD — pushing to main without explicit ask
+git checkout main
+git push origin main
+
+# ❌ BAD — force push to main
+git push --force origin main
+
+# ✅ GOOD — push to feature branch
+git push -u origin feature/my-change
+
+# ✅ GOOD — user said "push to main", so it's allowed
+git push origin main
+```
