@@ -8,6 +8,7 @@ import {
   IconAlertTriangle,
   IconTrash,
 } from '@tabler/icons-react'
+import { ThinkingOrb } from '@/components/thinking-orb'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -25,6 +26,7 @@ import {
   usePublishPost,
   type PostStage,
 } from '../query/post-generator.query'
+import { STAGE_LABEL } from '../utils/stage-label'
 import { RejectPostDialog } from './reject-post-dialog'
 import { DeletePostDialog } from './delete-post-dialog'
 
@@ -33,14 +35,6 @@ interface PostCardProps {
   calendarId: string
   onClick: () => void
   stage?: PostStage
-}
-
-const STAGE_LABEL: Record<PostStage, string> = {
-  researching: 'Researching sources',
-  planning: 'Planning the angle',
-  writing: 'Writing the draft',
-  reviewing: 'Reviewing the draft',
-  revising: 'Applying edits',
 }
 
 function postStatusVariant(
@@ -127,7 +121,11 @@ export function PostCard({ post, calendarId, onClick, stage }: PostCardProps) {
         ) : (
           <p className='text-sm leading-relaxed'>{getHookPreview(post.content)}</p>
         )}
-        <Badge variant={postStatusVariant(post.status)} className='shrink-0'>
+        <Badge
+          variant={postStatusVariant(post.status)}
+          className='shrink-0 gap-1.5'
+        >
+          {isGenerating && <ThinkingOrb size={14} label='Generating' />}
           {isGenerating && stage ? STAGE_LABEL[stage] : post.status}
         </Badge>
       </div>

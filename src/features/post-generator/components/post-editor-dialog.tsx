@@ -231,6 +231,7 @@ export function PostEditorDialog({
             <PostChatPanel
               post={post}
               calendarId={calendarId}
+              profileId={profileId}
               onContentUpdate={handleChatUpdate}
             />
           </div>

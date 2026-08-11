@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 import {
   createManualPost,
   generateCalendar,
@@ -28,6 +29,7 @@ import {
   getPostingPreferences,
   updatePostingPreferences,
   getCalendarStreamUrl,
+  getProfileStreamUrl,
   uploadPostMedia,
   deletePostMedia,
   regenerateAiImage,
@@ -47,7 +49,6 @@ import {
   type CarouselStyleKey,
   type SlideTemplateKey,
 } from '../api/post-generator.api'
-import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 
 function extractErrorMessage(error: any, fallback: string): string {
   return error?.response?.data?.message || error?.message || fallback
@@ -99,18 +100,30 @@ export const useActiveCalendars = (profileId: string | undefined) => {
 }
 
 export type PostStage =
-  | 'researching'
-  | 'planning'
-  | 'writing'
-  | 'reviewing'
-  | 'revising'
+  'researching' | 'planning' | 'writing' | 'reviewing' | 'revising'
+
+export interface ResearchClaim {
+  headline: string
+  source?: string
+  url?: string
+  date?: string
+  summary?: string
+}
+
+/** One thing the edit agent did, as it did it. */
+export interface EditStep {
+  key: string
+  label: string
+}
 
 export const useCalendarStream = (
   calendarId: string | undefined,
-  profileId: string | undefined,
+  profileId: string | undefined
 ) => {
   const queryClient = useQueryClient()
   const [stages, setStages] = useState<Record<string, PostStage>>({})
+  const [claims, setClaims] = useState<Record<string, ResearchClaim[]>>({})
+  const [details, setDetails] = useState<Record<string, string | undefined>>({})
 
   useEffect(() => {
     if (!calendarId || !profileId) return
@@ -136,11 +149,44 @@ export const useCalendarStream = (
       }
       if (!payload?.type || payload.type === 'ping') return
 
+      // Catching up on what was missed before this connection existed. The
+      // first stage is emitted while the browser is still creating the post and
+      // routing to the editor, so it is always gone by the time anyone is
+      // listening, and the next one can be forty seconds of research later.
+      if (payload.type === 'snapshot') {
+        const seenStages: Record<string, PostStage> = {}
+        const seenClaims: Record<string, ResearchClaim[]> = {}
+        for (const post of payload.posts ?? []) {
+          // A finished post's last stage says nothing about now.
+          if (post.status !== 'generating') continue
+          if (post.generationStage) seenStages[post._id] = post.generationStage
+          if (post.researchClaims?.length) {
+            seenClaims[post._id] = post.researchClaims
+          }
+        }
+        // Anything already streamed is newer than the snapshot, so it wins.
+        setStages((prev) => ({ ...seenStages, ...prev }))
+        setClaims((prev) => ({ ...seenClaims, ...prev }))
+        refetch()
+        return
+      }
+
       // Progress is display-only and fires several times per post. Refetching
       // on it would multiply calendar requests for data that has not changed —
       // nothing is written to the post until it is ready.
       if (payload.type === 'post_progress') {
         setStages((prev) => ({ ...prev, [payload.postId]: payload.stage }))
+        // Set unconditionally: an event without one has moved past whatever the
+        // last detail described, and leaving it up would caption the new stage
+        // with the old stage's work.
+        setDetails((prev) => ({ ...prev, [payload.postId]: payload.detail }))
+        // Claims are persisted on the post, but only a refetch would surface
+        // them and progress deliberately does not refetch. Riding along on the
+        // event is what lets the sources appear while the draft is still being
+        // written, which is the only time anyone is watching this screen.
+        if (payload.claims?.length) {
+          setClaims((prev) => ({ ...prev, [payload.postId]: payload.claims }))
+        }
         return
       }
 
@@ -161,8 +207,60 @@ export const useCalendarStream = (
     }
   }, [calendarId, profileId, queryClient])
 
-  return stages
+  return { stages, claims, details }
 }
+
+/**
+ * Live steps from an agent working somewhere on this profile.
+ *
+ * Editing cannot ride the calendar stream: that one hangs up the moment nothing
+ * is generating, which during an edit is always, so every step it sent landed
+ * on a connection the browser had already given up on. This one is opened by
+ * the caller for the turn it is waiting on and closed when the turn settles.
+ */
+const useProfileSteps = (
+  profileId: string | undefined,
+  type: string,
+  postId?: string
+) => {
+  const [steps, setSteps] = useState<EditStep[]>([])
+
+  useEffect(() => {
+    if (!profileId) return
+
+    const es = new EventSource(getProfileStreamUrl(profileId))
+
+    es.onmessage = (event) => {
+      let payload: any
+      try {
+        payload = JSON.parse(event.data)
+      } catch {
+        return
+      }
+      if (payload?.type !== type) return
+      if (postId && payload.postId !== postId) return
+      // The agent carries its whole list on every event, so this replaces
+      // rather than appends and a late subscriber still catches up.
+      setSteps(payload.steps ?? [])
+    }
+
+    es.onerror = () => es.close()
+
+    return () => es.close()
+  }, [profileId, type, postId])
+
+  const clearSteps = useCallback(() => setSteps([]), [])
+
+  return { steps, clearSteps }
+}
+
+export const useVoiceStream = (profileId: string | undefined) =>
+  useProfileSteps(profileId, 'voice_edit_progress')
+
+export const usePostEditStream = (
+  profileId: string | undefined,
+  postId: string
+) => useProfileSteps(profileId, 'post_edit_progress', postId)
 
 export const useCreateManualPost = () => {
   const queryClient = useQueryClient()
@@ -170,10 +268,16 @@ export const useCreateManualPost = () => {
     mutationFn: (payload: CreateManualPostPayload) => createManualPost(payload),
     onSuccess: (_data, payload) => {
       queryClient.invalidateQueries({
-        queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS, payload.profileId],
+        queryKey: [
+          PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS,
+          payload.profileId,
+        ],
       })
       queryClient.invalidateQueries({
-        queryKey: [PostGeneratorQueryEnum.GET_CALENDAR_HISTORY, payload.profileId],
+        queryKey: [
+          PostGeneratorQueryEnum.GET_CALENDAR_HISTORY,
+          payload.profileId,
+        ],
       })
     },
     onError: (error: any) => {
@@ -264,8 +368,15 @@ export const useEditPost = (calendarId: string) => {
 export const useRejectPost = (calendarId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ postId, reason, profileId }: { postId: string; reason: string; profileId: string }) =>
-      rejectPost(calendarId, postId, reason, profileId),
+    mutationFn: ({
+      postId,
+      reason,
+      profileId,
+    }: {
+      postId: string
+      reason: string
+      profileId: string
+    }) => rejectPost(calendarId, postId, reason, profileId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CURRENT_CALENDAR],
@@ -281,7 +392,8 @@ export const useRejectPost = (calendarId: string) => {
 export const useDeletePost = (calendarId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ postId }: { postId: string }) => deletePost(calendarId, postId),
+    mutationFn: ({ postId }: { postId: string }) =>
+      deletePost(calendarId, postId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CURRENT_CALENDAR],
@@ -315,12 +427,20 @@ export const useChatEditPost = (calendarId: string) => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_ACTIVE_CALENDARS],
       })
-      if (data?.action === 'convert_to_carousel') {
+      // One turn can rewrite the body and queue a carousel, and the queued work
+      // is the part that finishes later and so needs announcing.
+      const actions = data?.actions ?? (data?.action ? [data.action] : [])
+      if (actions.includes('convert_to_carousel')) {
         toast.success('Generating carousel slides…')
-      } else if (data?.action === 'regenerate_image') {
+      }
+      if (actions.includes('edit_carousel_slides')) {
+        toast.success('Updating the carousel slides…')
+      }
+      if (actions.includes('regenerate_image')) {
         toast.success('Working on the image…')
-      } else if (data?.action === 'unsupported') {
-        toast.info(data.assistantMessage || 'That request isn\'t supported.')
+      }
+      if (data?.action === 'unsupported') {
+        toast.info(data.assistantMessage || "That request isn't supported.")
       }
     },
     onError: (error: any) => {
@@ -369,8 +489,13 @@ export const usePublishPost = (calendarId: string) => {
 export const useReschedulePost = (calendarId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ postId, scheduledAt }: { postId: string; scheduledAt: string }) =>
-      reschedulePost(calendarId, postId, scheduledAt),
+    mutationFn: ({
+      postId,
+      scheduledAt,
+    }: {
+      postId: string
+      scheduledAt: string
+    }) => reschedulePost(calendarId, postId, scheduledAt),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CALENDAR, calendarId],
@@ -420,8 +545,13 @@ export const useStartOnboarding = () => {
 export const useActivateAgentType = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ profileId, agentType }: { profileId: string; agentType: string }) =>
-      updateAgentTypes(profileId, { add: agentType }),
+    mutationFn: ({
+      profileId,
+      agentType,
+    }: {
+      profileId: string
+      agentType: string
+    }) => updateAgentTypes(profileId, { add: agentType }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
@@ -465,14 +595,19 @@ export const useCreators = (profileId: string | undefined) => {
 export const useAddCreator = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ profileId, linkedinUrl }: { profileId: string; linkedinUrl: string }) =>
-      addCreator(profileId, linkedinUrl),
+    mutationFn: ({
+      profileId,
+      linkedinUrl,
+    }: {
+      profileId: string
+      linkedinUrl: string
+    }) => addCreator(profileId, linkedinUrl),
     onSuccess: (_data, { profileId }) => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.CREATORS, profileId],
       })
       toast.success(
-        'Creator added — re-analyzing your voice profile in the background. Refresh in ~1 min to see the updated profile.',
+        'Creator added — re-analyzing your voice profile in the background. Refresh in ~1 min to see the updated profile.'
       )
     },
     onError: (error: any) => {
@@ -491,7 +626,7 @@ export const useDeleteCreator = () => {
         queryKey: [PostGeneratorQueryEnum.CREATORS, profileId],
       })
       toast.success(
-        'Creator removed — re-analyzing your voice profile in the background. Refresh in ~1 min to see the updated profile.',
+        'Creator removed — re-analyzing your voice profile in the background. Refresh in ~1 min to see the updated profile.'
       )
     },
     onError: (error: any) => {
@@ -561,7 +696,7 @@ export const useRegenerateAiImage = (calendarId: string) => {
       })
       toast.success(
         data?.message ||
-          'Image queued — your new image will appear here in about 2 minutes.',
+          'Image queued — your new image will appear here in about 2 minutes.'
       )
     },
     onError: (error: any) => {
@@ -640,10 +775,15 @@ export const useSwitchCarouselTemplate = (calendarId: string) => {
     }) => switchCarouselTemplate(postId, styleKey),
     onSuccess: (data) => {
       invalidateCalendarQueries(queryClient, calendarId)
-      toast.success(data?.message || 'Switching carousel template — all slides regenerating.')
+      toast.success(
+        data?.message ||
+          'Switching carousel template — all slides regenerating.'
+      )
     },
     onError: (error: any) => {
-      toast.error(extractErrorMessage(error, 'Failed to switch carousel template'))
+      toast.error(
+        extractErrorMessage(error, 'Failed to switch carousel template')
+      )
     },
   })
 }
@@ -651,7 +791,7 @@ export const useSwitchCarouselTemplate = (calendarId: string) => {
 export const useFormatSuggestions = (
   postId: string | undefined,
   commentary: string,
-  enabled: boolean,
+  enabled: boolean
 ) => {
   return useQuery<FormatSuggestion>({
     queryKey: ['post-gen-format-suggestion', postId, commentary],
@@ -665,8 +805,13 @@ export const useFormatSuggestions = (
 export const useUpdatePostingPreferences = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ profileId, prefs }: { profileId: string; prefs: Partial<PostingPreferences> }) =>
-      updatePostingPreferences(profileId, prefs),
+    mutationFn: ({
+      profileId,
+      prefs,
+    }: {
+      profileId: string
+      prefs: Partial<PostingPreferences>
+    }) => updatePostingPreferences(profileId, prefs),
     onSuccess: (_data, { profileId }) => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.POSTING_PREFERENCES, profileId],
@@ -749,9 +894,7 @@ export const useRecomputeMasterySignals = (profileId: string) => {
       queryClient.setQueryData(
         [PostGeneratorQueryEnum.MASTERY_SIGNALS, profileId],
         (prev: any) =>
-          prev
-            ? { ...prev, status: data.status, error: null }
-            : prev,
+          prev ? { ...prev, status: data.status, error: null } : prev
       )
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.MASTERY_SIGNALS, profileId],
@@ -759,7 +902,7 @@ export const useRecomputeMasterySignals = (profileId: string) => {
       toast.success(
         data.queued
           ? 'Re-analyzing your expertise — this takes ~30s'
-          : 'Already re-analyzing — please wait',
+          : 'Already re-analyzing — please wait'
       )
     },
     onError: (error: any) => {

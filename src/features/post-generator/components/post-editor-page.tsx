@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useParams, useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
+import { useQueryClient } from '@tanstack/react-query'
+import { useParams, useNavigate } from '@tanstack/react-router'
 import {
   IconAlertTriangle,
   IconArrowBackUp,
@@ -22,8 +22,9 @@ import {
   IconX,
   IconZoomIn,
 } from '@tabler/icons-react'
-import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
   Dialog,
@@ -44,15 +45,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { Textarea } from '@/components/ui/textarea'
+import type { CarouselPayload, PostMedia } from '../api/post-generator.api'
 import {
   useActiveCalendars,
   useApprovePost,
   useUnapprovePost,
   useCalendarStream,
+  type ResearchClaim,
   useDeletePostMedia,
   useEditCarouselSlide,
   useEditPost,
@@ -66,12 +68,13 @@ import {
   useSwitchCarouselTemplate,
   useUploadPostMedia,
 } from '../query/post-generator.query'
-import type { CarouselPayload, PostMedia } from '../api/post-generator.api'
+import { STAGE_LABEL } from '../utils/stage-label'
+import { CarouselStrip } from './carousel-strip'
+import { DeletePostDialog } from './delete-post-dialog'
+import { GenerationProgress, ResearchSources } from './generation-progress'
 import { PostChatPanel } from './post-chat-panel'
 import { RegenerateImageDialog } from './regenerate-image-dialog'
-import { CarouselStrip } from './carousel-strip'
 import { RejectPostDialog } from './reject-post-dialog'
-import { DeletePostDialog } from './delete-post-dialog'
 
 function charCountColor(count: number) {
   if (count >= 1000 && count <= 1200) return 'text-green-600'
@@ -99,7 +102,7 @@ function statusLabel(status: string) {
 }
 
 function statusVariant(
-  status: string,
+  status: string
 ): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (status) {
     case 'approved':
@@ -118,7 +121,11 @@ function statusVariant(
 }
 
 export function PostEditorPage() {
-  const { profileId, agentType: _agentType, postId } = useParams({ strict: false }) as {
+  const {
+    profileId,
+    agentType: _agentType,
+    postId,
+  } = useParams({ strict: false }) as {
     profileId: string
     agentType: string
     postId: string
@@ -150,7 +157,7 @@ export function PostEditorPage() {
   const regenerateSlide = useRegenerateCarouselSlide(calendarId)
   const switchTemplate = useSwitchCarouselTemplate(calendarId)
   const [regenTargetMediaId, setRegenTargetMediaId] = useState<string | null>(
-    null,
+    null
   )
   const [previewMediaId, setPreviewMediaId] = useState<string | null>(null)
 
@@ -169,8 +176,7 @@ export function PostEditorPage() {
   })()
   const aiImagePending = (() => {
     const fit = (post as any)?.imageFit as
-      | { type?: string; error?: string | null }
-      | undefined
+      { type?: string; error?: string | null } | undefined
     const t = fit?.type
     const isAiImageKind =
       t === 'chat_screenshot' ||
@@ -182,12 +188,26 @@ export function PostEditorPage() {
     if (fit?.error) return false
     return !media.some((m) => m.source === 'ai' && m.aiKind === t)
   })()
-  useCalendarStream(
-    post?.status === 'generating' || carouselInProgress || aiImagePending
+  const isGenerating = post?.status === 'generating'
+  // The chat is the only one of these the page cannot see for itself, and the
+  // edit agent's steps arrive on the same stream, so the panel says when it
+  // needs the connection open.
+  const [chatBusy, setChatBusy] = useState(false)
+  const {
+    stages,
+    claims: streamedClaims,
+    details,
+  } = useCalendarStream(
+    isGenerating || carouselInProgress || aiImagePending || chatBusy
       ? calendarId || undefined
       : undefined,
-    profileId,
+    profileId
   )
+  const stage = isGenerating ? stages[postId] : undefined
+  // The stream carries claims as they are found; the post carries them after a
+  // reload, once the calendar has been refetched.
+  const researchClaims: ResearchClaim[] =
+    streamedClaims[postId] ?? (post as any)?.researchClaims ?? []
 
   const [content, setContent] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -200,7 +220,9 @@ export function PostEditorPage() {
 
   useEffect(() => {
     if (!postId) return
-    setFormatDismissed(sessionStorage.getItem(`format-suggest-dismissed:${postId}`) === '1')
+    setFormatDismissed(
+      sessionStorage.getItem(`format-suggest-dismissed:${postId}`) === '1'
+    )
   }, [postId])
 
   useEffect(() => {
@@ -215,8 +237,7 @@ export function PostEditorPage() {
   // a decision the system has already made. Same when the classifier already
   // picked an image kind (the generator handles attachment automatically).
   const imageFit = post?.imageFit as
-    | { type?: string; confidence?: number }
-    | undefined
+    { type?: string; confidence?: number } | undefined
   const classifierDecidedNoImage =
     imageFit?.type === 'none' && (imageFit?.confidence ?? 0) > 0
   const classifierPickedImage =
@@ -231,7 +252,10 @@ export function PostEditorPage() {
   const formatSuggestion = useFormatSuggestions(
     postId,
     debouncedCommentary,
-    !formatDismissed && !hasImages && !hasPdf && !suppressImageBannerByClassifier,
+    !formatDismissed &&
+      !hasImages &&
+      !hasPdf &&
+      !suppressImageBannerByClassifier
   )
   const suggestion = formatSuggestion.data
 
@@ -253,14 +277,14 @@ export function PostEditorPage() {
       setContent(value)
       setHasUnsavedChanges(value !== post?.content)
     },
-    [post?.content],
+    [post?.content]
   )
 
   const handleSave = () => {
     if (!post) return
     editPost.mutate(
       { postId: post._id, content },
-      { onSuccess: () => setHasUnsavedChanges(false) },
+      { onSuccess: () => setHasUnsavedChanges(false) }
     )
   }
 
@@ -274,7 +298,7 @@ export function PostEditorPage() {
             setHasUnsavedChanges(false)
             approvePost.mutate(post._id)
           },
-        },
+        }
       )
     } else {
       approvePost.mutate(post._id)
@@ -293,7 +317,7 @@ export function PostEditorPage() {
     if (!post) return
     rejectPost.mutate(
       { postId: post._id, reason, profileId },
-      { onSuccess: () => setRejectOpen(false) },
+      { onSuccess: () => setRejectOpen(false) }
     )
   }
 
@@ -311,7 +335,7 @@ export function PostEditorPage() {
           setDeleteOpen(false)
           goBack()
         },
-      },
+      }
     )
   }
 
@@ -337,7 +361,7 @@ export function PostEditorPage() {
               onSuccess: () => setPublishNowOpen(false),
             })
           },
-        },
+        }
       )
     } else {
       publishPost.mutate(post._id, {
@@ -366,13 +390,15 @@ export function PostEditorPage() {
       if (arr.length === 0) return
       uploadMedia.mutate({ postId: post._id, files: arr })
     },
-    [post?._id, uploadMedia],
+    [post?._id, uploadMedia]
   )
 
   const handleAttachClick = (kind: 'image' | 'pdf') => {
     if (!fileInputRef.current) return
     fileInputRef.current.accept =
-      kind === 'pdf' ? 'application/pdf' : 'image/png,image/jpeg,image/webp,image/gif'
+      kind === 'pdf'
+        ? 'application/pdf'
+        : 'image/png,image/jpeg,image/webp,image/gif'
     fileInputRef.current.multiple = kind === 'image'
     fileInputRef.current.click()
   }
@@ -405,7 +431,7 @@ export function PostEditorPage() {
     if (!post?._id || !regenTargetMediaId) return
     regenerateAi.mutate(
       { postId: post._id, mediaId: regenTargetMediaId, instruction },
-      { onSettled: () => setRegenTargetMediaId(null) },
+      { onSettled: () => setRegenTargetMediaId(null) }
     )
   }
   const handleRegenUploadReplace = (file: File) => {
@@ -417,11 +443,11 @@ export function PostEditorPage() {
         onSuccess: () => {
           uploadMedia.mutate(
             { postId: post._id, files: [file] },
-            { onSettled: () => setRegenTargetMediaId(null) },
+            { onSettled: () => setRegenTargetMediaId(null) }
           )
         },
         onError: () => setRegenTargetMediaId(null),
-      },
+      }
     )
   }
   const regenTargetMedia: PostMedia | null = regenTargetMediaId
@@ -459,7 +485,10 @@ export function PostEditorPage() {
           <Skeleton className='h-5 w-16' />
         </div>
         <div className='flex min-h-0 flex-1'>
-          <div className='flex flex-1 flex-col border-r p-6' style={{ flex: '55 0 0' }}>
+          <div
+            className='flex flex-1 flex-col border-r p-6'
+            style={{ flex: '55 0 0' }}
+          >
             <Skeleton className='mb-4 h-4 w-full' />
             <Skeleton className='mb-4 h-4 w-11/12' />
             <Skeleton className='mb-4 h-4 w-4/5' />
@@ -488,7 +517,12 @@ export function PostEditorPage() {
       {/* Top bar */}
       <div className='flex shrink-0 items-center justify-between border-b px-4 py-3'>
         <div className='flex items-center gap-3'>
-          <Button variant='ghost' size='icon' className='size-8' onClick={goBack}>
+          <Button
+            variant='ghost'
+            size='icon'
+            className='size-8'
+            onClick={goBack}
+          >
             <IconArrowLeft className='size-4' />
           </Button>
           <div className='flex items-center gap-2'>
@@ -503,7 +537,7 @@ export function PostEditorPage() {
               </Badge>
             )}
             <Badge variant={statusVariant(post.status)} className='text-xs'>
-              {statusLabel(post.status)}
+              {stage ? STAGE_LABEL[stage] : statusLabel(post.status)}
             </Badge>
           </div>
         </div>
@@ -558,16 +592,28 @@ export function PostEditorPage() {
                   onDismiss={dismissFormatSuggestion}
                 />
               )}
-            <Textarea
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              className='min-h-[60vh] resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0'
-              placeholder='Post content...'
-            />
+            {isGenerating && !content ? (
+              <GenerationProgress
+                stage={stage}
+                detail={isGenerating ? details[postId] : undefined}
+                claims={researchClaims}
+              />
+            ) : (
+              <>
+                <Textarea
+                  value={content}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  className='min-h-[60vh] resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0'
+                  placeholder='Post content...'
+                />
+                {researchClaims.length > 0 && (
+                  <ResearchSources claims={researchClaims} />
+                )}
+              </>
+            )}
             {(() => {
               const carousel = (post as any)?.imageFit?.carousel as
-                | CarouselPayload
-                | undefined
+                CarouselPayload | undefined
               const shouldShow =
                 carousel &&
                 ((carousel.slides?.length ?? 0) > 0 ||
@@ -665,7 +711,8 @@ export function PostEditorPage() {
                 <>
                   <Separator orientation='vertical' className='h-4' />
                   <span className='text-muted-foreground'>
-                    {imageCount > 0 && `${imageCount} image${imageCount > 1 ? 's' : ''}`}
+                    {imageCount > 0 &&
+                      `${imageCount} image${imageCount > 1 ? 's' : ''}`}
                     {pdfCount > 0 && `${imageCount > 0 ? ', ' : ''}PDF`}
                   </span>
                 </>
@@ -673,7 +720,7 @@ export function PostEditorPage() {
               {aiImagePending && (
                 <>
                   <Separator orientation='vertical' className='h-4' />
-                  <span className='flex items-center gap-1 text-muted-foreground'>
+                  <span className='text-muted-foreground flex items-center gap-1'>
                     <IconLoader2 className='size-3 animate-spin' />
                     Generating image…
                   </span>
@@ -765,7 +812,8 @@ export function PostEditorPage() {
                     },
                   ]}
                 />
-              ) : post.status === 'ready' || post.status === 'needs_attention' ? (
+              ) : post.status === 'ready' ||
+                post.status === 'needs_attention' ? (
                 <SplitButton
                   primary={
                     <>
@@ -795,7 +843,9 @@ export function PostEditorPage() {
           <PostChatPanel
             post={post}
             calendarId={calendarId}
+            profileId={profileId}
             onContentUpdate={handleChatUpdate}
+            onBusyChange={setChatBusy}
           />
         </div>
       </div>
@@ -889,7 +939,7 @@ function GenerationWarningBanner({
       className={`mb-4 flex items-start gap-3 rounded-lg border px-3 py-2 text-xs ${palette}`}
     >
       <IconAlertTriangle className={`mt-0.5 size-4 shrink-0 ${iconColor}`} />
-      <div className='flex-1 min-w-0'>
+      <div className='min-w-0 flex-1'>
         <div className='font-medium'>{title}</div>
         <div className='mt-0.5 break-words opacity-90'>{message}</div>
       </div>
@@ -953,7 +1003,9 @@ function MediaStrip({
           disabled={!canAttachImages || uploading}
         >
           <IconPaperclip className='mr-1.5 size-3.5' />
-          {hasImages ? `Add image (${imageSlotsRemaining} left)` : 'Attach images'}
+          {hasImages
+            ? `Add image (${imageSlotsRemaining} left)`
+            : 'Attach images'}
         </Button>
         <Button
           variant='outline'
@@ -975,12 +1027,12 @@ function MediaStrip({
 
 function PendingAiImageTile() {
   return (
-    <div className='group relative flex h-24 w-24 flex-col items-center justify-center gap-1 overflow-hidden rounded-md border border-dashed bg-muted/50'>
-      <span className='absolute left-1 top-1 rounded bg-violet-600/90 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-white'>
+    <div className='group bg-muted/50 relative flex h-24 w-24 flex-col items-center justify-center gap-1 overflow-hidden rounded-md border border-dashed'>
+      <span className='absolute top-1 left-1 rounded bg-violet-600/90 px-1 py-px text-[9px] font-medium tracking-wide text-white uppercase'>
         AI
       </span>
-      <IconLoader2 className='size-5 animate-spin text-muted-foreground' />
-      <span className='text-[9px] font-medium text-muted-foreground'>
+      <IconLoader2 className='text-muted-foreground size-5 animate-spin' />
+      <span className='text-muted-foreground text-[9px] font-medium'>
         Generating…
       </span>
     </div>
@@ -1003,16 +1055,13 @@ function MediaTile({
   const isAi = media.source === 'ai'
   const previewable = media.type === 'image' && !!onPreview && !isRegenerating
   return (
-    <div className='group relative h-24 w-24 overflow-hidden rounded-md border bg-muted'>
+    <div className='group bg-muted relative h-24 w-24 overflow-hidden rounded-md border'>
       {media.type === 'image' ? (
         <button
           type='button'
           onClick={previewable ? () => onPreview!(media._id) : undefined}
           aria-label='Preview image'
-          className={cn(
-            'block h-full w-full',
-            previewable && 'cursor-zoom-in',
-          )}
+          className={cn('block h-full w-full', previewable && 'cursor-zoom-in')}
           disabled={!previewable}
         >
           <img
@@ -1020,20 +1069,20 @@ function MediaTile({
             alt={media.originalFilename}
             className={cn(
               'h-full w-full object-cover',
-              isRegenerating && 'opacity-40',
+              isRegenerating && 'opacity-40'
             )}
           />
         </button>
       ) : (
         <div className='flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center'>
           <IconFileTypePdf className='size-7 text-red-500' />
-          <span className='line-clamp-2 text-[10px] text-muted-foreground'>
+          <span className='text-muted-foreground line-clamp-2 text-[10px]'>
             {media.originalFilename}
           </span>
         </div>
       )}
       {isAi && (
-        <span className='pointer-events-none absolute left-1 top-1 rounded bg-violet-600/90 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-white'>
+        <span className='pointer-events-none absolute top-1 left-1 rounded bg-violet-600/90 px-1 py-px text-[9px] font-medium tracking-wide text-white uppercase'>
           AI
         </span>
       )}
@@ -1049,7 +1098,7 @@ function MediaTile({
         </div>
       )}
       {!isRegenerating && (
-        <div className='absolute right-1 top-1 hidden gap-1 group-hover:flex'>
+        <div className='absolute top-1 right-1 hidden gap-1 group-hover:flex'>
           {isAi && onRegenerate && (
             <button
               type='button'
@@ -1122,7 +1171,7 @@ function ImageLightboxDialog({
         <DialogHeader className='space-y-1 pr-8'>
           <DialogTitle className='flex min-w-0 items-center gap-2'>
             {isAi && (
-              <span className='shrink-0 rounded bg-violet-600/90 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-white'>
+              <span className='shrink-0 rounded bg-violet-600/90 px-1 py-px text-[9px] font-medium tracking-wide text-white uppercase'>
                 AI
               </span>
             )}
@@ -1151,7 +1200,7 @@ function ImageLightboxDialog({
             </Button>
           )}
 
-          <div className='flex max-h-[70vh] w-full items-center justify-center overflow-hidden rounded-lg border bg-muted'>
+          <div className='bg-muted flex max-h-[70vh] w-full items-center justify-center overflow-hidden rounded-lg border'>
             <img
               src={current.url}
               alt={current.originalFilename}
@@ -1184,8 +1233,8 @@ function ImageLightboxDialog({
                 className={cn(
                   'h-1.5 rounded-full transition-all',
                   i === index
-                    ? 'w-6 bg-foreground'
-                    : 'w-1.5 bg-muted-foreground/30',
+                    ? 'bg-foreground w-6'
+                    : 'bg-muted-foreground/30 w-1.5'
                 )}
               />
             ))}
@@ -1233,7 +1282,9 @@ function SchedulePill({
   const initial = useMemo(() => new Date(scheduledAt), [scheduledAt])
 
   const [draftDate, setDraftDate] = useState<Date | undefined>(initial)
-  const [draftTime, setDraftTime] = useState<string>(() => format(initial, 'HH:mm'))
+  const [draftTime, setDraftTime] = useState<string>(() =>
+    format(initial, 'HH:mm')
+  )
 
   useEffect(() => {
     if (!open) return
@@ -1271,9 +1322,9 @@ function SchedulePill({
           type='button'
           disabled={disabled}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs font-medium text-muted-foreground transition-colors',
+            'text-muted-foreground inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs font-medium transition-colors',
             'hover:border-border hover:bg-muted/60 hover:text-foreground',
-            'disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-transparent disabled:hover:bg-transparent',
+            'disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-transparent disabled:hover:bg-transparent'
           )}
           aria-label='Reschedule post'
         >
@@ -1297,7 +1348,7 @@ function SchedulePill({
           }}
         />
         <div className='border-t p-3'>
-          <label className='mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground'>
+          <label className='text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs font-medium'>
             <IconCalendar className='size-3.5' />
             Time
           </label>
@@ -1305,7 +1356,7 @@ function SchedulePill({
             type='time'
             value={draftTime}
             onChange={(e) => setDraftTime(e.target.value)}
-            className='border-input focus-visible:ring-ring h-9 w-full rounded-md border bg-transparent px-2 text-sm shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-1'
+            className='border-input focus-visible:ring-ring h-9 w-full rounded-md border bg-transparent px-2 text-sm shadow-xs transition-colors focus-visible:ring-1 focus-visible:outline-hidden'
           />
           <div className='mt-3 flex justify-end gap-2'>
             <Button

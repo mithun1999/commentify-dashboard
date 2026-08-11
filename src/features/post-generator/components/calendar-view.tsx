@@ -163,7 +163,7 @@ export function CalendarView() {
     () => weekList.find((w: any) => w?.calendar?.status === 'generating'),
     [weekList],
   )
-  const stages = useCalendarStream(generatingWeek?.calendar?._id, profileId)
+  const { stages } = useCalendarStream(generatingWeek?.calendar?._id, profileId)
 
   const scheduledCount = posts.filter(
     (p) =>
