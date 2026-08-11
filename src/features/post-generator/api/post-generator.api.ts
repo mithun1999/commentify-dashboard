@@ -10,7 +10,7 @@ export interface CalendarUserContextInput {
 export async function generateCalendar(
   profileId: string,
   weekOffset: number = 0,
-  userContext?: CalendarUserContextInput,
+  userContext?: CalendarUserContextInput
 ) {
   const { data } = await axiosInstance({
     method: 'POST',
@@ -60,7 +60,11 @@ export async function unapprovePost(calendarId: string, postId: string) {
   return data
 }
 
-export async function editPost(calendarId: string, postId: string, content: string) {
+export async function editPost(
+  calendarId: string,
+  postId: string,
+  content: string
+) {
   const { data } = await axiosInstance({
     method: 'PATCH',
     url: `/post-generator/calendar/${calendarId}/post/${postId}/edit`,
@@ -69,7 +73,12 @@ export async function editPost(calendarId: string, postId: string, content: stri
   return data
 }
 
-export async function rejectPost(calendarId: string, postId: string, reason: string, profileId: string) {
+export async function rejectPost(
+  calendarId: string,
+  postId: string,
+  reason: string,
+  profileId: string
+) {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/calendar/${calendarId}/post/${postId}/reject`,
@@ -86,19 +95,29 @@ export async function deletePost(calendarId: string, postId: string) {
   return data
 }
 
-export async function chatEditPost(calendarId: string, postId: string, message: string) {
+export type PostEditAction =
+  | 'edit_text'
+  | 'convert_to_carousel'
+  | 'edit_carousel_slides'
+  | 'regenerate_image'
+  | 'unsupported'
+
+export async function chatEditPost(
+  calendarId: string,
+  postId: string,
+  message: string
+) {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/calendar/${calendarId}/post/${postId}/chat`,
     data: { message },
   })
   return data as {
-    action?:
-      | 'edit_text'
-      | 'convert_to_carousel'
-      | 'regenerate_image'
-      | 'unsupported'
+    action?: PostEditAction
+    /** Everything the agent did this turn, since one request can do several. */
+    actions?: PostEditAction[]
     content: string
+    contentChanged?: boolean
     assistantMessage: string
     editHistory: Array<{
       role: 'user' | 'assistant'
@@ -148,7 +167,7 @@ export async function publishPost(calendarId: string, postId: string) {
 export async function reschedulePost(
   calendarId: string,
   postId: string,
-  scheduledAt: string,
+  scheduledAt: string
 ) {
   const { data } = await axiosInstance({
     method: 'PATCH',
@@ -224,7 +243,9 @@ export interface PostingPreferences {
   }
 }
 
-export async function getPostingPreferences(profileId: string): Promise<PostingPreferences> {
+export async function getPostingPreferences(
+  profileId: string
+): Promise<PostingPreferences> {
   const { data } = await axiosInstance({
     method: 'GET',
     url: `/post-generator/preferences/${profileId}`,
@@ -234,7 +255,7 @@ export async function getPostingPreferences(profileId: string): Promise<PostingP
 
 export async function updatePostingPreferences(
   profileId: string,
-  prefs: Partial<PostingPreferences>,
+  prefs: Partial<PostingPreferences>
 ): Promise<PostingPreferences> {
   const { data } = await axiosInstance({
     method: 'PATCH',
@@ -295,7 +316,10 @@ export async function deleteCreator(creatorId: string) {
   return data
 }
 
-export async function updateAgentTypes(profileId: string, payload: { add?: string; remove?: string }) {
+export async function updateAgentTypes(
+  profileId: string,
+  payload: { add?: string; remove?: string }
+) {
   const { data } = await axiosInstance({
     method: 'PATCH',
     url: `/profile/${profileId}/agent-types`,
@@ -307,6 +331,11 @@ export async function updateAgentTypes(profileId: string, payload: { add?: strin
 export function getCalendarStreamUrl(calendarId: string): string {
   const base = axiosInstance.defaults.baseURL || ''
   return `${base}/post-generator/calendar/stream/${calendarId}`
+}
+
+export function getProfileStreamUrl(profileId: string): string {
+  const base = axiosInstance.defaults.baseURL || ''
+  return `${base}/post-generator/profile/stream/${profileId}`
 }
 
 export interface PostMedia {
@@ -386,7 +415,7 @@ export interface RegenerateAiImageResponse {
 export async function regenerateAiImage(
   postId: string,
   mediaId: string,
-  instruction: string,
+  instruction: string
 ): Promise<RegenerateAiImageResponse> {
   const { data } = await axiosInstance({
     method: 'POST',
@@ -396,7 +425,10 @@ export async function regenerateAiImage(
   return data
 }
 
-export async function uploadPostMedia(postId: string, files: File[]): Promise<{ media: PostMedia[] }> {
+export async function uploadPostMedia(
+  postId: string,
+  files: File[]
+): Promise<{ media: PostMedia[] }> {
   const form = new FormData()
   for (const f of files) form.append('files', f)
   const { data } = await axiosInstance({
@@ -408,7 +440,10 @@ export async function uploadPostMedia(postId: string, files: File[]): Promise<{ 
   return data
 }
 
-export async function deletePostMedia(postId: string, mediaId: string): Promise<{ media: PostMedia[] }> {
+export async function deletePostMedia(
+  postId: string,
+  mediaId: string
+): Promise<{ media: PostMedia[] }> {
   const { data } = await axiosInstance({
     method: 'DELETE',
     url: `/post-generator/posts/${postId}/media/${mediaId}`,
@@ -423,7 +458,10 @@ export interface FormatSuggestion {
   pdfOutline?: string[]
 }
 
-export async function getFormatSuggestions(postId: string, commentary: string): Promise<FormatSuggestion> {
+export async function getFormatSuggestions(
+  postId: string,
+  commentary: string
+): Promise<FormatSuggestion> {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/posts/${postId}/format-suggestions`,
@@ -464,7 +502,9 @@ export interface BrandSettings {
   updatedAt?: string
 }
 
-export async function getBrandSettings(profileId: string): Promise<BrandSettings> {
+export async function getBrandSettings(
+  profileId: string
+): Promise<BrandSettings> {
   const { data } = await axiosInstance({
     method: 'GET',
     url: `/post-generator/brand-settings/${profileId}`,
@@ -478,7 +518,7 @@ export async function updateBrandSettings(
     colors?: Partial<BrandSettings['colors']>
     lockedStyles?: CarouselStyleKey[]
     allowMemes?: boolean
-  },
+  }
 ): Promise<BrandSettings> {
   const { data } = await axiosInstance({
     method: 'PATCH',
@@ -488,7 +528,9 @@ export async function updateBrandSettings(
   return data
 }
 
-export async function rederiveBrandSettings(profileId: string): Promise<BrandSettings> {
+export async function rederiveBrandSettings(
+  profileId: string
+): Promise<BrandSettings> {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/brand-settings/${profileId}/rederive`,
@@ -540,7 +582,9 @@ export interface MasteryRecomputeQueuedResponse {
   queued: boolean
 }
 
-export async function getMasterySignals(profileId: string): Promise<MasterySignals> {
+export async function getMasterySignals(
+  profileId: string
+): Promise<MasterySignals> {
   const { data } = await axiosInstance({
     method: 'GET',
     url: `/post-generator/mastery/${profileId}`,
@@ -549,7 +593,7 @@ export async function getMasterySignals(profileId: string): Promise<MasterySigna
 }
 
 export async function recomputeMasterySignals(
-  profileId: string,
+  profileId: string
 ): Promise<MasteryRecomputeQueuedResponse> {
   const { data } = await axiosInstance({
     method: 'POST',
@@ -570,7 +614,7 @@ export interface CarouselSlideJobResponse {
 export async function editCarouselSlide(
   postId: string,
   slideIndex: number,
-  instruction: string,
+  instruction: string
 ): Promise<CarouselSlideJobResponse> {
   const { data } = await axiosInstance({
     method: 'POST',
@@ -588,7 +632,7 @@ export async function regenerateCarouselSlide(
     body?: string
     accent?: string
     slideTemplate?: SlideTemplateKey
-  } = {},
+  } = {}
 ): Promise<CarouselSlideJobResponse> {
   const { data } = await axiosInstance({
     method: 'POST',
@@ -600,7 +644,7 @@ export async function regenerateCarouselSlide(
 
 export async function switchCarouselTemplate(
   postId: string,
-  styleKey: CarouselStyleKey,
+  styleKey: CarouselStyleKey
 ): Promise<CarouselSlideJobResponse> {
   const { data } = await axiosInstance({
     method: 'POST',

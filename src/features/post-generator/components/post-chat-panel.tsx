@@ -1,14 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
-import { IconSend, IconSparkles, IconLoader2 } from '@tabler/icons-react'
+import { IconSend, IconSparkles, IconCheck } from '@tabler/icons-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
-import { useChatEditPost } from '../query/post-generator.query'
+import { ThinkingOrb } from '@/components/thinking-orb'
+import {
+  useChatEditPost,
+  usePostEditStream,
+} from '../query/post-generator.query'
 
 interface PostChatPanelProps {
   post: any
   calendarId: string
+  profileId: string
   onContentUpdate: (content: string) => void
+  onBusyChange?: (busy: boolean) => void
 }
 
 interface ChatMessage {
@@ -18,26 +24,48 @@ interface ChatMessage {
   postSnapshot?: string
 }
 
+/**
+ * Shown until the agent's first step arrives, which is a round trip away.
+ * A guess is fine here because it is replaced by what actually happened.
+ */
+function optimisticLabel(intent: 'edit' | 'carousel' | 'image' | null): string {
+  if (intent === 'carousel') return 'Setting up the carousel'
+  if (intent === 'image') return 'Working on the image'
+  return 'Reading your post'
+}
+
 export function PostChatPanel({
   post,
   calendarId,
+  profileId,
   onContentUpdate,
+  onBusyChange,
 }: PostChatPanelProps) {
   const [input, setInput] = useState('')
   const [pendingIntent, setPendingIntent] = useState<
     'edit' | 'carousel' | 'image' | null
   >(null)
+  // The transcript is the post's saved history, which only gains this message
+  // when the turn ends. Without an echo, sending appears to swallow it.
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null)
   const chatEditPost = useChatEditPost(calendarId)
+  const { steps, clearSteps } = usePostEditStream(
+    chatEditPost.isPending ? profileId : undefined,
+    post._id
+  )
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const messages: ChatMessage[] = post.editHistory ?? []
+  // The newest step is what it is doing now; everything before it is finished.
+  const done = steps.slice(0, -1)
+  const current = steps[steps.length - 1]
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages.length, chatEditPost.isPending])
+  }, [messages.length, chatEditPost.isPending, steps.length])
 
   const guessIntent = (text: string): 'edit' | 'carousel' | 'image' => {
     const t = text.toLowerCase()
@@ -53,15 +81,29 @@ export function PostChatPanel({
 
     setInput('')
     setPendingIntent(guessIntent(trimmed))
+    setPendingMessage(trimmed)
+    // The last turn's steps outlive it, and the first event of this one is a
+    // round trip away. Without this the panel opens on the old list.
+    clearSteps()
+    onBusyChange?.(true)
     chatEditPost.mutate(
       { postId: post._id, message: trimmed },
       {
         onSuccess: (data) => {
-          if (!data?.action || data.action === 'edit_text') {
+          // One turn can rewrite the body and queue a carousel, so the flag
+          // rather than the headline action decides whether the editor reloads.
+          if (
+            data?.contentChanged ??
+            (!data?.action || data.action === 'edit_text')
+          ) {
             onContentUpdate(data.content)
           }
         },
-        onSettled: () => setPendingIntent(null),
+        onSettled: () => {
+          setPendingIntent(null)
+          setPendingMessage(null)
+          onBusyChange?.(false)
+        },
       }
     )
   }
@@ -85,8 +127,8 @@ export function PostChatPanel({
           <div className='flex flex-col items-center justify-center gap-2 py-12'>
             <IconSparkles className='text-muted-foreground/40 size-8' />
             <p className='text-muted-foreground text-center text-xs'>
-              Ask the AI to refine your post, generate an image, or turn it
-              into a carousel.
+              Ask the AI to refine your post, generate an image, or turn it into
+              a carousel.
               <br />
               Try: "Tighten the hook", "Generate an image", or "Convert this
               into a 5-slide carousel"
@@ -127,17 +169,31 @@ export function PostChatPanel({
                 </div>
               </div>
             ))}
+            {pendingMessage && (
+              <div className='flex justify-end'>
+                <div className='bg-primary text-primary-foreground max-w-[85%] rounded-lg px-3 py-2 text-sm'>
+                  <p className='whitespace-pre-wrap'>{pendingMessage}</p>
+                </div>
+              </div>
+            )}
             {chatEditPost.isPending && (
               <div className='flex justify-start'>
-                <div className='bg-muted flex items-center gap-2 rounded-lg px-3 py-2'>
-                  <IconLoader2 className='size-3.5 animate-spin' />
-                  <span className='text-muted-foreground text-xs'>
-                    {pendingIntent === 'carousel'
-                      ? 'Setting up a carousel from this post...'
-                      : pendingIntent === 'image'
-                        ? 'Working on the image...'
-                        : 'Editing your post...'}
-                  </span>
+                <div className='bg-muted max-w-[85%] space-y-1.5 rounded-lg px-3 py-2'>
+                  {done.map((step) => (
+                    <div
+                      key={step.key}
+                      className='text-muted-foreground flex items-center gap-2 text-xs'
+                    >
+                      <IconCheck className='size-3 shrink-0' />
+                      <span>{step.label}</span>
+                    </div>
+                  ))}
+                  <div className='flex items-center gap-2'>
+                    <ThinkingOrb size={16} className='text-primary' />
+                    <span className='text-shimmer text-xs'>
+                      {current?.label ?? optimisticLabel(pendingIntent)}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

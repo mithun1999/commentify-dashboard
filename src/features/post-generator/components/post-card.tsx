@@ -8,6 +8,7 @@ import {
   IconAlertTriangle,
   IconTrash,
 } from '@tabler/icons-react'
+import { ThinkingOrb } from '@/components/thinking-orb'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,7 +24,9 @@ import {
   useRejectPost,
   useDeletePost,
   usePublishPost,
+  type PostStage,
 } from '../query/post-generator.query'
+import { STAGE_LABEL } from '../utils/stage-label'
 import { RejectPostDialog } from './reject-post-dialog'
 import { DeletePostDialog } from './delete-post-dialog'
 
@@ -31,6 +34,7 @@ interface PostCardProps {
   post: any
   calendarId: string
   onClick: () => void
+  stage?: PostStage
 }
 
 function postStatusVariant(
@@ -60,7 +64,7 @@ function getHookPreview(content: string | undefined) {
   return firstLine.length > 120 ? firstLine.slice(0, 120) + '...' : firstLine
 }
 
-export function PostCard({ post, calendarId, onClick }: PostCardProps) {
+export function PostCard({ post, calendarId, onClick, stage }: PostCardProps) {
   const approvePost = useApprovePost(calendarId)
   const unapprovePost = useUnapprovePost(calendarId)
   const rejectPost = useRejectPost(calendarId)
@@ -117,8 +121,12 @@ export function PostCard({ post, calendarId, onClick }: PostCardProps) {
         ) : (
           <p className='text-sm leading-relaxed'>{getHookPreview(post.content)}</p>
         )}
-        <Badge variant={postStatusVariant(post.status)} className='shrink-0'>
-          {post.status}
+        <Badge
+          variant={postStatusVariant(post.status)}
+          className='shrink-0 gap-1.5'
+        >
+          {isGenerating && <ThinkingOrb size={14} label='Generating' />}
+          {isGenerating && stage ? STAGE_LABEL[stage] : post.status}
         </Badge>
       </div>
 

@@ -9,6 +9,7 @@ import { NavAgents } from '@/components/layout/nav-agents'
 import { NavGroup } from '@/components/layout/nav-group'
 import { NavUser } from '@/components/layout/nav-user'
 import { useTheme } from '@/context/theme-context'
+import { CopilotLauncher } from '@/features/copilot/components/copilot-launcher'
 import { sidebarData } from './data/sidebar-data'
 import logoWhite from '@/assets/images/logo.svg'
 import logoBlack from '@/assets/images/logo-black.svg'
@@ -41,6 +42,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavGroup key={index} {...props} />
       ))}
       <SidebarFooter>
+        <CopilotLauncher />
         <NavUser />
       </SidebarFooter>
       <SidebarRail />

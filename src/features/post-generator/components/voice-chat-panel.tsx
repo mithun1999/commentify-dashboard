@@ -1,9 +1,18 @@
 import { useState, useRef, useEffect } from 'react'
-import { IconSend, IconSparkles, IconLoader2, IconCheck, IconHelpCircle } from '@tabler/icons-react'
+import {
+  IconSend,
+  IconSparkles,
+  IconCheck,
+  IconHelpCircle,
+} from '@tabler/icons-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
-import { useChatUpdateVoice } from '../query/post-generator.query'
+import { ThinkingOrb } from '@/components/thinking-orb'
+import {
+  useChatUpdateVoice,
+  useVoiceStream,
+} from '../query/post-generator.query'
 
 interface VoiceChatPanelProps {
   profileId: string
@@ -17,22 +26,35 @@ interface VoiceChatPanelProps {
 
 export function VoiceChatPanel({ profileId, history }: VoiceChatPanelProps) {
   const [input, setInput] = useState('')
+  const [pending, setPending] = useState<string | null>(null)
   const chatUpdate = useChatUpdateVoice(profileId)
+  const { steps, clearSteps } = useVoiceStream(
+    chatUpdate.isPending ? profileId : undefined
+  )
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  const done = steps.slice(0, -1)
+  const current = steps[steps.length - 1]
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [history.length, chatUpdate.isPending])
+  }, [history.length, chatUpdate.isPending, steps.length])
 
   const handleSend = () => {
     const trimmed = input.trim()
     if (!trimmed || chatUpdate.isPending) return
 
     setInput('')
-    chatUpdate.mutate(trimmed)
+    setPending(trimmed)
+    clearSteps()
+    chatUpdate.mutate(trimmed, {
+      // The answer arrives as history, so the echo has to survive until that
+      // has landed or the message blinks out and back in.
+      onSettled: () => setPending(null),
+    })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -56,7 +78,8 @@ export function VoiceChatPanel({ profileId, history }: VoiceChatPanelProps) {
             <p className='text-muted-foreground text-center text-xs'>
               Tell us how to refine your voice.
               <br />
-              Try: "Make me sound more direct" or "Add 'shipping' as a content pillar and drop the word synergy"
+              Try: "Make me sound more direct" or "Add 'shipping' as a content
+              pillar and drop the word synergy"
             </p>
           </div>
         ) : (
@@ -87,7 +110,7 @@ export function VoiceChatPanel({ profileId, history }: VoiceChatPanelProps) {
                         ) : (
                           <IconCheck className='size-3 text-emerald-500' />
                         )}
-                        <span className='text-muted-foreground text-[10px] font-medium uppercase tracking-wide'>
+                        <span className='text-muted-foreground text-[10px] font-medium tracking-wide uppercase'>
                           {isClarification ? 'Question' : 'Updated'}
                         </span>
                       </div>
@@ -110,13 +133,31 @@ export function VoiceChatPanel({ profileId, history }: VoiceChatPanelProps) {
                 </div>
               )
             })}
+            {pending && (
+              <div className='flex justify-end'>
+                <div className='bg-primary text-primary-foreground max-w-[85%] rounded-lg px-3 py-2 text-sm'>
+                  <p className='whitespace-pre-wrap'>{pending}</p>
+                </div>
+              </div>
+            )}
             {chatUpdate.isPending && (
               <div className='flex justify-start'>
-                <div className='bg-muted flex items-center gap-2 rounded-lg px-3 py-2'>
-                  <IconLoader2 className='size-3.5 animate-spin' />
-                  <span className='text-muted-foreground text-xs'>
-                    Updating your voice...
-                  </span>
+                <div className='bg-muted max-w-[85%] space-y-1.5 rounded-lg px-3 py-2'>
+                  {done.map((step) => (
+                    <div
+                      key={step.key}
+                      className='text-muted-foreground flex items-center gap-2 text-xs'
+                    >
+                      <IconCheck className='size-3 shrink-0' />
+                      <span>{step.label}</span>
+                    </div>
+                  ))}
+                  <div className='flex items-center gap-2'>
+                    <ThinkingOrb size={16} className='text-primary' />
+                    <span className='text-shimmer text-xs'>
+                      {current?.label ?? 'Reading your voice profile'}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
