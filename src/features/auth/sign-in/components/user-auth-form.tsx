@@ -66,7 +66,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       toast.error('Unexpected error occurred')
 
       if (err instanceof Error) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
           console.error(err)
         }
