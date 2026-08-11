@@ -10,6 +10,7 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { useAgents } from '@/features/agent-system/hooks/use-agents'
+import { HubComposer } from '@/features/copilot/components/hub-composer'
 import { AgentCard } from './components/agent-card'
 import { AddAgentCard } from './components/add-agent-card'
 import { AddAgentDialog } from './components/add-agent-dialog'
@@ -66,22 +67,28 @@ export default function AgentHub() {
           </Alert>
         )}
 
-        {!isLoading && agents.length === 0 ? (
-          <EmptyState onAddAgent={() => openAddDialog()} />
-        ) : (
-          <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-            {agents.map((agent) => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                profile={profiles?.find((p) => p._id === agent.profileId)}
-              />
-            ))}
-            <AddAgentCard onClick={() => openAddDialog()} />
-            <ComingSoonCards />
-          </div>
-        )}
+        {/* Room for the docked composer, which floats over the bottom of the
+            viewport and would otherwise sit on top of the last row of cards. */}
+        <div className='pb-28'>
+          {!isLoading && agents.length === 0 ? (
+            <EmptyState onAddAgent={() => openAddDialog()} />
+          ) : (
+            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+              {agents.map((agent) => (
+                <AgentCard
+                  key={agent.id}
+                  agent={agent}
+                  profile={profiles?.find((p) => p._id === agent.profileId)}
+                />
+              ))}
+              <AddAgentCard onClick={() => openAddDialog()} />
+              <ComingSoonCards />
+            </div>
+          )}
+        </div>
       </Main>
+
+      <HubComposer />
 
       <AddAgentDialog
         open={addDialogOpen}

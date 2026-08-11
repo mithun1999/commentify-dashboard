@@ -8,590 +8,853 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as OnboardingRouteRouteImport } from './routes/onboarding/route'
+import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
+import { Route as authOtpRouteImport } from './routes/(auth)/otp'
+import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
+import { Route as authSignIn2RouteImport } from './routes/(auth)/sign-in-2'
+import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
+import { Route as authUpdatePasswordRouteImport } from './routes/(auth)/update-password'
+import { Route as errors401RouteImport } from './routes/(errors)/401'
+import { Route as errors403RouteImport } from './routes/(errors)/403'
+import { Route as errors404RouteImport } from './routes/(errors)/404'
+import { Route as errors500RouteImport } from './routes/(errors)/500'
+import { Route as errors503RouteImport } from './routes/(errors)/503'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
+import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
+import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
+import { Route as OnboardingActivateTrialRouteImport } from './routes/onboarding/activate-trial'
+import { Route as OnboardingAgentTypeRouteImport } from './routes/onboarding/agent-type'
+import { Route as OnboardingCommentSettingsRouteImport } from './routes/onboarding/comment-settings'
+import { Route as OnboardingConnectAccountRouteImport } from './routes/onboarding/connect-account'
+import { Route as OnboardingDemoRouteImport } from './routes/onboarding/demo'
+import { Route as OnboardingExtensionRouteImport } from './routes/onboarding/extension'
+import { Route as OnboardingIdentityRouteImport } from './routes/onboarding/identity'
+import { Route as OnboardingOtherSettingsRouteImport } from './routes/onboarding/other-settings'
+import { Route as OnboardingPostSettingsRouteImport } from './routes/onboarding/post-settings'
+import { Route as AuthenticatedCopilotIndexRouteImport } from './routes/_authenticated/copilot/index'
+import { Route as AuthenticatedCopilotConversationIdRouteImport } from './routes/_authenticated/copilot/$conversationId'
+import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
+import { Route as AuthenticatedHistoryIndexRouteImport } from './routes/_authenticated/history/index'
+import { Route as AuthenticatedPlansIndexRouteImport } from './routes/_authenticated/plans/index'
+import { Route as AuthenticatedPricingIndexRouteImport } from './routes/_authenticated/pricing/index'
+import { Route as AuthenticatedSettingsCommentsRouteImport } from './routes/_authenticated/settings/comments'
+import { Route as AuthenticatedSettingsPostRouteImport } from './routes/_authenticated/settings/post'
+import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeRouteRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/route'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeCalendarRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/calendar'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeHistoryRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/history'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeQueueRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/queue'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeSettingsRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/settings'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeStatsRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/stats'
+import { Route as AuthenticatedAgentsProfileIdAgentTypePostPostIdRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/post/$postId'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as OnboardingRouteImport } from './routes/onboarding/route'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated/route'
-import { Route as OnboardingIndexImport } from './routes/onboarding/index'
-import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
-import { Route as OnboardingPostSettingsImport } from './routes/onboarding/post-settings'
-import { Route as OnboardingOtherSettingsImport } from './routes/onboarding/other-settings'
-import { Route as OnboardingIdentityImport } from './routes/onboarding/identity'
-import { Route as OnboardingExtensionImport } from './routes/onboarding/extension'
-import { Route as OnboardingDemoImport } from './routes/onboarding/demo'
-import { Route as OnboardingConnectAccountImport } from './routes/onboarding/connect-account'
-import { Route as OnboardingCommentSettingsImport } from './routes/onboarding/comment-settings'
-import { Route as OnboardingAgentTypeImport } from './routes/onboarding/agent-type'
-import { Route as OnboardingActivateTrialImport } from './routes/onboarding/activate-trial'
-import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
-import { Route as errors503Import } from './routes/(errors)/503'
-import { Route as errors500Import } from './routes/(errors)/500'
-import { Route as errors404Import } from './routes/(errors)/404'
-import { Route as errors403Import } from './routes/(errors)/403'
-import { Route as errors401Import } from './routes/(errors)/401'
-import { Route as authUpdatePasswordImport } from './routes/(auth)/update-password'
-import { Route as authSignUpImport } from './routes/(auth)/sign-up'
-import { Route as authSignIn2Import } from './routes/(auth)/sign-in-2'
-import { Route as authSignInImport } from './routes/(auth)/sign-in'
-import { Route as authOtpImport } from './routes/(auth)/otp'
-import { Route as authForgotPasswordImport } from './routes/(auth)/forgot-password'
-import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings/route'
-import { Route as AuthenticatedUsersIndexImport } from './routes/_authenticated/users/index'
-import { Route as AuthenticatedPricingIndexImport } from './routes/_authenticated/pricing/index'
-import { Route as AuthenticatedPlansIndexImport } from './routes/_authenticated/plans/index'
-import { Route as AuthenticatedHistoryIndexImport } from './routes/_authenticated/history/index'
-import { Route as AuthenticatedHelpCenterIndexImport } from './routes/_authenticated/help-center/index'
-import { Route as AuthenticatedSettingsPostImport } from './routes/_authenticated/settings/post'
-import { Route as AuthenticatedSettingsCommentsImport } from './routes/_authenticated/settings/comments'
-import { Route as AuthenticatedAgentsProfileIdAgentTypeRouteImport } from './routes/_authenticated/agents/$profileId/$agentType/route'
-import { Route as AuthenticatedAgentsProfileIdAgentTypeStatsImport } from './routes/_authenticated/agents/$profileId/$agentType/stats'
-import { Route as AuthenticatedAgentsProfileIdAgentTypeSettingsImport } from './routes/_authenticated/agents/$profileId/$agentType/settings'
-import { Route as AuthenticatedAgentsProfileIdAgentTypeQueueImport } from './routes/_authenticated/agents/$profileId/$agentType/queue'
-import { Route as AuthenticatedAgentsProfileIdAgentTypeHistoryImport } from './routes/_authenticated/agents/$profileId/$agentType/history'
-import { Route as AuthenticatedAgentsProfileIdAgentTypeCalendarImport } from './routes/_authenticated/agents/$profileId/$agentType/calendar'
-import { Route as AuthenticatedAgentsProfileIdAgentTypePostPostIdImport } from './routes/_authenticated/agents/$profileId/$agentType/post/$postId'
-
-// Create/Update Routes
-
-const OnboardingRouteRoute = OnboardingRouteImport.update({
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRouteRoute = OnboardingRouteRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const AuthenticatedRouteRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRoute,
+const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
+  id: '/(auth)/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const OnboardingIndexRoute = OnboardingIndexImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => OnboardingRouteRoute,
+const authOtpRoute = authOtpRouteImport.update({
+  id: '/(auth)/otp',
+  path: '/otp',
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
+const authSignInRoute = authSignInRouteImport.update({
+  id: '/(auth)/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSignIn2Route = authSignIn2RouteImport.update({
+  id: '/(auth)/sign-in-2',
+  path: '/sign-in-2',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSignUpRoute = authSignUpRouteImport.update({
+  id: '/(auth)/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authUpdatePasswordRoute = authUpdatePasswordRouteImport.update({
+  id: '/(auth)/update-password',
+  path: '/update-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors401Route = errors401RouteImport.update({
+  id: '/(errors)/401',
+  path: '/401',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors403Route = errors403RouteImport.update({
+  id: '/(errors)/403',
+  path: '/403',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors404Route = errors404RouteImport.update({
+  id: '/(errors)/404',
+  path: '/404',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors500Route = errors500RouteImport.update({
+  id: '/(errors)/500',
+  path: '/500',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors503Route = errors503RouteImport.update({
+  id: '/(errors)/503',
+  path: '/503',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-
-const OnboardingPostSettingsRoute = OnboardingPostSettingsImport.update({
-  id: '/post-settings',
-  path: '/post-settings',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const OnboardingOtherSettingsRoute = OnboardingOtherSettingsImport.update({
-  id: '/other-settings',
-  path: '/other-settings',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const OnboardingIdentityRoute = OnboardingIdentityImport.update({
-  id: '/identity',
-  path: '/identity',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const OnboardingExtensionRoute = OnboardingExtensionImport.update({
-  id: '/extension',
-  path: '/extension',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const OnboardingDemoRoute = OnboardingDemoImport.update({
-  id: '/demo',
-  path: '/demo',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const OnboardingConnectAccountRoute = OnboardingConnectAccountImport.update({
-  id: '/connect-account',
-  path: '/connect-account',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const OnboardingCommentSettingsRoute = OnboardingCommentSettingsImport.update({
-  id: '/comment-settings',
-  path: '/comment-settings',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const OnboardingAgentTypeRoute = OnboardingAgentTypeImport.update({
-  id: '/agent-type',
-  path: '/agent-type',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const OnboardingActivateTrialRoute = OnboardingActivateTrialImport.update({
-  id: '/activate-trial',
-  path: '/activate-trial',
-  getParentRoute: () => OnboardingRouteRoute,
-} as any)
-
-const AuthenticatedBillingRoute = AuthenticatedBillingImport.update({
+const AuthenticatedBillingRoute = AuthenticatedBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-
-const errors503Route = errors503Import.update({
-  id: '/(errors)/503',
-  path: '/503',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const errors500Route = errors500Import.update({
-  id: '/(errors)/500',
-  path: '/500',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const errors404Route = errors404Import.update({
-  id: '/(errors)/404',
-  path: '/404',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const errors403Route = errors403Import.update({
-  id: '/(errors)/403',
-  path: '/403',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const errors401Route = errors401Import.update({
-  id: '/(errors)/401',
-  path: '/401',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const authUpdatePasswordRoute = authUpdatePasswordImport.update({
-  id: '/(auth)/update-password',
-  path: '/update-password',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const authSignUpRoute = authSignUpImport.update({
-  id: '/(auth)/sign-up',
-  path: '/sign-up',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const authSignIn2Route = authSignIn2Import.update({
-  id: '/(auth)/sign-in-2',
-  path: '/sign-in-2',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const authSignInRoute = authSignInImport.update({
-  id: '/(auth)/sign-in',
-  path: '/sign-in',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const authOtpRoute = authOtpImport.update({
-  id: '/(auth)/otp',
-  path: '/otp',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const authForgotPasswordRoute = authForgotPasswordImport.update({
-  id: '/(auth)/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const AuthenticatedSettingsRouteRoute = AuthenticatedSettingsRouteImport.update(
-  {
+const AuthenticatedSettingsRouteRoute =
+  AuthenticatedSettingsRouteRouteImport.update({
     id: '/settings',
     path: '/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
-  } as any,
-)
-
-const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexImport.update({
-  id: '/users/',
-  path: '/users/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OnboardingRouteRoute,
 } as any)
-
-const AuthenticatedPricingIndexRoute = AuthenticatedPricingIndexImport.update({
-  id: '/pricing/',
-  path: '/pricing/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const OnboardingActivateTrialRoute = OnboardingActivateTrialRouteImport.update({
+  id: '/activate-trial',
+  path: '/activate-trial',
+  getParentRoute: () => OnboardingRouteRoute,
 } as any)
-
-const AuthenticatedPlansIndexRoute = AuthenticatedPlansIndexImport.update({
-  id: '/plans/',
-  path: '/plans/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const OnboardingAgentTypeRoute = OnboardingAgentTypeRouteImport.update({
+  id: '/agent-type',
+  path: '/agent-type',
+  getParentRoute: () => OnboardingRouteRoute,
 } as any)
-
-const AuthenticatedHistoryIndexRoute = AuthenticatedHistoryIndexImport.update({
-  id: '/history/',
-  path: '/history/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const OnboardingCommentSettingsRoute =
+  OnboardingCommentSettingsRouteImport.update({
+    id: '/comment-settings',
+    path: '/comment-settings',
+    getParentRoute: () => OnboardingRouteRoute,
+  } as any)
+const OnboardingConnectAccountRoute =
+  OnboardingConnectAccountRouteImport.update({
+    id: '/connect-account',
+    path: '/connect-account',
+    getParentRoute: () => OnboardingRouteRoute,
+  } as any)
+const OnboardingDemoRoute = OnboardingDemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => OnboardingRouteRoute,
 } as any)
-
+const OnboardingExtensionRoute = OnboardingExtensionRouteImport.update({
+  id: '/extension',
+  path: '/extension',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+const OnboardingIdentityRoute = OnboardingIdentityRouteImport.update({
+  id: '/identity',
+  path: '/identity',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+const OnboardingOtherSettingsRoute = OnboardingOtherSettingsRouteImport.update({
+  id: '/other-settings',
+  path: '/other-settings',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+const OnboardingPostSettingsRoute = OnboardingPostSettingsRouteImport.update({
+  id: '/post-settings',
+  path: '/post-settings',
+  getParentRoute: () => OnboardingRouteRoute,
+} as any)
+const AuthenticatedCopilotIndexRoute =
+  AuthenticatedCopilotIndexRouteImport.update({
+    id: '/copilot/',
+    path: '/copilot/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCopilotConversationIdRoute =
+  AuthenticatedCopilotConversationIdRouteImport.update({
+    id: '/copilot/$conversationId',
+    path: '/copilot/$conversationId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHelpCenterIndexRoute =
-  AuthenticatedHelpCenterIndexImport.update({
+  AuthenticatedHelpCenterIndexRouteImport.update({
     id: '/help-center/',
     path: '/help-center/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-
-const AuthenticatedSettingsPostRoute = AuthenticatedSettingsPostImport.update({
-  id: '/post',
-  path: '/post',
-  getParentRoute: () => AuthenticatedSettingsRouteRoute,
+const AuthenticatedHistoryIndexRoute =
+  AuthenticatedHistoryIndexRouteImport.update({
+    id: '/history/',
+    path: '/history/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPlansIndexRoute = AuthenticatedPlansIndexRouteImport.update({
+  id: '/plans/',
+  path: '/plans/',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-
+const AuthenticatedPricingIndexRoute =
+  AuthenticatedPricingIndexRouteImport.update({
+    id: '/pricing/',
+    path: '/pricing/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsCommentsRoute =
-  AuthenticatedSettingsCommentsImport.update({
+  AuthenticatedSettingsCommentsRouteImport.update({
     id: '/comments',
     path: '/comments',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
-
+const AuthenticatedSettingsPostRoute =
+  AuthenticatedSettingsPostRouteImport.update({
+    id: '/post',
+    path: '/post',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAgentsProfileIdAgentTypeRouteRoute =
-  AuthenticatedAgentsProfileIdAgentTypeRouteImport.update({
+  AuthenticatedAgentsProfileIdAgentTypeRouteRouteImport.update({
     id: '/agents/$profileId/$agentType',
     path: '/agents/$profileId/$agentType',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-
-const AuthenticatedAgentsProfileIdAgentTypeStatsRoute =
-  AuthenticatedAgentsProfileIdAgentTypeStatsImport.update({
-    id: '/stats',
-    path: '/stats',
-    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
-  } as any)
-
-const AuthenticatedAgentsProfileIdAgentTypeSettingsRoute =
-  AuthenticatedAgentsProfileIdAgentTypeSettingsImport.update({
-    id: '/settings',
-    path: '/settings',
-    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
-  } as any)
-
-const AuthenticatedAgentsProfileIdAgentTypeQueueRoute =
-  AuthenticatedAgentsProfileIdAgentTypeQueueImport.update({
-    id: '/queue',
-    path: '/queue',
-    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
-  } as any)
-
-const AuthenticatedAgentsProfileIdAgentTypeHistoryRoute =
-  AuthenticatedAgentsProfileIdAgentTypeHistoryImport.update({
-    id: '/history',
-    path: '/history',
-    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
-  } as any)
-
 const AuthenticatedAgentsProfileIdAgentTypeCalendarRoute =
-  AuthenticatedAgentsProfileIdAgentTypeCalendarImport.update({
+  AuthenticatedAgentsProfileIdAgentTypeCalendarRouteImport.update({
     id: '/calendar',
     path: '/calendar',
     getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
   } as any)
-
+const AuthenticatedAgentsProfileIdAgentTypeHistoryRoute =
+  AuthenticatedAgentsProfileIdAgentTypeHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
+  } as any)
+const AuthenticatedAgentsProfileIdAgentTypeQueueRoute =
+  AuthenticatedAgentsProfileIdAgentTypeQueueRouteImport.update({
+    id: '/queue',
+    path: '/queue',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
+  } as any)
+const AuthenticatedAgentsProfileIdAgentTypeSettingsRoute =
+  AuthenticatedAgentsProfileIdAgentTypeSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
+  } as any)
+const AuthenticatedAgentsProfileIdAgentTypeStatsRoute =
+  AuthenticatedAgentsProfileIdAgentTypeStatsRouteImport.update({
+    id: '/stats',
+    path: '/stats',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
+  } as any)
 const AuthenticatedAgentsProfileIdAgentTypePostPostIdRoute =
-  AuthenticatedAgentsProfileIdAgentTypePostPostIdImport.update({
+  AuthenticatedAgentsProfileIdAgentTypePostPostIdRouteImport.update({
     id: '/post/$postId',
     path: '/post/$postId',
     getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
   } as any)
 
-// Populate the FileRoutesByPath interface
+export interface FileRoutesByFullPath {
+  '/': typeof AuthenticatedIndexRoute
+  '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/forgot-password': typeof authForgotPasswordRoute
+  '/otp': typeof authOtpRoute
+  '/sign-in': typeof authSignInRoute
+  '/sign-in-2': typeof authSignIn2Route
+  '/sign-up': typeof authSignUpRoute
+  '/update-password': typeof authUpdatePasswordRoute
+  '/401': typeof errors401Route
+  '/403': typeof errors403Route
+  '/404': typeof errors404Route
+  '/500': typeof errors500Route
+  '/503': typeof errors503Route
+  '/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
+  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
+  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
+  '/onboarding/demo': typeof OnboardingDemoRoute
+  '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/identity': typeof OnboardingIdentityRoute
+  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
+  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/copilot/$conversationId': typeof AuthenticatedCopilotConversationIdRoute
+  '/settings/comments': typeof AuthenticatedSettingsCommentsRoute
+  '/settings/post': typeof AuthenticatedSettingsPostRoute
+  '/copilot/': typeof AuthenticatedCopilotIndexRoute
+  '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/history/': typeof AuthenticatedHistoryIndexRoute
+  '/plans/': typeof AuthenticatedPlansIndexRoute
+  '/pricing/': typeof AuthenticatedPricingIndexRoute
+  '/users/': typeof AuthenticatedUsersIndexRoute
+  '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
+  '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
+  '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
+  '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
+  '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
+  '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
+  '/agents/$profileId/$agentType/post/$postId': typeof AuthenticatedAgentsProfileIdAgentTypePostPostIdRoute
+}
+export interface FileRoutesByTo {
+  '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/forgot-password': typeof authForgotPasswordRoute
+  '/otp': typeof authOtpRoute
+  '/sign-in': typeof authSignInRoute
+  '/sign-in-2': typeof authSignIn2Route
+  '/sign-up': typeof authSignUpRoute
+  '/update-password': typeof authUpdatePasswordRoute
+  '/401': typeof errors401Route
+  '/403': typeof errors403Route
+  '/404': typeof errors404Route
+  '/500': typeof errors500Route
+  '/503': typeof errors503Route
+  '/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
+  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
+  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
+  '/onboarding/demo': typeof OnboardingDemoRoute
+  '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/identity': typeof OnboardingIdentityRoute
+  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
+  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
+  '/copilot/$conversationId': typeof AuthenticatedCopilotConversationIdRoute
+  '/settings/comments': typeof AuthenticatedSettingsCommentsRoute
+  '/settings/post': typeof AuthenticatedSettingsPostRoute
+  '/copilot': typeof AuthenticatedCopilotIndexRoute
+  '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/history': typeof AuthenticatedHistoryIndexRoute
+  '/plans': typeof AuthenticatedPlansIndexRoute
+  '/pricing': typeof AuthenticatedPricingIndexRoute
+  '/users': typeof AuthenticatedUsersIndexRoute
+  '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
+  '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
+  '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
+  '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
+  '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
+  '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
+  '/agents/$profileId/$agentType/post/$postId': typeof AuthenticatedAgentsProfileIdAgentTypePostPostIdRoute
+}
+export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/(auth)/forgot-password': typeof authForgotPasswordRoute
+  '/(auth)/otp': typeof authOtpRoute
+  '/(auth)/sign-in': typeof authSignInRoute
+  '/(auth)/sign-in-2': typeof authSignIn2Route
+  '/(auth)/sign-up': typeof authSignUpRoute
+  '/(auth)/update-password': typeof authUpdatePasswordRoute
+  '/(errors)/401': typeof errors401Route
+  '/(errors)/403': typeof errors403Route
+  '/(errors)/404': typeof errors404Route
+  '/(errors)/500': typeof errors500Route
+  '/(errors)/503': typeof errors503Route
+  '/_authenticated/billing': typeof AuthenticatedBillingRoute
+  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
+  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
+  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
+  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
+  '/onboarding/demo': typeof OnboardingDemoRoute
+  '/onboarding/extension': typeof OnboardingExtensionRoute
+  '/onboarding/identity': typeof OnboardingIdentityRoute
+  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
+  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/_authenticated/copilot/$conversationId': typeof AuthenticatedCopilotConversationIdRoute
+  '/_authenticated/settings/comments': typeof AuthenticatedSettingsCommentsRoute
+  '/_authenticated/settings/post': typeof AuthenticatedSettingsPostRoute
+  '/_authenticated/copilot/': typeof AuthenticatedCopilotIndexRoute
+  '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
+  '/_authenticated/plans/': typeof AuthenticatedPlansIndexRoute
+  '/_authenticated/pricing/': typeof AuthenticatedPricingIndexRoute
+  '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
+  '/_authenticated/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
+  '/_authenticated/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
+  '/_authenticated/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
+  '/_authenticated/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
+  '/_authenticated/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
+  '/_authenticated/agents/$profileId/$agentType/post/$postId': typeof AuthenticatedAgentsProfileIdAgentTypePostPostIdRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/onboarding'
+    | '/settings'
+    | '/forgot-password'
+    | '/otp'
+    | '/sign-in'
+    | '/sign-in-2'
+    | '/sign-up'
+    | '/update-password'
+    | '/401'
+    | '/403'
+    | '/404'
+    | '/500'
+    | '/503'
+    | '/billing'
+    | '/onboarding/activate-trial'
+    | '/onboarding/agent-type'
+    | '/onboarding/comment-settings'
+    | '/onboarding/connect-account'
+    | '/onboarding/demo'
+    | '/onboarding/extension'
+    | '/onboarding/identity'
+    | '/onboarding/other-settings'
+    | '/onboarding/post-settings'
+    | '/onboarding/'
+    | '/copilot/$conversationId'
+    | '/settings/comments'
+    | '/settings/post'
+    | '/copilot/'
+    | '/help-center/'
+    | '/history/'
+    | '/plans/'
+    | '/pricing/'
+    | '/users/'
+    | '/agents/$profileId/$agentType'
+    | '/agents/$profileId/$agentType/calendar'
+    | '/agents/$profileId/$agentType/history'
+    | '/agents/$profileId/$agentType/queue'
+    | '/agents/$profileId/$agentType/settings'
+    | '/agents/$profileId/$agentType/stats'
+    | '/agents/$profileId/$agentType/post/$postId'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/settings'
+    | '/forgot-password'
+    | '/otp'
+    | '/sign-in'
+    | '/sign-in-2'
+    | '/sign-up'
+    | '/update-password'
+    | '/401'
+    | '/403'
+    | '/404'
+    | '/500'
+    | '/503'
+    | '/billing'
+    | '/onboarding/activate-trial'
+    | '/onboarding/agent-type'
+    | '/onboarding/comment-settings'
+    | '/onboarding/connect-account'
+    | '/onboarding/demo'
+    | '/onboarding/extension'
+    | '/onboarding/identity'
+    | '/onboarding/other-settings'
+    | '/onboarding/post-settings'
+    | '/'
+    | '/onboarding'
+    | '/copilot/$conversationId'
+    | '/settings/comments'
+    | '/settings/post'
+    | '/copilot'
+    | '/help-center'
+    | '/history'
+    | '/plans'
+    | '/pricing'
+    | '/users'
+    | '/agents/$profileId/$agentType'
+    | '/agents/$profileId/$agentType/calendar'
+    | '/agents/$profileId/$agentType/history'
+    | '/agents/$profileId/$agentType/queue'
+    | '/agents/$profileId/$agentType/settings'
+    | '/agents/$profileId/$agentType/stats'
+    | '/agents/$profileId/$agentType/post/$postId'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/onboarding'
+    | '/_authenticated/settings'
+    | '/(auth)/forgot-password'
+    | '/(auth)/otp'
+    | '/(auth)/sign-in'
+    | '/(auth)/sign-in-2'
+    | '/(auth)/sign-up'
+    | '/(auth)/update-password'
+    | '/(errors)/401'
+    | '/(errors)/403'
+    | '/(errors)/404'
+    | '/(errors)/500'
+    | '/(errors)/503'
+    | '/_authenticated/billing'
+    | '/onboarding/activate-trial'
+    | '/onboarding/agent-type'
+    | '/onboarding/comment-settings'
+    | '/onboarding/connect-account'
+    | '/onboarding/demo'
+    | '/onboarding/extension'
+    | '/onboarding/identity'
+    | '/onboarding/other-settings'
+    | '/onboarding/post-settings'
+    | '/_authenticated/'
+    | '/onboarding/'
+    | '/_authenticated/copilot/$conversationId'
+    | '/_authenticated/settings/comments'
+    | '/_authenticated/settings/post'
+    | '/_authenticated/copilot/'
+    | '/_authenticated/help-center/'
+    | '/_authenticated/history/'
+    | '/_authenticated/plans/'
+    | '/_authenticated/pricing/'
+    | '/_authenticated/users/'
+    | '/_authenticated/agents/$profileId/$agentType'
+    | '/_authenticated/agents/$profileId/$agentType/calendar'
+    | '/_authenticated/agents/$profileId/$agentType/history'
+    | '/_authenticated/agents/$profileId/$agentType/queue'
+    | '/_authenticated/agents/$profileId/$agentType/settings'
+    | '/_authenticated/agents/$profileId/$agentType/stats'
+    | '/_authenticated/agents/$profileId/$agentType/post/$postId'
+  fileRoutesById: FileRoutesById
+}
+export interface RootRouteChildren {
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
+  authForgotPasswordRoute: typeof authForgotPasswordRoute
+  authOtpRoute: typeof authOtpRoute
+  authSignInRoute: typeof authSignInRoute
+  authSignIn2Route: typeof authSignIn2Route
+  authSignUpRoute: typeof authSignUpRoute
+  authUpdatePasswordRoute: typeof authUpdatePasswordRoute
+  errors401Route: typeof errors401Route
+  errors403Route: typeof errors403Route
+  errors404Route: typeof errors404Route
+  errors500Route: typeof errors500Route
+  errors503Route: typeof errors503Route
+}
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
-      fullPath: ''
-      preLoaderRoute: typeof AuthenticatedRouteImport
-      parentRoute: typeof rootRoute
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
       fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/_authenticated/settings': {
-      id: '/_authenticated/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
-      parentRoute: typeof AuthenticatedRouteImport
+      preLoaderRoute: typeof OnboardingRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)/forgot-password': {
       id: '/(auth)/forgot-password'
       path: '/forgot-password'
       fullPath: '/forgot-password'
-      preLoaderRoute: typeof authForgotPasswordImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof authForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)/otp': {
       id: '/(auth)/otp'
       path: '/otp'
       fullPath: '/otp'
-      preLoaderRoute: typeof authOtpImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof authOtpRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)/sign-in': {
       id: '/(auth)/sign-in'
       path: '/sign-in'
       fullPath: '/sign-in'
-      preLoaderRoute: typeof authSignInImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof authSignInRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)/sign-in-2': {
       id: '/(auth)/sign-in-2'
       path: '/sign-in-2'
       fullPath: '/sign-in-2'
-      preLoaderRoute: typeof authSignIn2Import
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof authSignIn2RouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)/sign-up': {
       id: '/(auth)/sign-up'
       path: '/sign-up'
       fullPath: '/sign-up'
-      preLoaderRoute: typeof authSignUpImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof authSignUpRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)/update-password': {
       id: '/(auth)/update-password'
       path: '/update-password'
       fullPath: '/update-password'
-      preLoaderRoute: typeof authUpdatePasswordImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof authUpdatePasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(errors)/401': {
       id: '/(errors)/401'
       path: '/401'
       fullPath: '/401'
-      preLoaderRoute: typeof errors401Import
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof errors401RouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(errors)/403': {
       id: '/(errors)/403'
       path: '/403'
       fullPath: '/403'
-      preLoaderRoute: typeof errors403Import
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof errors403RouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(errors)/404': {
       id: '/(errors)/404'
       path: '/404'
       fullPath: '/404'
-      preLoaderRoute: typeof errors404Import
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof errors404RouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(errors)/500': {
       id: '/(errors)/500'
       path: '/500'
       fullPath: '/500'
-      preLoaderRoute: typeof errors500Import
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof errors500RouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(errors)/503': {
       id: '/(errors)/503'
       path: '/503'
       fullPath: '/503'
-      preLoaderRoute: typeof errors503Import
-      parentRoute: typeof rootRoute
-    }
-    '/_authenticated/billing': {
-      id: '/_authenticated/billing'
-      path: '/billing'
-      fullPath: '/billing'
-      preLoaderRoute: typeof AuthenticatedBillingImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
-    '/onboarding/activate-trial': {
-      id: '/onboarding/activate-trial'
-      path: '/activate-trial'
-      fullPath: '/onboarding/activate-trial'
-      preLoaderRoute: typeof OnboardingActivateTrialImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/agent-type': {
-      id: '/onboarding/agent-type'
-      path: '/agent-type'
-      fullPath: '/onboarding/agent-type'
-      preLoaderRoute: typeof OnboardingAgentTypeImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/comment-settings': {
-      id: '/onboarding/comment-settings'
-      path: '/comment-settings'
-      fullPath: '/onboarding/comment-settings'
-      preLoaderRoute: typeof OnboardingCommentSettingsImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/connect-account': {
-      id: '/onboarding/connect-account'
-      path: '/connect-account'
-      fullPath: '/onboarding/connect-account'
-      preLoaderRoute: typeof OnboardingConnectAccountImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/demo': {
-      id: '/onboarding/demo'
-      path: '/demo'
-      fullPath: '/onboarding/demo'
-      preLoaderRoute: typeof OnboardingDemoImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/extension': {
-      id: '/onboarding/extension'
-      path: '/extension'
-      fullPath: '/onboarding/extension'
-      preLoaderRoute: typeof OnboardingExtensionImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/identity': {
-      id: '/onboarding/identity'
-      path: '/identity'
-      fullPath: '/onboarding/identity'
-      preLoaderRoute: typeof OnboardingIdentityImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/other-settings': {
-      id: '/onboarding/other-settings'
-      path: '/other-settings'
-      fullPath: '/onboarding/other-settings'
-      preLoaderRoute: typeof OnboardingOtherSettingsImport
-      parentRoute: typeof OnboardingRouteImport
-    }
-    '/onboarding/post-settings': {
-      id: '/onboarding/post-settings'
-      path: '/post-settings'
-      fullPath: '/onboarding/post-settings'
-      preLoaderRoute: typeof OnboardingPostSettingsImport
-      parentRoute: typeof OnboardingRouteImport
+      preLoaderRoute: typeof errors503RouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexImport
-      parentRoute: typeof AuthenticatedRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/billing': {
+      id: '/_authenticated/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AuthenticatedBillingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/onboarding/': {
       id: '/onboarding/'
       path: '/'
       fullPath: '/onboarding/'
-      preLoaderRoute: typeof OnboardingIndexImport
-      parentRoute: typeof OnboardingRouteImport
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/activate-trial': {
+      id: '/onboarding/activate-trial'
+      path: '/activate-trial'
+      fullPath: '/onboarding/activate-trial'
+      preLoaderRoute: typeof OnboardingActivateTrialRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/agent-type': {
+      id: '/onboarding/agent-type'
+      path: '/agent-type'
+      fullPath: '/onboarding/agent-type'
+      preLoaderRoute: typeof OnboardingAgentTypeRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/comment-settings': {
+      id: '/onboarding/comment-settings'
+      path: '/comment-settings'
+      fullPath: '/onboarding/comment-settings'
+      preLoaderRoute: typeof OnboardingCommentSettingsRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/connect-account': {
+      id: '/onboarding/connect-account'
+      path: '/connect-account'
+      fullPath: '/onboarding/connect-account'
+      preLoaderRoute: typeof OnboardingConnectAccountRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/demo': {
+      id: '/onboarding/demo'
+      path: '/demo'
+      fullPath: '/onboarding/demo'
+      preLoaderRoute: typeof OnboardingDemoRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/extension': {
+      id: '/onboarding/extension'
+      path: '/extension'
+      fullPath: '/onboarding/extension'
+      preLoaderRoute: typeof OnboardingExtensionRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/identity': {
+      id: '/onboarding/identity'
+      path: '/identity'
+      fullPath: '/onboarding/identity'
+      preLoaderRoute: typeof OnboardingIdentityRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/other-settings': {
+      id: '/onboarding/other-settings'
+      path: '/other-settings'
+      fullPath: '/onboarding/other-settings'
+      preLoaderRoute: typeof OnboardingOtherSettingsRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/onboarding/post-settings': {
+      id: '/onboarding/post-settings'
+      path: '/post-settings'
+      fullPath: '/onboarding/post-settings'
+      preLoaderRoute: typeof OnboardingPostSettingsRouteImport
+      parentRoute: typeof OnboardingRouteRoute
+    }
+    '/_authenticated/copilot/': {
+      id: '/_authenticated/copilot/'
+      path: '/copilot'
+      fullPath: '/copilot/'
+      preLoaderRoute: typeof AuthenticatedCopilotIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/copilot/$conversationId': {
+      id: '/_authenticated/copilot/$conversationId'
+      path: '/copilot/$conversationId'
+      fullPath: '/copilot/$conversationId'
+      preLoaderRoute: typeof AuthenticatedCopilotConversationIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/help-center/': {
+      id: '/_authenticated/help-center/'
+      path: '/help-center'
+      fullPath: '/help-center/'
+      preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/history/': {
+      id: '/_authenticated/history/'
+      path: '/history'
+      fullPath: '/history/'
+      preLoaderRoute: typeof AuthenticatedHistoryIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plans/': {
+      id: '/_authenticated/plans/'
+      path: '/plans'
+      fullPath: '/plans/'
+      preLoaderRoute: typeof AuthenticatedPlansIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pricing/': {
+      id: '/_authenticated/pricing/'
+      path: '/pricing'
+      fullPath: '/pricing/'
+      preLoaderRoute: typeof AuthenticatedPricingIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings/comments': {
       id: '/_authenticated/settings/comments'
       path: '/comments'
       fullPath: '/settings/comments'
-      preLoaderRoute: typeof AuthenticatedSettingsCommentsImport
-      parentRoute: typeof AuthenticatedSettingsRouteImport
+      preLoaderRoute: typeof AuthenticatedSettingsCommentsRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
     '/_authenticated/settings/post': {
       id: '/_authenticated/settings/post'
       path: '/post'
       fullPath: '/settings/post'
-      preLoaderRoute: typeof AuthenticatedSettingsPostImport
-      parentRoute: typeof AuthenticatedSettingsRouteImport
-    }
-    '/_authenticated/help-center/': {
-      id: '/_authenticated/help-center/'
-      path: '/help-center'
-      fullPath: '/help-center'
-      preLoaderRoute: typeof AuthenticatedHelpCenterIndexImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
-    '/_authenticated/history/': {
-      id: '/_authenticated/history/'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof AuthenticatedHistoryIndexImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
-    '/_authenticated/plans/': {
-      id: '/_authenticated/plans/'
-      path: '/plans'
-      fullPath: '/plans'
-      preLoaderRoute: typeof AuthenticatedPlansIndexImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
-    '/_authenticated/pricing/': {
-      id: '/_authenticated/pricing/'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof AuthenticatedPricingIndexImport
-      parentRoute: typeof AuthenticatedRouteImport
+      preLoaderRoute: typeof AuthenticatedSettingsPostRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
     '/_authenticated/users/': {
       id: '/_authenticated/users/'
       path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof AuthenticatedUsersIndexImport
-      parentRoute: typeof AuthenticatedRouteImport
+      fullPath: '/users/'
+      preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/agents/$profileId/$agentType': {
       id: '/_authenticated/agents/$profileId/$agentType'
       path: '/agents/$profileId/$agentType'
       fullPath: '/agents/$profileId/$agentType'
-      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
-      parentRoute: typeof AuthenticatedRouteImport
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/agents/$profileId/$agentType/calendar': {
       id: '/_authenticated/agents/$profileId/$agentType/calendar'
       path: '/calendar'
       fullPath: '/agents/$profileId/$agentType/calendar'
-      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeCalendarImport
-      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRouteImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRoute
     }
     '/_authenticated/agents/$profileId/$agentType/history': {
       id: '/_authenticated/agents/$profileId/$agentType/history'
       path: '/history'
       fullPath: '/agents/$profileId/$agentType/history'
-      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeHistoryImport
-      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRouteImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRoute
     }
     '/_authenticated/agents/$profileId/$agentType/queue': {
       id: '/_authenticated/agents/$profileId/$agentType/queue'
       path: '/queue'
       fullPath: '/agents/$profileId/$agentType/queue'
-      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeQueueImport
-      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeQueueRouteImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRoute
     }
     '/_authenticated/agents/$profileId/$agentType/settings': {
       id: '/_authenticated/agents/$profileId/$agentType/settings'
       path: '/settings'
       fullPath: '/agents/$profileId/$agentType/settings'
-      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsImport
-      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRouteImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRoute
     }
     '/_authenticated/agents/$profileId/$agentType/stats': {
       id: '/_authenticated/agents/$profileId/$agentType/stats'
       path: '/stats'
       fullPath: '/agents/$profileId/$agentType/stats'
-      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeStatsImport
-      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeStatsRouteImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRoute
     }
     '/_authenticated/agents/$profileId/$agentType/post/$postId': {
       id: '/_authenticated/agents/$profileId/$agentType/post/$postId'
       path: '/post/$postId'
       fullPath: '/agents/$profileId/$agentType/post/$postId'
-      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypePostPostIdImport
-      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypePostPostIdRouteImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteRoute
     }
   }
 }
-
-// Create and export the route tree
 
 interface AuthenticatedSettingsRouteRouteChildren {
   AuthenticatedSettingsCommentsRoute: typeof AuthenticatedSettingsCommentsRoute
@@ -643,6 +906,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedCopilotConversationIdRoute: typeof AuthenticatedCopilotConversationIdRoute
+  AuthenticatedCopilotIndexRoute: typeof AuthenticatedCopilotIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
   AuthenticatedPlansIndexRoute: typeof AuthenticatedPlansIndexRoute
@@ -655,6 +920,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedCopilotConversationIdRoute:
+    AuthenticatedCopilotConversationIdRoute,
+  AuthenticatedCopilotIndexRoute: AuthenticatedCopilotIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
   AuthenticatedPlansIndexRoute: AuthenticatedPlansIndexRoute,
@@ -697,278 +965,6 @@ const OnboardingRouteRouteWithChildren = OnboardingRouteRoute._addFileChildren(
   OnboardingRouteRouteChildren,
 )
 
-export interface FileRoutesByFullPath {
-  '': typeof AuthenticatedRouteRouteWithChildren
-  '/onboarding': typeof OnboardingRouteRouteWithChildren
-  '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
-  '/forgot-password': typeof authForgotPasswordRoute
-  '/otp': typeof authOtpRoute
-  '/sign-in': typeof authSignInRoute
-  '/sign-in-2': typeof authSignIn2Route
-  '/sign-up': typeof authSignUpRoute
-  '/update-password': typeof authUpdatePasswordRoute
-  '/401': typeof errors401Route
-  '/403': typeof errors403Route
-  '/404': typeof errors404Route
-  '/500': typeof errors500Route
-  '/503': typeof errors503Route
-  '/billing': typeof AuthenticatedBillingRoute
-  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
-  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
-  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
-  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
-  '/onboarding/demo': typeof OnboardingDemoRoute
-  '/onboarding/extension': typeof OnboardingExtensionRoute
-  '/onboarding/identity': typeof OnboardingIdentityRoute
-  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
-  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
-  '/': typeof AuthenticatedIndexRoute
-  '/onboarding/': typeof OnboardingIndexRoute
-  '/settings/comments': typeof AuthenticatedSettingsCommentsRoute
-  '/settings/post': typeof AuthenticatedSettingsPostRoute
-  '/help-center': typeof AuthenticatedHelpCenterIndexRoute
-  '/history': typeof AuthenticatedHistoryIndexRoute
-  '/plans': typeof AuthenticatedPlansIndexRoute
-  '/pricing': typeof AuthenticatedPricingIndexRoute
-  '/users': typeof AuthenticatedUsersIndexRoute
-  '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
-  '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
-  '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
-  '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
-  '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
-  '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
-  '/agents/$profileId/$agentType/post/$postId': typeof AuthenticatedAgentsProfileIdAgentTypePostPostIdRoute
-}
-
-export interface FileRoutesByTo {
-  '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
-  '/forgot-password': typeof authForgotPasswordRoute
-  '/otp': typeof authOtpRoute
-  '/sign-in': typeof authSignInRoute
-  '/sign-in-2': typeof authSignIn2Route
-  '/sign-up': typeof authSignUpRoute
-  '/update-password': typeof authUpdatePasswordRoute
-  '/401': typeof errors401Route
-  '/403': typeof errors403Route
-  '/404': typeof errors404Route
-  '/500': typeof errors500Route
-  '/503': typeof errors503Route
-  '/billing': typeof AuthenticatedBillingRoute
-  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
-  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
-  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
-  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
-  '/onboarding/demo': typeof OnboardingDemoRoute
-  '/onboarding/extension': typeof OnboardingExtensionRoute
-  '/onboarding/identity': typeof OnboardingIdentityRoute
-  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
-  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
-  '/': typeof AuthenticatedIndexRoute
-  '/onboarding': typeof OnboardingIndexRoute
-  '/settings/comments': typeof AuthenticatedSettingsCommentsRoute
-  '/settings/post': typeof AuthenticatedSettingsPostRoute
-  '/help-center': typeof AuthenticatedHelpCenterIndexRoute
-  '/history': typeof AuthenticatedHistoryIndexRoute
-  '/plans': typeof AuthenticatedPlansIndexRoute
-  '/pricing': typeof AuthenticatedPricingIndexRoute
-  '/users': typeof AuthenticatedUsersIndexRoute
-  '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
-  '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
-  '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
-  '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
-  '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
-  '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
-  '/agents/$profileId/$agentType/post/$postId': typeof AuthenticatedAgentsProfileIdAgentTypePostPostIdRoute
-}
-
-export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/onboarding': typeof OnboardingRouteRouteWithChildren
-  '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
-  '/(auth)/forgot-password': typeof authForgotPasswordRoute
-  '/(auth)/otp': typeof authOtpRoute
-  '/(auth)/sign-in': typeof authSignInRoute
-  '/(auth)/sign-in-2': typeof authSignIn2Route
-  '/(auth)/sign-up': typeof authSignUpRoute
-  '/(auth)/update-password': typeof authUpdatePasswordRoute
-  '/(errors)/401': typeof errors401Route
-  '/(errors)/403': typeof errors403Route
-  '/(errors)/404': typeof errors404Route
-  '/(errors)/500': typeof errors500Route
-  '/(errors)/503': typeof errors503Route
-  '/_authenticated/billing': typeof AuthenticatedBillingRoute
-  '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
-  '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
-  '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
-  '/onboarding/connect-account': typeof OnboardingConnectAccountRoute
-  '/onboarding/demo': typeof OnboardingDemoRoute
-  '/onboarding/extension': typeof OnboardingExtensionRoute
-  '/onboarding/identity': typeof OnboardingIdentityRoute
-  '/onboarding/other-settings': typeof OnboardingOtherSettingsRoute
-  '/onboarding/post-settings': typeof OnboardingPostSettingsRoute
-  '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/onboarding/': typeof OnboardingIndexRoute
-  '/_authenticated/settings/comments': typeof AuthenticatedSettingsCommentsRoute
-  '/_authenticated/settings/post': typeof AuthenticatedSettingsPostRoute
-  '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
-  '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
-  '/_authenticated/plans/': typeof AuthenticatedPlansIndexRoute
-  '/_authenticated/pricing/': typeof AuthenticatedPricingIndexRoute
-  '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
-  '/_authenticated/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
-  '/_authenticated/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
-  '/_authenticated/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
-  '/_authenticated/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
-  '/_authenticated/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
-  '/_authenticated/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
-  '/_authenticated/agents/$profileId/$agentType/post/$postId': typeof AuthenticatedAgentsProfileIdAgentTypePostPostIdRoute
-}
-
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | ''
-    | '/onboarding'
-    | '/settings'
-    | '/forgot-password'
-    | '/otp'
-    | '/sign-in'
-    | '/sign-in-2'
-    | '/sign-up'
-    | '/update-password'
-    | '/401'
-    | '/403'
-    | '/404'
-    | '/500'
-    | '/503'
-    | '/billing'
-    | '/onboarding/activate-trial'
-    | '/onboarding/agent-type'
-    | '/onboarding/comment-settings'
-    | '/onboarding/connect-account'
-    | '/onboarding/demo'
-    | '/onboarding/extension'
-    | '/onboarding/identity'
-    | '/onboarding/other-settings'
-    | '/onboarding/post-settings'
-    | '/'
-    | '/onboarding/'
-    | '/settings/comments'
-    | '/settings/post'
-    | '/help-center'
-    | '/history'
-    | '/plans'
-    | '/pricing'
-    | '/users'
-    | '/agents/$profileId/$agentType'
-    | '/agents/$profileId/$agentType/calendar'
-    | '/agents/$profileId/$agentType/history'
-    | '/agents/$profileId/$agentType/queue'
-    | '/agents/$profileId/$agentType/settings'
-    | '/agents/$profileId/$agentType/stats'
-    | '/agents/$profileId/$agentType/post/$postId'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/settings'
-    | '/forgot-password'
-    | '/otp'
-    | '/sign-in'
-    | '/sign-in-2'
-    | '/sign-up'
-    | '/update-password'
-    | '/401'
-    | '/403'
-    | '/404'
-    | '/500'
-    | '/503'
-    | '/billing'
-    | '/onboarding/activate-trial'
-    | '/onboarding/agent-type'
-    | '/onboarding/comment-settings'
-    | '/onboarding/connect-account'
-    | '/onboarding/demo'
-    | '/onboarding/extension'
-    | '/onboarding/identity'
-    | '/onboarding/other-settings'
-    | '/onboarding/post-settings'
-    | '/'
-    | '/onboarding'
-    | '/settings/comments'
-    | '/settings/post'
-    | '/help-center'
-    | '/history'
-    | '/plans'
-    | '/pricing'
-    | '/users'
-    | '/agents/$profileId/$agentType'
-    | '/agents/$profileId/$agentType/calendar'
-    | '/agents/$profileId/$agentType/history'
-    | '/agents/$profileId/$agentType/queue'
-    | '/agents/$profileId/$agentType/settings'
-    | '/agents/$profileId/$agentType/stats'
-    | '/agents/$profileId/$agentType/post/$postId'
-  id:
-    | '__root__'
-    | '/_authenticated'
-    | '/onboarding'
-    | '/_authenticated/settings'
-    | '/(auth)/forgot-password'
-    | '/(auth)/otp'
-    | '/(auth)/sign-in'
-    | '/(auth)/sign-in-2'
-    | '/(auth)/sign-up'
-    | '/(auth)/update-password'
-    | '/(errors)/401'
-    | '/(errors)/403'
-    | '/(errors)/404'
-    | '/(errors)/500'
-    | '/(errors)/503'
-    | '/_authenticated/billing'
-    | '/onboarding/activate-trial'
-    | '/onboarding/agent-type'
-    | '/onboarding/comment-settings'
-    | '/onboarding/connect-account'
-    | '/onboarding/demo'
-    | '/onboarding/extension'
-    | '/onboarding/identity'
-    | '/onboarding/other-settings'
-    | '/onboarding/post-settings'
-    | '/_authenticated/'
-    | '/onboarding/'
-    | '/_authenticated/settings/comments'
-    | '/_authenticated/settings/post'
-    | '/_authenticated/help-center/'
-    | '/_authenticated/history/'
-    | '/_authenticated/plans/'
-    | '/_authenticated/pricing/'
-    | '/_authenticated/users/'
-    | '/_authenticated/agents/$profileId/$agentType'
-    | '/_authenticated/agents/$profileId/$agentType/calendar'
-    | '/_authenticated/agents/$profileId/$agentType/history'
-    | '/_authenticated/agents/$profileId/$agentType/queue'
-    | '/_authenticated/agents/$profileId/$agentType/settings'
-    | '/_authenticated/agents/$profileId/$agentType/stats'
-    | '/_authenticated/agents/$profileId/$agentType/post/$postId'
-  fileRoutesById: FileRoutesById
-}
-
-export interface RootRouteChildren {
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
-  authForgotPasswordRoute: typeof authForgotPasswordRoute
-  authOtpRoute: typeof authOtpRoute
-  authSignInRoute: typeof authSignInRoute
-  authSignIn2Route: typeof authSignIn2Route
-  authSignUpRoute: typeof authSignUpRoute
-  authUpdatePasswordRoute: typeof authUpdatePasswordRoute
-  errors401Route: typeof errors401Route
-  errors403Route: typeof errors403Route
-  errors404Route: typeof errors404Route
-  errors500Route: typeof errors500Route
-  errors503Route: typeof errors503Route
-}
-
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   OnboardingRouteRoute: OnboardingRouteRouteWithChildren,
@@ -984,214 +980,6 @@ const rootRouteChildren: RootRouteChildren = {
   errors500Route: errors500Route,
   errors503Route: errors503Route,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/_authenticated",
-        "/onboarding",
-        "/(auth)/forgot-password",
-        "/(auth)/otp",
-        "/(auth)/sign-in",
-        "/(auth)/sign-in-2",
-        "/(auth)/sign-up",
-        "/(auth)/update-password",
-        "/(errors)/401",
-        "/(errors)/403",
-        "/(errors)/404",
-        "/(errors)/500",
-        "/(errors)/503"
-      ]
-    },
-    "/_authenticated": {
-      "filePath": "_authenticated/route.tsx",
-      "children": [
-        "/_authenticated/settings",
-        "/_authenticated/billing",
-        "/_authenticated/",
-        "/_authenticated/help-center/",
-        "/_authenticated/history/",
-        "/_authenticated/plans/",
-        "/_authenticated/pricing/",
-        "/_authenticated/users/",
-        "/_authenticated/agents/$profileId/$agentType"
-      ]
-    },
-    "/onboarding": {
-      "filePath": "onboarding/route.tsx",
-      "children": [
-        "/onboarding/activate-trial",
-        "/onboarding/agent-type",
-        "/onboarding/comment-settings",
-        "/onboarding/connect-account",
-        "/onboarding/demo",
-        "/onboarding/extension",
-        "/onboarding/identity",
-        "/onboarding/other-settings",
-        "/onboarding/post-settings",
-        "/onboarding/"
-      ]
-    },
-    "/_authenticated/settings": {
-      "filePath": "_authenticated/settings/route.tsx",
-      "parent": "/_authenticated",
-      "children": [
-        "/_authenticated/settings/comments",
-        "/_authenticated/settings/post"
-      ]
-    },
-    "/(auth)/forgot-password": {
-      "filePath": "(auth)/forgot-password.tsx"
-    },
-    "/(auth)/otp": {
-      "filePath": "(auth)/otp.tsx"
-    },
-    "/(auth)/sign-in": {
-      "filePath": "(auth)/sign-in.tsx"
-    },
-    "/(auth)/sign-in-2": {
-      "filePath": "(auth)/sign-in-2.tsx"
-    },
-    "/(auth)/sign-up": {
-      "filePath": "(auth)/sign-up.tsx"
-    },
-    "/(auth)/update-password": {
-      "filePath": "(auth)/update-password.tsx"
-    },
-    "/(errors)/401": {
-      "filePath": "(errors)/401.tsx"
-    },
-    "/(errors)/403": {
-      "filePath": "(errors)/403.tsx"
-    },
-    "/(errors)/404": {
-      "filePath": "(errors)/404.tsx"
-    },
-    "/(errors)/500": {
-      "filePath": "(errors)/500.tsx"
-    },
-    "/(errors)/503": {
-      "filePath": "(errors)/503.tsx"
-    },
-    "/_authenticated/billing": {
-      "filePath": "_authenticated/billing.tsx",
-      "parent": "/_authenticated"
-    },
-    "/onboarding/activate-trial": {
-      "filePath": "onboarding/activate-trial.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/agent-type": {
-      "filePath": "onboarding/agent-type.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/comment-settings": {
-      "filePath": "onboarding/comment-settings.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/connect-account": {
-      "filePath": "onboarding/connect-account.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/demo": {
-      "filePath": "onboarding/demo.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/extension": {
-      "filePath": "onboarding/extension.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/identity": {
-      "filePath": "onboarding/identity.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/other-settings": {
-      "filePath": "onboarding/other-settings.tsx",
-      "parent": "/onboarding"
-    },
-    "/onboarding/post-settings": {
-      "filePath": "onboarding/post-settings.tsx",
-      "parent": "/onboarding"
-    },
-    "/_authenticated/": {
-      "filePath": "_authenticated/index.tsx",
-      "parent": "/_authenticated"
-    },
-    "/onboarding/": {
-      "filePath": "onboarding/index.tsx",
-      "parent": "/onboarding"
-    },
-    "/_authenticated/settings/comments": {
-      "filePath": "_authenticated/settings/comments.tsx",
-      "parent": "/_authenticated/settings"
-    },
-    "/_authenticated/settings/post": {
-      "filePath": "_authenticated/settings/post.tsx",
-      "parent": "/_authenticated/settings"
-    },
-    "/_authenticated/help-center/": {
-      "filePath": "_authenticated/help-center/index.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/history/": {
-      "filePath": "_authenticated/history/index.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/plans/": {
-      "filePath": "_authenticated/plans/index.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/pricing/": {
-      "filePath": "_authenticated/pricing/index.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/users/": {
-      "filePath": "_authenticated/users/index.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/agents/$profileId/$agentType": {
-      "filePath": "_authenticated/agents/$profileId/$agentType/route.tsx",
-      "parent": "/_authenticated",
-      "children": [
-        "/_authenticated/agents/$profileId/$agentType/calendar",
-        "/_authenticated/agents/$profileId/$agentType/history",
-        "/_authenticated/agents/$profileId/$agentType/queue",
-        "/_authenticated/agents/$profileId/$agentType/settings",
-        "/_authenticated/agents/$profileId/$agentType/stats",
-        "/_authenticated/agents/$profileId/$agentType/post/$postId"
-      ]
-    },
-    "/_authenticated/agents/$profileId/$agentType/calendar": {
-      "filePath": "_authenticated/agents/$profileId/$agentType/calendar.tsx",
-      "parent": "/_authenticated/agents/$profileId/$agentType"
-    },
-    "/_authenticated/agents/$profileId/$agentType/history": {
-      "filePath": "_authenticated/agents/$profileId/$agentType/history.tsx",
-      "parent": "/_authenticated/agents/$profileId/$agentType"
-    },
-    "/_authenticated/agents/$profileId/$agentType/queue": {
-      "filePath": "_authenticated/agents/$profileId/$agentType/queue.tsx",
-      "parent": "/_authenticated/agents/$profileId/$agentType"
-    },
-    "/_authenticated/agents/$profileId/$agentType/settings": {
-      "filePath": "_authenticated/agents/$profileId/$agentType/settings.tsx",
-      "parent": "/_authenticated/agents/$profileId/$agentType"
-    },
-    "/_authenticated/agents/$profileId/$agentType/stats": {
-      "filePath": "_authenticated/agents/$profileId/$agentType/stats.tsx",
-      "parent": "/_authenticated/agents/$profileId/$agentType"
-    },
-    "/_authenticated/agents/$profileId/$agentType/post/$postId": {
-      "filePath": "_authenticated/agents/$profileId/$agentType/post/$postId.tsx",
-      "parent": "/_authenticated/agents/$profileId/$agentType"
-    }
-  }
-}
-ROUTE_MANIFEST_END */
