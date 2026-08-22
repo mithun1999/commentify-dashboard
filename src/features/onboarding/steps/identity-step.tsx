@@ -60,7 +60,7 @@ export function IdentityStep() {
       })
       await updateOnboardingStatusAsync({
         status: isPending ? 'in-progress' : 'completed',
-        step: isPending ? 6 : 5,
+        stepKey: isPending ? 'activate-trial' : 'identity',
         heardFrom: heardFromValue,
       })
       return true

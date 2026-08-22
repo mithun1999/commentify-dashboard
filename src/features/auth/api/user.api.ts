@@ -16,6 +16,7 @@ export async function getUser() {
 export async function updateOnboardingStatus(data: {
   status: 'not-started' | 'in-progress' | 'completed'
   step: number
+  stepKey: string
   heardFrom?: string
   selectedAgentType?: string
 }) {

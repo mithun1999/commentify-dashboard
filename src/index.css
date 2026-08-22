@@ -284,9 +284,24 @@
   animation: text-shimmer 2.6s linear infinite;
 }
 
-/* Unlayered, so it beats the utility above regardless of source order. */
+@keyframes image-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* A band of light crossing a placeholder while an image is being generated. */
+@utility animate-image-sweep {
+  animation: image-sweep 2s ease-in-out infinite;
+}
+
+/* Unlayered, so it beats the utilities above regardless of source order. */
 @media (prefers-reduced-motion: reduce) {
-  .text-shimmer {
+  .text-shimmer,
+  .animate-image-sweep {
     animation: none;
   }
 }

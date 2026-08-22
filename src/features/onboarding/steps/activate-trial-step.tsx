@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -29,6 +29,7 @@ import {
   type PlanTier,
 } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery, UserQueryEnum } from '@/features/auth/query/user.query'
+import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 import type { PaymentProvider } from '@/features/subscription/interfaces/subscription.interface'
 import {
   useCreateCheckoutUrl,
@@ -55,6 +56,8 @@ import {
   useOnboarding,
   type OnboardingPlatform,
 } from '@/stores/onboarding.store'
+import { useProfileStore } from '@/stores/profile.store'
+import { getAgentTypeFor } from '@/features/agent-system/registry'
 import { OnboardingCard } from '../onboarding-card'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 
@@ -167,9 +170,43 @@ function formatCents(cents: number, symbol: string) {
   return `${symbol}${(cents / 100).toFixed(2)}`
 }
 
+/**
+ * Post-capability users land on their content calendar rather than the comment
+ * hub: the draft written during onboarding is sitting there waiting to be
+ * scheduled, and sending them to the hub buries it two clicks deep.
+ */
+function useAfterTrialNavigate() {
+  const navigate = useNavigate()
+  const { data: onboardingData } = useOnboarding()
+  const activeProfile = useProfileStore((s) => s.activeProfile)
+
+  return useCallback(() => {
+    const profileId = onboardingData.linkedProfileId ?? activeProfile?._id
+    const wantsPost = (onboardingData.selectedCapabilities ?? []).includes(
+      'post'
+    )
+    const agentType = getAgentTypeFor('linkedin', 'post')?.slug
+
+    if (wantsPost && profileId && agentType) {
+      void navigate({
+        to: '/agents/$profileId/$agentType/calendar',
+        params: { profileId, agentType },
+      })
+      return
+    }
+    void navigate({ to: '/' })
+  }, [
+    navigate,
+    onboardingData.linkedProfileId,
+    onboardingData.selectedCapabilities,
+    activeProfile?._id,
+  ])
+}
+
 function useCheckoutReturn() {
   const { status, subscription_id } = activateTrialRoute.useSearch()
   const navigate = useNavigate()
+  const afterTrialNavigate = useAfterTrialNavigate()
   const queryClient = useQueryClient()
   const posthog = usePostHog()
   const { data: user } = useGetUserQuery()
@@ -179,6 +216,25 @@ function useCheckoutReturn() {
 
   const hasCheckoutParams = Boolean(status)
   const isFailed = status === 'failed' || status === 'cancelled'
+
+  /**
+   * Checkout grants land on two records, not one: the subscription sync flips
+   * the user's status and, in the same pass, writes the posting agent onto the
+   * profile. Refreshing only the user leaves the hub listing the agents it read
+   * during onboarding - and since the profile query stays mounted across the
+   * navigation, nothing refetches it on arrival either, so the agent the user
+   * just paid for is missing until they reload the page by hand.
+   */
+  const refreshEntitlements = useCallback(
+    () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: [UserQueryEnum.GET_USER] }),
+        queryClient.invalidateQueries({
+          queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+        }),
+      ]),
+    [queryClient]
+  )
 
   const [checkoutState, setCheckoutState] = useState<CheckoutState>(() => {
     if (!hasCheckoutParams) return 'selecting'
@@ -204,7 +260,8 @@ function useCheckoutReturn() {
     if (user?.status !== UserSubscriptionStatus.PENDING) {
       setCheckoutState('success')
       posthog?.capture('onboarding_trial_activated', { source: 'immediate' })
-      setTimeout(() => navigate({ to: '/' }), 1500)
+      void refreshEntitlements()
+      setTimeout(afterTrialNavigate, 1500)
       return
     }
 
@@ -218,7 +275,7 @@ function useCheckoutReturn() {
         } catch {
           posthog?.capture('onboarding_checkout_verify_failed', { subscription_id })
         }
-        await queryClient.invalidateQueries({ queryKey: [UserQueryEnum.GET_USER] })
+        await refreshEntitlements()
       }
 
       startTimeRef.current = Date.now()
@@ -228,7 +285,7 @@ function useCheckoutReturn() {
           if (pollRef.current) clearInterval(pollRef.current)
           return
         }
-        await queryClient.invalidateQueries({ queryKey: [UserQueryEnum.GET_USER] })
+        await refreshEntitlements()
       }, POLL_INTERVAL_MS)
     }
 
@@ -237,7 +294,14 @@ function useCheckoutReturn() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [checkoutState, user?.status, navigate, queryClient, subscription_id, posthog])
+  }, [
+    checkoutState,
+    user?.status,
+    afterTrialNavigate,
+    refreshEntitlements,
+    subscription_id,
+    posthog,
+  ])
 
   useEffect(() => {
     if (
@@ -251,9 +315,18 @@ function useCheckoutReturn() {
         source: 'polling',
         elapsed_ms: Date.now() - startTimeRef.current,
       })
-      setTimeout(() => navigate({ to: '/' }), 1500)
+      // The status flip is what ends the poll, so this is the last chance to
+      // pick up a profile write that landed just after the tick that saw it.
+      void refreshEntitlements()
+      setTimeout(afterTrialNavigate, 1500)
     }
-  }, [user?.status, checkoutState, navigate, posthog])
+  }, [
+    user?.status,
+    checkoutState,
+    afterTrialNavigate,
+    refreshEntitlements,
+    posthog,
+  ])
 
   const retryCheckout = () => {
     posthog?.capture('onboarding_checkout_retry_clicked')
@@ -277,6 +350,7 @@ export function ActivateTrialStep() {
   const { data: plans, isLoading: isFetchingPlans } = useGetPlans()
   const { data: onboardingData } = useOnboarding()
   const { checkoutState, timedOut, retryCheckout } = useCheckoutReturn()
+  const afterTrialNavigate = useAfterTrialNavigate()
 
   const [interval, setBillingInterval] = useState<Interval>('monthly')
   const [selection, setSelection] = useState<AgentSelection>(() => {
@@ -403,7 +477,7 @@ export function ActivateTrialStep() {
 
   if (user?.status && user.status !== UserSubscriptionStatus.PENDING) {
     if (checkoutState !== 'success' && !isExistingSubscriber) {
-      navigate({ to: '/' })
+      afterTrialNavigate()
     }
   }
 

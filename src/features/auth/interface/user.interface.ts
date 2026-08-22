@@ -38,7 +38,13 @@ export interface IUser {
   metadata: {
     onboarding: {
       status: 'not-started' | 'in-progress' | 'completed'
+      /**
+       * Position in the flow. Kept alongside `stepKey` because Brevo's
+       * ONBOARDING_STEP attribute and its drip automations are typed on a
+       * number; `stepKey` is what routing reads.
+       */
       step: number
+      stepKey?: string
       selectedAgentType?: string
     }
     heardFrom?: string

@@ -7,7 +7,9 @@ export interface ITwitterProfileFromExtension {
   platform: 'twitter'
   authToken: string
   csrfToken: string
-  cookieDump: string
+  /** Raw `chrome.cookies.Cookie` records, passed straight through to the API. */
+  cookieDump: Record<string, unknown>[]
+  queryIds?: Record<string, string>
   twitterUserId: string
   screenName: string
   displayName: string

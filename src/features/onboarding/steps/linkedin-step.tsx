@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Info, Loader2 } from 'lucide-react'
 import { IconBrandLinkedin, IconBrandX } from '@tabler/icons-react'
 import { usePostHog } from 'posthog-js/react'
@@ -10,7 +11,7 @@ import { useProfileStore } from '@/stores/profile.store'
 import { detectExtension } from '@/lib/extension'
 import { getProfileDetailsFromExtension } from '@/lib/utils'
 import { getAgentType, getAgentTypeFor } from '@/features/agent-system/registry'
-import { useActivateAgentType } from '@/features/post-generator/query/post-generator.query'
+import { updateAgentTypes } from '@/features/post-generator/api/post-generator.api'
 import {
   getTwitterProfileDetailsFromExtension,
   type ITwitterProfileFromExtension,
@@ -28,11 +29,19 @@ import {
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '@/features/onboarding/onboarding-card'
 import { OnboardingNavigation } from '@/features/onboarding/onboarding-navigation'
-import { getStepNav } from '@/features/onboarding/onboarding-flow'
+import {
+  getStepNav,
+  resolveSavedStep,
+  stepIndexOf,
+  stepKeyForPath,
+} from '@/features/onboarding/onboarding-flow'
+import { prewarmPostingPreview } from '@/features/onboarding/api/preview.api'
+import { useDeriveOnboardingSettings } from '@/features/onboarding/hooks/useDeriveOnboardingSettings'
 import { useExtensionGuard } from '@/features/onboarding/hooks/useExtensionGuard'
 import { useTrackStepView } from '@/features/onboarding/hooks/useTrackStepView'
 import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
 import {
+  ProfileQueryEnum,
   useGetAllProfileQuery,
   useLinkProfile,
   useLinkTwitterProfile,
@@ -73,6 +82,7 @@ export function LinkedInStep() {
   useTrackStepView('connect-account')
   const { isChecking: isExtensionGuardChecking } = useExtensionGuard()
   const posthog = usePostHog()
+  const queryClient = useQueryClient()
   const { data: onboardingData, updateData, markStepCompleted } =
     useOnboarding()
   const { data: user } = useGetUserQuery()
@@ -88,7 +98,9 @@ export function LinkedInStep() {
   const hasLinkedRef = useRef(false)
   const hasCollectedRef = useRef(false)
 
-  const activateAgentType = useActivateAgentType()
+  const { start: startDerivation, saveInBackground: saveDerivedSettings } =
+    useDeriveOnboardingSettings()
+
   const selectedSlug = onboardingData.selectedAgentType
     ?? user?.metadata?.onboarding?.selectedAgentType
     ?? null
@@ -99,11 +111,14 @@ export function LinkedInStep() {
 
   const capabilities = onboardingData.selectedCapabilities ?? []
   const wantsPost = capabilities.includes('post')
-  // Next step is derived from the capability-aware flow (post-only skips the
-  // commenting config and jumps straight to "About You").
+  const wantsComment = capabilities.includes('comment')
+  // Platform-aware: the two flows diverge here, and asking for the LinkedIn
+  // one lands an X account on the preview - a step its flow does not contain,
+  // so the save is rejected as out-of-order and the user is bounced back here.
   const connectNextStep =
-    getStepNav(capabilities, '/onboarding/connect-account').next ??
+    getStepNav('/onboarding/connect-account', platform).next ??
     '/onboarding/identity'
+  const connectNextKey = stepKeyForPath(connectNextStep) ?? 'identity'
 
   const checkIfExtensionIsInstalled = async () => {
     const { installed } = await detectExtension()
@@ -114,7 +129,13 @@ export function LinkedInStep() {
   const userOnboarding = user?.metadata?.onboarding
   const isConnectStepCompleted =
     userOnboarding &&
-    (userOnboarding.status === 'completed' || userOnboarding.step >= 3)
+    (userOnboarding.status === 'completed' ||
+      stepIndexOf(
+        resolveSavedStep({
+          stepKey: userOnboarding.stepKey,
+          step: userOnboarding.step,
+        })
+      ) > stepIndexOf('connect-account'))
 
   const collectLinkedInInfo = useCallback(async () => {
     try {
@@ -306,6 +327,26 @@ export function LinkedInStep() {
 
   const hasProfileInfo = profileData || (isConnectStepCompleted && onboardingData.userProfile)
 
+  const resolvedProfileId =
+    onboardingData.linkedProfileId ??
+    activeProfile?._id ??
+    profiles?.[profiles.length - 1]?._id
+
+  // Targeting and comment style are worked out from the profile instead of
+  // being asked for. Kicking it off on link rather than on Continue means it
+  // runs while the user reads the confirmation.
+  //
+  // LinkedIn only: it derives both from a LinkedIn profile read, which an X
+  // account has nothing to answer. X asks for them on the two steps that
+  // follow, and deriving here would overwrite those answers before they are
+  // given.
+  const derives = wantsComment && platform === 'linkedin'
+
+  useEffect(() => {
+    if (!derives || !hasProfileInfo || !resolvedProfileId) return
+    startDerivation(resolvedProfileId)
+  }, [derives, hasProfileInfo, resolvedProfileId, startDerivation])
+
   const displayName =
     profileData?._platform === 'twitter'
       ? profileData.displayName ||
@@ -383,6 +424,13 @@ export function LinkedInStep() {
                   </span>
                 </div>
 
+                {/*
+                  Working out the keywords used to be shown here, with its own
+                  spinner and chips. It is real work and worth seeing, but not
+                  on a screen whose only job is done - it held the user on a
+                  confirmation reading a list they had no reason to check yet.
+                  The next screen narrates it alongside the search it feeds.
+                */}
                 <div className='flex w-full flex-col gap-4 rounded-lg p-4'>
                   <div className='flex items-center gap-4 rounded border p-3'>
                     <div className='relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800'>
@@ -438,36 +486,57 @@ export function LinkedInStep() {
 
         {hasProfileInfo && (
           <OnboardingNavigation
+            prevStep='/onboarding/extension'
             nextStep={connectNextStep}
             currentStep='connect-account'
             loading={isUpdatingOnboardingStatus}
             onNext={async () => {
-              const resolvedId = activeProfile?._id ?? profiles?.[profiles.length - 1]?._id
+              const resolvedId =
+                activeProfile?._id ?? profiles?.[profiles.length - 1]?._id
               if (resolvedId) {
                 updateData({ linkedProfileId: resolvedId })
+
+                // Not awaited. Reading the profile and validating keywords
+                // against real searches is up to a minute of work, and holding
+                // Continue for it buys a silent spinner on the one screen with
+                // nothing to show. The preview step waits on this instead, and
+                // has somewhere to say so.
+                if (derives) {
+                  saveDerivedSettings(resolvedId)
+                }
+
                 // Activate the posting agent up front so it shows in the hub and
-                // runs its own voice-analysis onboarding when opened. Commenting
-                // is activated later via its settings step.
+                // runs its own voice-analysis onboarding when opened.
                 if (wantsPost && platform === 'linkedin') {
                   const postingSlug = getAgentTypeFor('linkedin', 'post')?.slug
                   if (postingSlug) {
+                    // Called directly rather than through useActivateAgentType:
+                    // this runs before checkout, so the posting slot cap is 0 and
+                    // the backend refuses with a 400 by design, granting the slot
+                    // later when the entitlement arrives. A mutation would hand
+                    // that expected refusal to the global onError toast, which a
+                    // local catch cannot suppress.
                     try {
-                      await activateAgentType.mutateAsync({
-                        profileId: resolvedId,
-                        agentType: postingSlug,
+                      await updateAgentTypes(resolvedId, { add: postingSlug })
+                      queryClient.invalidateQueries({
+                        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
                       })
                     } catch {
                       // Non-fatal: user can add it from the hub later.
                     }
                   }
+
+                  // The voice build plus a first draft takes about a minute, so
+                  // it starts here and finishes while the comment preview runs.
+                  void prewarmPostingPreview({ profileId: resolvedId }).catch(
+                    () => {}
+                  )
                 }
               }
-              if (!isConnectStepCompleted) {
-                await updateOnboardingStatusAsync({
-                  status: 'in-progress',
-                  step: 3,
-                })
-              }
+              await updateOnboardingStatusAsync({
+                status: 'in-progress',
+                stepKey: connectNextKey,
+              })
               return true
             }}
           />

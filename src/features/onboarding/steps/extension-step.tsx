@@ -111,7 +111,7 @@ export function ExtensionStep() {
         ) {
           updateOnboardingStatus({
             status: 'in-progress',
-            step: 1,
+            stepKey: 'extension',
           })
         }
       }
@@ -230,14 +230,15 @@ export function ExtensionStep() {
 
         {isInstalled && (
           <OnboardingNavigation
-            nextStep='/onboarding/agent-type'
+            prevStep='/onboarding/agent-type'
+            nextStep='/onboarding/connect-account'
             loading={isUpdatingOnboardingStatus}
             currentStep='extension'
             onNext={async () => {
-              const currentStep = user?.metadata?.onboarding?.step ?? 0
-              if (currentStep < 1) {
-                await updateOnboardingStatusAsync({ status: 'in-progress', step: 1 })
-              }
+              await updateOnboardingStatusAsync({
+                status: 'in-progress',
+                stepKey: 'connect-account',
+              })
               return true
             }}
           />

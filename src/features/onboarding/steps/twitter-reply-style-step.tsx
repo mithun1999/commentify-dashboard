@@ -1,19 +1,19 @@
 'use client'
 
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import {
-  MessageSquare,
-  Settings,
-  Smile,
+  AlertCircle,
   Calendar,
   ChevronDown,
   ChevronUp,
   Info,
-  AlertCircle,
+  MessageSquare,
+  Settings,
+  Smile,
 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { useOnboarding } from '@/stores/onboarding.store'
@@ -46,110 +46,94 @@ import {
 } from '@/components/ui/tooltip'
 import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
 import { CommentLengthEnum } from '@/features/settings/enum/setting.enum'
-import { ICreateOnboardingCommentDto } from '../interface/onboarding.interface'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 import { useCreateOnboardingCommentQuery } from '../query/onboarding.query'
 
-const LazySalesStrategyStep = lazy(() =>
-  import('@/features/linkedin-sales/components/sales-strategy-step').then(
-    (m) => ({ default: m.SalesStrategyStep })
-  )
-)
+const ABOUT_MAX = 500
 
-const commentSettingsSchema = z.object({
+const schema = z.object({
   aboutProfile: z
     .string()
-    .min(10, 'Profile description must be at least 10 characters')
-    .max(500, 'Profile description must be less than 500 characters'),
-  commentStyle: z.enum(['short', 'medium', 'long']),
-  commentsPerDay: z
+    .min(10, 'Tell us at least a sentence about yourself')
+    .max(ABOUT_MAX, `Keep this under ${ABOUT_MAX} characters`),
+  replyStyle: z.enum(['short', 'medium', 'long']),
+  repliesPerDay: z
     .number()
-    .min(0, 'Comments per day must be at least 0')
-    .max(100, 'Comments per day must be at most 100'),
+    .min(0, 'Replies per day must be at least 0')
+    .max(100, 'Replies per day must be at most 100'),
   useEmojis: z.boolean(),
   useExclamations: z.boolean(),
 })
 
-type CommentSettingsValues = z.infer<typeof commentSettingsSchema>
+type ReplyStyleValues = z.infer<typeof schema>
 
-const defaultValues: CommentSettingsValues = {
+const defaultValues: ReplyStyleValues = {
   aboutProfile: '',
-  commentStyle: 'medium',
-  commentsPerDay: 10,
+  replyStyle: 'medium',
+  repliesPerDay: 10,
   useEmojis: true,
   useExclamations: true,
 }
 
-export function CommentSettingsStep() {
+export function TwitterReplyStyleStep() {
   useTrackStepView('comment-settings')
-  const { data: onboardingData } = useOnboarding()
 
-  if (onboardingData.selectedAgentMode === 'sales') {
-    return (
-      <Suspense fallback={<div className='flex items-center justify-center py-12'>Loading...</div>}>
-        <LazySalesStrategyStep />
-      </Suspense>
-    )
-  }
-
-  return <BrandingCommentSettingsStep />
-}
-
-function BrandingCommentSettingsStep() {
   const posthog = usePostHog()
-  const [isStylePreferencesExpanded, setIsStylePreferencesExpanded] =
-    useState(false)
-  const [isCommentSettingsExpanded, setIsCommentSettingsExpanded] =
-    useState(false)
+  const [isStyleExpanded, setIsStyleExpanded] = useState(false)
+  const [isReplySettingsExpanded, setIsReplySettingsExpanded] = useState(false)
 
   const { data: onboardingData, markStepCompleted } = useOnboarding()
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const { data: profiles } = useGetAllProfileQuery()
-  const resolvedProfileId = onboardingData.linkedProfileId ?? activeProfile?._id ?? profiles?.[profiles.length - 1]?._id
+  const resolvedProfileId =
+    onboardingData.linkedProfileId ??
+    activeProfile?._id ??
+    profiles?.[profiles.length - 1]?._id
+
   const { createOnboardingCommentSettingAsync, isCreatingOnboardingComment } =
     useCreateOnboardingCommentQuery()
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
 
-  const form = useForm<CommentSettingsValues>({
-    resolver: zodResolver(commentSettingsSchema),
+  const form = useForm<ReplyStyleValues>({
+    resolver: zodResolver(schema),
     defaultValues: {
       ...defaultValues,
       aboutProfile:
-        onboardingData.commentSetting?.aboutProfile || defaultValues.aboutProfile,
+        onboardingData.commentSetting?.aboutProfile ||
+        defaultValues.aboutProfile,
     },
     mode: 'onChange',
   })
 
-  // Form values are now handled by FormField components
-
-  const onSubmit = async (data: CommentSettingsValues) => {
+  const save = async (data: ReplyStyleValues) => {
     posthog?.capture('onboarding_comment_setting_form_submitted', {
-      commentStyle: data.commentStyle,
-      commentsPerDay: data.commentsPerDay,
+      platform: 'twitter',
+      commentStyle: data.replyStyle,
+      commentsPerDay: data.repliesPerDay,
       useEmojis: data.useEmojis,
       useExclamations: data.useExclamations,
     })
 
     if (!resolvedProfileId) {
-      toast.error('No connected profile found. Please go back and connect your account first.')
+      toast.error(
+        'No connected profile found. Please go back and connect your account first.'
+      )
       return false
-    }
-
-    const payload: ICreateOnboardingCommentDto = {
-      aboutProfile: data.aboutProfile,
-      length: data.commentStyle as CommentLengthEnum,
-      commentsPerDay: data.commentsPerDay,
-      turnOnEmoji: data.useEmojis,
-      turnOnExclamations: data.useExclamations,
     }
 
     try {
       await createOnboardingCommentSettingAsync({
         profileId: resolvedProfileId,
-        data: payload,
+        data: {
+          aboutProfile: data.aboutProfile,
+          length: data.replyStyle as CommentLengthEnum,
+          commentsPerDay: data.repliesPerDay,
+          turnOnEmoji: data.useEmojis,
+          turnOnExclamations: data.useExclamations,
+        },
       })
       return true
     } catch {
@@ -159,27 +143,21 @@ function BrandingCommentSettingsStep() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(save)}>
         <OnboardingCard
-          title='Comment Generation Settings'
-          description='Configure how your automated comments will be generated and styled.'
+          title='How your replies should sound'
+          description='This is what your agent draws on when it writes in your name.'
         >
           <div className='mb-8 space-y-6'>
-            {/* About Profile Section */}
             <FormField
               control={form.control}
               name='aboutProfile'
-              render={({ field }) => {
-                const remainingChars = Math.max(
-                  0,
-                  500 - (field.value?.length ?? 0)
-                )
-                return (
-                  <FormItem className='space-y-3'>
+              render={({ field }) => (
+                <FormItem className='space-y-3'>
                   <div className='flex items-center gap-2'>
                     <MessageSquare className='text-muted-foreground h-4 w-4' />
                     <FormLabel className='text-foreground font-medium'>
-                      About Your Profile
+                      About You
                     </FormLabel>
                     <TooltipProvider>
                       <Tooltip>
@@ -190,11 +168,8 @@ function BrandingCommentSettingsStep() {
                         </TooltipTrigger>
                         <TooltipContent side='right' className='max-w-xs'>
                           <p>
-                            Describe your background to help generate
-                            <br />
-                            comments that match your expertise
-                            <br />
-                            and professional voice
+                            Your background is what lets a reply sound like it
+                            came from you rather than from anyone.
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -202,61 +177,45 @@ function BrandingCommentSettingsStep() {
                   </div>
                   <FormControl>
                     <Textarea
-                      placeholder='Describe your professional background, expertise, and interests to help generate relevant comments'
+                      placeholder='What you do, what you know well, and what you like talking about.'
                       className='focus-visible:ring-primary bg-card border-border text-card-foreground min-h-[120px] focus-visible:ring-2 focus-visible:ring-offset-2'
                       {...field}
                     />
                   </FormControl>
-                  <span className='text-muted-foreground text-xs'>
-                    This helps our AI understand your voice and expertise
-                  </span>
-                    <p className='text-muted-foreground text-xs'>
-                      {remainingChars} characters left
-                    </p>
+                  <p className='text-muted-foreground text-xs'>
+                    {Math.max(0, ABOUT_MAX - (field.value?.length ?? 0))}{' '}
+                    characters left
+                  </p>
                   <FormMessage>
                     {form.formState.errors.aboutProfile && (
-                      <div className='text-destructive flex items-center gap-2 text-sm'>
+                      <span className='text-destructive flex items-center gap-2 text-sm'>
                         <AlertCircle className='h-4 w-4' />
                         {form.formState.errors.aboutProfile.message}
-                      </div>
+                      </span>
                     )}
                   </FormMessage>
-                  </FormItem>
-                )
-              }}
+                </FormItem>
+              )}
             />
 
-            {/* Comment Settings Row - Collapsible */}
             <div className='space-y-2'>
               <div
                 className='group flex cursor-pointer items-center justify-between'
                 onClick={() =>
-                  setIsCommentSettingsExpanded(!isCommentSettingsExpanded)
+                  setIsReplySettingsExpanded(!isReplySettingsExpanded)
                 }
               >
                 <div className='flex items-center gap-2'>
                   <Settings className='text-muted-foreground h-4 w-4' />
                   <Label className='text-foreground cursor-pointer font-medium'>
-                    Comment Settings
+                    Reply Settings
                   </Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                          <Info className='text-muted-foreground h-3 w-3' />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side='right' className='max-w-xs'>
-                        <p>
-                          Control the length of generated comments and <br />
-                          Set your preferred daily comment volume.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <span className='text-muted-foreground text-xs'>
+                    Length and daily volume
+                  </span>
                 </div>
                 <div className='text-muted-foreground group-hover:text-foreground flex items-center transition-colors'>
-                  {isCommentSettingsExpanded ? (
+                  {isReplySettingsExpanded ? (
                     <ChevronUp className='h-4 w-4' />
                   ) : (
                     <ChevronDown className='h-4 w-4' />
@@ -264,42 +223,23 @@ function BrandingCommentSettingsStep() {
                 </div>
               </div>
 
-              {isCommentSettingsExpanded && (
+              {isReplySettingsExpanded && (
                 <div className='grid grid-cols-1 gap-6 pt-4 md:grid-cols-2'>
-                  {/* Comment Size */}
                   <FormField
                     control={form.control}
-                    name='commentStyle'
+                    name='replyStyle'
                     render={({ field }) => (
                       <FormItem className='space-y-3'>
-                        <div className='flex items-center gap-2'>
-                          <FormLabel className='text-foreground font-medium'>
-                            Comment Size
-                          </FormLabel>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                                  <Info className='text-muted-foreground h-3 w-3' />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side='right' className='max-w-xs'>
-                                <p>
-                                  Control the length of generated comments.
-                                  <br />
-                                  Shorter comments tend to get more engagement
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                        <FormLabel className='text-foreground font-medium'>
+                          Reply Length
+                        </FormLabel>
                         <FormControl>
                           <Select
                             value={field.value}
                             onValueChange={field.onChange}
                           >
                             <SelectTrigger className='focus-visible:ring-primary bg-card border-border text-card-foreground focus-visible:ring-2 focus-visible:ring-offset-2'>
-                              <SelectValue placeholder='Select comment style' />
+                              <SelectValue placeholder='Select reply length' />
                             </SelectTrigger>
                             <SelectContent className='bg-popover border-border'>
                               <SelectItem value='short'>
@@ -314,40 +254,24 @@ function BrandingCommentSettingsStep() {
                             </SelectContent>
                           </Select>
                         </FormControl>
+                        <p className='text-muted-foreground text-xs'>
+                          Shorter replies tend to get more engagement.
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Comments Per Day */}
                   <FormField
                     control={form.control}
-                    name='commentsPerDay'
+                    name='repliesPerDay'
                     render={({ field }) => (
                       <FormItem className='space-y-3'>
                         <div className='flex items-center gap-2'>
                           <Calendar className='text-muted-foreground h-4 w-4' />
                           <FormLabel className='text-foreground font-medium'>
-                            Comments Per Day
+                            Replies Per Day
                           </FormLabel>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                                  <Info className='text-muted-foreground h-3 w-3' />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side='right' className='max-w-xs'>
-                                <p>
-                                  Set your preferred daily comment volume.
-                                  <br />
-                                  Higher numbers increase engagement
-                                  <br />
-                                  but may appear less authentic
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
                         </div>
                         <FormControl>
                           <Input
@@ -356,15 +280,20 @@ function BrandingCommentSettingsStep() {
                             max={100}
                             className='focus-visible:ring-primary bg-card border-border text-card-foreground focus-visible:ring-2 focus-visible:ring-offset-2'
                             {...field}
-                            onChange={(e) => {
-                              const val = Math.min(
-                                100,
-                                Math.max(0, Number(e.target.value))
+                            onChange={(e) =>
+                              field.onChange(
+                                Math.min(
+                                  100,
+                                  Math.max(0, Number(e.target.value))
+                                )
                               )
-                              field.onChange(val)
-                            }}
+                            }
                           />
                         </FormControl>
+                        <p className='text-muted-foreground text-xs'>
+                          Higher volume reaches more people but reads as less
+                          personal.
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -373,40 +302,22 @@ function BrandingCommentSettingsStep() {
               )}
             </div>
 
-            {/* Style Preferences - Collapsible */}
             <div className='space-y-2'>
               <div
                 className='group flex cursor-pointer items-center justify-between'
-                onClick={() =>
-                  setIsStylePreferencesExpanded(!isStylePreferencesExpanded)
-                }
+                onClick={() => setIsStyleExpanded(!isStyleExpanded)}
               >
                 <div className='flex items-center gap-2'>
                   <Smile className='text-muted-foreground h-4 w-4' />
                   <Label className='text-foreground cursor-pointer font-medium'>
                     Style Preferences
                   </Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                          <Info className='text-muted-foreground h-3 w-3' />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side='right' className='max-w-xs'>
-                        <p>
-                          Customize the tone and style of your
-                          <br />
-                          automated comments for better
-                          <br />
-                          alignment with your brand
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <span className='text-muted-foreground text-xs'>
+                    Emojis and exclamations
+                  </span>
                 </div>
                 <div className='text-muted-foreground group-hover:text-foreground flex items-center transition-colors'>
-                  {isStylePreferencesExpanded ? (
+                  {isStyleExpanded ? (
                     <ChevronUp className='h-4 w-4' />
                   ) : (
                     <ChevronDown className='h-4 w-4' />
@@ -414,9 +325,8 @@ function BrandingCommentSettingsStep() {
                 </div>
               </div>
 
-              {isStylePreferencesExpanded && (
+              {isStyleExpanded && (
                 <div className='grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2'>
-                  {/* Emojis Toggle Card */}
                   <FormField
                     control={form.control}
                     name='useEmojis'
@@ -428,7 +338,7 @@ function BrandingCommentSettingsStep() {
                               Use Emojis
                             </FormLabel>
                             <p className='text-muted-foreground text-xs'>
-                              Include relevant emojis in comments
+                              Include relevant emojis in replies
                             </p>
                           </div>
                           <FormControl>
@@ -442,7 +352,6 @@ function BrandingCommentSettingsStep() {
                     )}
                   />
 
-                  {/* Exclamations Toggle Card */}
                   <FormField
                     control={form.control}
                     name='useExclamations'
@@ -470,25 +379,28 @@ function BrandingCommentSettingsStep() {
                 </div>
               )}
             </div>
+
+            <p className='text-muted-foreground text-xs'>
+              You can change any of this from Settings later.
+            </p>
           </div>
 
           <OnboardingNavigation
             prevStep='/onboarding/post-settings'
             nextStep='/onboarding/identity'
+            currentStep='comment-settings'
             loading={isCreatingOnboardingComment || isUpdatingOnboardingStatus}
             onNext={async () => {
-              const isValid = await form.trigger()
-              if (!isValid) return false
-
-              const values = form.getValues()
-              const result = await onSubmit(values)
-              if (!result) return false
+              if (!(await form.trigger())) return false
+              if (!(await save(form.getValues()))) return false
 
               markStepCompleted('comment-settings')
-              await updateOnboardingStatusAsync({ status: 'in-progress', step: 5 })
+              await updateOnboardingStatusAsync({
+                status: 'in-progress',
+                stepKey: 'identity',
+              })
               return true
             }}
-            currentStep='comment-settings'
           />
         </OnboardingCard>
       </form>

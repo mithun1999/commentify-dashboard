@@ -1,50 +1,53 @@
 import { useEffect } from 'react'
 import { useNavigate, useLocation } from '@tanstack/react-router'
+import {
+  platformFor,
+  resolveSavedStep,
+  stepDefFor,
+  stepIndexOf,
+  stepKeyForPath,
+} from '@/features/onboarding/onboarding-flow'
+import { useOnboardingStore } from '@/stores/onboarding.store'
 import { useGetUserQuery } from '../query/user.query'
-
-const STEP_ROUTES: Record<number, string> = {
-  0: '/onboarding/extension',
-  1: '/onboarding/agent-type',
-  2: '/onboarding/connect-account',
-  3: '/onboarding/post-settings',
-  4: '/onboarding/comment-settings',
-  5: '/onboarding/identity',
-  6: '/onboarding/activate-trial',
-}
-
-const ROUTE_STEPS: Record<string, number> = {
-  '/onboarding/extension': 0,
-  '/onboarding/agent-type': 1,
-  '/onboarding/connect-account': 2,
-  '/onboarding/post-settings': 3,
-  '/onboarding/comment-settings': 4,
-  '/onboarding/identity': 5,
-  '/onboarding/activate-trial': 6,
-}
 
 export const useOnboardingRedirect = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { data: user, isFetched, isLoading } = useGetUserQuery()
+  const pickedPlatform = useOnboardingStore((s) => s.data.selectedPlatform)
 
   useEffect(() => {
     if (!isFetched || isLoading || !user) return
 
-    if (user?.metadata?.onboarding?.status === 'completed') return
+    const onboarding = user?.metadata?.onboarding
+    if (onboarding?.status === 'completed') return
 
-    const backendStep = user?.metadata?.onboarding?.step ?? 0
-    const currentPageStep = ROUTE_STEPS[location.pathname]
+    const platform = platformFor(onboarding?.selectedAgentType, pickedPlatform)
+    const savedKey = resolveSavedStep(
+      {
+        stepKey: onboarding?.stepKey,
+        step: onboarding?.step,
+      },
+      platform
+    )
+    const currentKey = stepKeyForPath(location.pathname)
 
-    // If we're on a recognized onboarding page, only redirect if the user
-    // is trying to jump AHEAD of their progress (prevent skipping).
-    // Never pull them backward from an earlier step.
-    if (currentPageStep !== undefined) {
-      if (currentPageStep <= backendStep) return
+    // On a step we recognise, only intervene when they are ahead of their saved
+    // progress. Pulling someone backwards would undo a step they just finished
+    // but whose save has not landed yet.
+    //
+    // A step belonging to the other platform's flow indexes as -1, which is
+    // never ahead - the route itself sends those on, and racing it from here
+    // would fight that redirect.
+    if (currentKey) {
+      if (stepIndexOf(currentKey, platform) <= stepIndexOf(savedKey, platform))
+        return
     }
 
-    const targetRoute = STEP_ROUTES[backendStep] ?? '/onboarding/extension'
-    navigate({ to: targetRoute })
-  }, [user, isFetched, isLoading, navigate, location.pathname])
+    const target =
+      stepDefFor(savedKey, platform)?.path ?? '/onboarding/agent-type'
+    navigate({ to: target })
+  }, [user, isFetched, isLoading, navigate, location.pathname, pickedPlatform])
 
   return { user, isFetched }
 }

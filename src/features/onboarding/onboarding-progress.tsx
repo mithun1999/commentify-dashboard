@@ -11,36 +11,63 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { getProgressSteps } from './onboarding-flow'
+import { useOnboardingPlatform } from './hooks/useOnboardingPlatform'
+import {
+  getProgressSteps,
+  resolveSavedStep,
+  stepDefFor,
+  stepIndexOf,
+  stepKeyForPath,
+  type OnboardingStepDef,
+  type OnboardingStepKey,
+} from './onboarding-flow'
 
 export function OnboardingProgress() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { completedSteps, data } = useOnboarding()
+  const { completedSteps } = useOnboarding()
   const { data: user } = useGetUserQuery()
-  const backendStep = user?.metadata?.onboarding?.step ?? 0
+  const platform = useOnboardingPlatform()
+  const savedStep = resolveSavedStep(
+    {
+      stepKey: user?.metadata?.onboarding?.stepKey,
+      step: user?.metadata?.onboarding?.step,
+    },
+    platform
+  )
 
-  const steps = getProgressSteps(data.selectedCapabilities)
+  const steps = getProgressSteps(platform)
+  // Steps outside the bar still count as progress, so compare on the full flow.
+  const furthestUnlocked = steps.filter(
+    (step) => stepIndexOf(step.key, platform) <= stepIndexOf(savedStep, platform)
+  ).length - 1
 
   const pathname = location.pathname
   const currentStepIndex = steps.findIndex((step) =>
     pathname.includes(step.path)
   )
+  // Position is read from the whole flow, not just the bar. Identity and the
+  // trial deliberately have no circle of their own, so matching on the bar
+  // alone reports someone standing on one as being nowhere - which empties the
+  // fill and unticks the step they have just finished.
+  const currentKey = stepKeyForPath(pathname)
+  const currentFlowIndex = stepIndexOf(currentKey, platform)
+  const isPast = (key: OnboardingStepKey) =>
+    currentFlowIndex >= 0 && stepIndexOf(key, platform) < currentFlowIndex
+
+  const passed = steps.filter((step) => isPast(step.key)).length
   const progress =
-    currentStepIndex >= 0 ? (currentStepIndex / (steps.length - 1)) * 100 : 0
+    currentFlowIndex < 0 ? 0 : Math.min(100, (passed / (steps.length - 1)) * 100)
 
   const currentMessage =
-    currentStepIndex >= 0
-      ? steps[currentStepIndex].message
-      : 'Complete your agent setup'
+    (currentKey && stepDefFor(currentKey, platform)?.message) ??
+    'Complete your agent setup'
 
-  const handleStepClick = (stepPath: string, index: number) => {
-    const stepName = stepPath.split('/').pop() || ''
-    const isLocallyAllowed = completedSteps.includes(stepName) || index <= currentStepIndex + 1
-    if (isLocallyAllowed && index <= backendStep) {
-      navigate({ to: stepPath })
-    }
-  }
+  const canVisit = (step: OnboardingStepDef, index: number) =>
+    (isPast(step.key) ||
+      completedSteps.includes(step.key) ||
+      index <= currentStepIndex + 1) &&
+    index <= furthestUnlocked
 
   return (
     <div className='mb-20 space-y-10'>
@@ -69,11 +96,9 @@ export function OnboardingProgress() {
 
         <div className='absolute top-1 right-0 left-0 flex -translate-y-1/2 justify-between'>
           {steps.map((step, index) => {
-            const stepName = step.key
             const isActive = index === currentStepIndex
-            const isCompleted =
-              index < currentStepIndex || completedSteps.includes(stepName)
-            const isClickable = (isCompleted || index < currentStepIndex + 1) && index <= backendStep
+            const isCompleted = isPast(step.key) || completedSteps.includes(step.key)
+            const isClickable = canVisit(step, index)
 
             return (
               <TooltipProvider key={step.path}>
@@ -86,7 +111,9 @@ export function OnboardingProgress() {
                           ? 'cursor-pointer'
                           : 'cursor-not-allowed opacity-50'
                       )}
-                      onClick={() => handleStepClick(step.path, index)}
+                      onClick={() => {
+                        if (isClickable) navigate({ to: step.path })
+                      }}
                     >
                       <div
                         className={cn(

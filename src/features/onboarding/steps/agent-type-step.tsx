@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { useOnboarding } from '@/stores/onboarding.store'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { getAgentTypeFor } from '@/features/agent-system/registry'
 import {
   PlatformCapabilityPicker,
@@ -16,12 +17,10 @@ import {
 } from '@/features/auth/query/user.query'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
-import { useExtensionGuard } from '../hooks/useExtensionGuard'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 
 export function AgentTypeStep() {
   useTrackStepView('agent-type')
-  const { isChecking } = useExtensionGuard()
 
   const posthog = usePostHog()
   const navigate = useNavigate()
@@ -34,6 +33,9 @@ export function AgentTypeStep() {
     capabilities: onboardingData.selectedCapabilities ?? [],
     commentGoal: onboardingData.selectedAgentMode === 'sales' ? 'sales' : 'branding',
   })
+  const [websiteUrl, setWebsiteUrl] = useState(
+    onboardingData.salesSetting.websiteUrl
+  )
 
   // Mirror the in-progress pick into the store so the progress bar reflects the
   // chosen capabilities live (post-only drops the commenting steps immediately).
@@ -45,26 +47,15 @@ export function AgentTypeStep() {
     })
   }
 
-  if (isChecking) {
-    return (
-      <div className='space-y-8'>
-        <OnboardingCard
-          title='Choose your agent'
-          description='Verifying extension installation...'
-        >
-          <div className='flex flex-col items-center space-y-6 py-4'>
-            <div className='text-muted-foreground flex items-center gap-2'>
-              <Loader2 className='h-4 w-4 animate-spin' />
-              <span>Checking extension...</span>
-            </div>
-          </div>
-        </OnboardingCard>
-      </div>
-    )
-  }
-
   const canProceed =
     Boolean(selection.platform) && selection.capabilities.length > 0
+
+  // Mirrors the picker, which only offers the goal on LinkedIn. Without the
+  // platform check a leftover 'sales' pick survives a switch to X.
+  const isSales =
+    selection.platform === 'linkedin' &&
+    selection.capabilities.includes('comment') &&
+    selection.commentGoal === 'sales'
 
   const primaryCapability = selection.capabilities.includes('comment')
     ? 'comment'
@@ -87,6 +78,24 @@ export function AgentTypeStep() {
           onUpgrade={() => navigate({ to: '/billing' })}
         />
 
+        {isSales && (
+          <div className='mt-8 space-y-2'>
+            <Label htmlFor='sales-website-url'>What are you selling?</Label>
+            <Input
+              id='sales-website-url'
+              type='url'
+              inputMode='url'
+              placeholder='yourcompany.com'
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+            />
+            <p className='text-muted-foreground text-xs'>
+              We read your site to work out who to look for and what to say. You
+              can skip this and we will go off your LinkedIn profile instead.
+            </p>
+          </div>
+        )}
+
         {!canProceed && (
           <p className='text-muted-foreground mt-6 text-center text-sm'>
             {selection.platform
@@ -96,35 +105,35 @@ export function AgentTypeStep() {
         )}
 
         <OnboardingNavigation
-          prevStep='/onboarding/extension'
-          nextStep={canProceed ? '/onboarding/connect-account' : undefined}
+          nextStep={canProceed ? '/onboarding/extension' : undefined}
           nextLabel='Continue'
           loading={isUpdatingOnboardingStatus}
           currentStep='agent-type'
           onNext={
             canProceed && primarySlug
               ? async () => {
+                  const agentMode = isSales ? 'sales' : 'branding'
                   posthog?.capture('onboarding_agent_type_selected', {
                     platform: selection.platform,
                     capabilities: selection.capabilities,
                     primaryAgentType: primarySlug,
-                    agentMode: selection.capabilities.includes('comment')
-                      ? selection.commentGoal
-                      : 'branding',
+                    agentMode,
+                    hasWebsite: isSales && Boolean(websiteUrl.trim()),
                   })
                   updateData({
                     selectedPlatform: selection.platform,
                     selectedCapabilities: selection.capabilities,
                     selectedAgentType: primarySlug,
-                    selectedAgentMode: selection.capabilities.includes('comment')
-                      ? selection.commentGoal
-                      : 'branding',
+                    selectedAgentMode: agentMode,
+                    salesSetting: {
+                      ...onboardingData.salesSetting,
+                      websiteUrl: isSales ? normalizeUrl(websiteUrl) : '',
+                    },
                   })
                   markStepCompleted('agent-type')
-                  const currentStep = user?.metadata?.onboarding?.step ?? 0
                   await updateOnboardingStatusAsync({
                     status: 'in-progress',
-                    step: currentStep < 2 ? 2 : currentStep,
+                    stepKey: 'extension',
                     selectedAgentType: primarySlug,
                   })
                   return true
@@ -135,4 +144,10 @@ export function AgentTypeStep() {
       </OnboardingCard>
     </div>
   )
+}
+
+function normalizeUrl(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
 }

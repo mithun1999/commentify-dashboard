@@ -24,7 +24,8 @@ export function useExtensionGuard() {
           removeCompletedStep('extension')
           await updateOnboardingStatusAsync({
             status: 'in-progress',
-            step: 0,
+            stepKey: 'extension',
+            rewind: true,
           })
           navigate({ to: '/onboarding/extension', replace: true })
           return
