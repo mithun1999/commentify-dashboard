@@ -25,8 +25,12 @@ import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { getAgentPlanTier } from '@/features/agent-system/registry'
 import { isLegacyProduct } from '@/features/pricing/utils/prices.util'
-import { useGetCustomerPortalUrlQuery } from '@/features/subscription/query/subscription.query'
+import {
+  useGetCustomerPortalUrlQuery,
+  useGetPaymentRecoveryQuery,
+} from '@/features/subscription/query/subscription.query'
 import { CancelSubscriptionDialog } from './components/cancel-subscription-dialog'
+import { PaymentAttentionCard } from './components/payment-attention-card'
 import { PostCreditsCard } from './components/post-credits-card'
 
 function formatDate(value?: string | null) {
@@ -138,8 +142,14 @@ export default function Billing() {
     user,
   })
 
+  const { data: paymentRecovery } = useGetPaymentRecoveryQuery({ user })
+
   const searchParams = new URLSearchParams(window.location.search)
   const paymentStatus = searchParams.get('status')
+  // The recovery card says the same thing with an actual way to fix it, so the
+  // generic checkout-return alert would just be a second red box.
+  const showCheckoutFailedAlert =
+    paymentStatus === 'failed' && !paymentRecovery?.needsAttention
 
   const handleChatSupportClick = () => {
     if (Crisp.isCrispInjected()) {
@@ -174,7 +184,7 @@ export default function Billing() {
           </Alert>
         )}
 
-        {paymentStatus === 'failed' && (
+        {showCheckoutFailedAlert && (
           <Alert variant='destructive' className='mt-4'>
             <AlertCircle className='h-4 w-4' />
             <AlertTitle>Payment Failed</AlertTitle>
@@ -184,6 +194,11 @@ export default function Billing() {
             </AlertDescription>
           </Alert>
         )}
+
+        <PaymentAttentionCard
+          recovery={paymentRecovery}
+          portalUrl={portal?.updatePaymentMethod}
+        />
 
         <Alert className='border-primary/40 bg-primary/5 mt-4'>
           <AlertTitle>Need help with billing?</AlertTitle>

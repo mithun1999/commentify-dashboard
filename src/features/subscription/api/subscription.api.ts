@@ -91,6 +91,24 @@ export async function getCustomerPortalUrl() {
   }
 }
 
+export interface IPaymentRecovery {
+  needsAttention: boolean
+  status?: string
+  renewsAt?: string
+  // Hosted page that settles the outstanding dues. Absent when the provider
+  // couldn't mint one — fall back to the customer portal.
+  paymentLink?: string
+  expiresAt?: string
+}
+
+export async function getPaymentRecovery() {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/subscription/payment-recovery`,
+  })
+  return data as IPaymentRecovery
+}
+
 export async function cancelSubscription(payload: {
   reason?: string
   comment?: string
