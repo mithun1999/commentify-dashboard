@@ -11,6 +11,7 @@ import {
   createCheckoutUrl,
   createTopupCheckoutUrl,
   getCustomerPortalUrl,
+  getPaymentRecovery,
   getPostCredits,
   upgradeDowngradeSubscription,
 } from '../api/subscription.api'
@@ -18,6 +19,28 @@ import {
 export enum SubscriptionQueryEnum {
   GET_CUSTOMER_PORTAL_URL = 'get-customer-portal-url',
   GET_POST_CREDITS = 'get-post-credits',
+  GET_PAYMENT_RECOVERY = 'get-payment-recovery',
+}
+
+/**
+ * Whether the user's subscription is blocked on a failed payment, plus the link
+ * that clears it.
+ *
+ * Refetches on focus so the banner clears on its own once the user pays in the
+ * other tab and the provider webhook lands. The link itself is cached
+ * server-side, so refetching never creates an extra charge.
+ */
+export const useGetPaymentRecoveryQuery = ({ user }: { user?: IUser }) => {
+  const { data, isLoading } = useQuery({
+    queryKey: [SubscriptionQueryEnum.GET_PAYMENT_RECOVERY, user?._id],
+    queryFn: () => getPaymentRecovery(),
+    enabled: Boolean(user?.subscription),
+    retry: 1,
+    refetchOnWindowFocus: true,
+    staleTime: 1000 * 30,
+  })
+
+  return { data, isLoading }
 }
 
 export const useUpdateSubscriptionPlan = () => {
