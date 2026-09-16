@@ -1,4 +1,6 @@
 import { IconFidgetSpinner } from '@tabler/icons-react'
+import { Link } from '@tanstack/react-router'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCurrentAgent } from '../hooks/use-current-agent'
 import {
@@ -52,11 +54,9 @@ const formatPercent = (n?: number | string | null) => {
   return `${rounded > 0 ? '+' : '-'}${compact}%`
 }
 
-function CommentStatsCards({
-  stats,
-}: {
-  stats: { scheduled: number; pending: number; completed: number }
-}) {
+type ICommentStats = { scheduled: number; pending: number; completed: number }
+
+function CommentStatsCards({ stats }: { stats: ICommentStats }) {
   return (
     <div className='grid gap-4 lg:grid-cols-3'>
       <Card>
@@ -101,12 +101,20 @@ function CommentStatsCards({
 
 function LinkedInStatsView({
   linkedInStats,
-  isLoading,
+  isLoadingGrowthStats,
+  isGrowthPlanGated,
+  commentStats,
+  isLoadingCommentStats,
 }: {
   linkedInStats: ILinkedInStats | null | undefined
-  isLoading: boolean
+  isLoadingGrowthStats: boolean
+  isGrowthPlanGated: boolean
+  commentStats: ICommentStats | undefined
+  isLoadingCommentStats: boolean
 }) {
-  if (isLoading) {
+  // Only block on the comment stats: the growth call is Pro-only and 403s for
+  // everyone else, so waiting on it would hide the agent's own activity.
+  if (isLoadingCommentStats) {
     return (
       <div className='mt-10 flex w-full items-center justify-center'>
         <Card>
@@ -114,9 +122,7 @@ function LinkedInStatsView({
             <div className='flex flex-col items-center justify-center text-center'>
               <IconFidgetSpinner className='animate-spin' />
               <p className='mt-2 text-sm'>
-                <span className='font-bold'>
-                  Pulling your LinkedIn numbers{' '}
-                </span>
+                <span className='font-bold'>Loading your agent stats </span>
               </p>
             </div>
           </CardContent>
@@ -126,17 +132,16 @@ function LinkedInStatsView({
   }
 
   if (
+    !commentStats &&
     !linkedInStats?.followersStats &&
-    !linkedInStats?.profileViewerStats &&
-    !linkedInStats?.postCommentStats
+    !linkedInStats?.profileViewerStats
   ) {
     return (
       <Card className='mt-4 w-full'>
         <CardContent>
           <div className='flex flex-col items-center justify-center py-6 text-center'>
             <p className='text-muted-foreground text-sm'>
-              No stats available yet. Stats will appear once your agent starts
-              running.
+              We couldn’t load your stats right now. Please refresh in a moment.
             </p>
           </div>
         </CardContent>
@@ -266,17 +271,28 @@ function LinkedInStatsView({
         </div>
       )}
 
-      {linkedInStats?.postCommentStats && (
-        <CommentStatsCards stats={linkedInStats.postCommentStats} />
-      )}
+      {commentStats && <CommentStatsCards stats={commentStats} />}
 
-      {!linkedInStats?.followersStats &&
-        !linkedInStats?.profileViewerStats &&
-        linkedInStats?.postCommentStats && (
+      {!isLoadingGrowthStats &&
+        !linkedInStats?.followersStats &&
+        !linkedInStats?.profileViewerStats && (
           <Card className='w-full'>
             <CardContent>
-              <div className='text-muted-foreground flex items-center justify-center py-3 text-center text-sm'>
-                Follower and profile view stats are temporarily unavailable.
+              <div className='text-muted-foreground flex flex-col items-center justify-center gap-2 py-3 text-center text-sm'>
+                {isGrowthPlanGated ? (
+                  <>
+                    <span>
+                      Follower and profile view analytics are part of Pro.
+                    </span>
+                    <Button variant='outline' size='sm' asChild>
+                      <Link to='/plans'>Upgrade to Pro</Link>
+                    </Button>
+                  </>
+                ) : (
+                  <span>
+                    Follower and profile view stats are temporarily unavailable.
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -342,8 +358,7 @@ function TwitterStatsView({ profileId }: { profileId: string }) {
         <CardContent>
           <div className='flex flex-col items-center justify-center py-6 text-center'>
             <p className='text-muted-foreground text-sm'>
-              No stats available yet. Stats will appear once your agent starts
-              running.
+              We couldn’t load your stats right now. Please refresh in a moment.
             </p>
           </div>
         </CardContent>
@@ -375,12 +390,24 @@ export function AgentStats() {
 
 function LinkedInAgentStats({ profileId }: { profileId: string }) {
   const { profile } = useCurrentAgent()
-  const { data: linkedInStats, isLoading } = useGetLinkedInStats(profileId)
+  const {
+    data: linkedInStats,
+    isLoading: isLoadingGrowthStats,
+    isPlanGated,
+  } = useGetLinkedInStats(profileId)
+  const { data: commentStats, isLoading: isLoadingCommentStats } =
+    useGetPostStats(profileId)
 
   return (
     <>
       <AgentRunStatusCard profileId={profileId} profile={profile} />
-      <LinkedInStatsView linkedInStats={linkedInStats} isLoading={isLoading} />
+      <LinkedInStatsView
+        linkedInStats={linkedInStats}
+        isLoadingGrowthStats={isLoadingGrowthStats}
+        isGrowthPlanGated={isPlanGated}
+        commentStats={commentStats}
+        isLoadingCommentStats={isLoadingCommentStats}
+      />
     </>
   )
 }

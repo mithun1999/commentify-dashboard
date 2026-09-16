@@ -13,15 +13,24 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
-import { useGetLinkedInStats } from '@/features/users/query/profile.query'
+import {
+  useGetLinkedInStats,
+  useGetPostStats,
+} from '@/features/users/query/profile.query'
 import { Overview } from './components/overview'
 import { ProfileOverview } from './components/profile-overview'
 
 export default function Dashboard() {
   const posthog = usePostHog()
-  const { data: linkedInStats, isLoading: isLoadingLinkedInStats } =
-    useGetLinkedInStats()
   const activeProfile = useProfileStore((s) => s.activeProfile)
+  const {
+    data: linkedInStats,
+    isLoading: isLoadingLinkedInStats,
+    isPlanGated: isGrowthPlanGated,
+  } = useGetLinkedInStats()
+  const { data: postStats, isLoading: isLoadingPostStats } = useGetPostStats(
+    activeProfile?._id
+  )
   const { data: user } = useGetUserQuery()
 
   // Formatting helpers
@@ -117,10 +126,12 @@ export default function Dashboard() {
   const weeklyProfileViewsValue = ps?.weeklyProfileViewersGrowth
   const weeklyProfileViewsPercent = ps?.weeklyProfileViewersGrowthPercent
 
-  // Zero-activity guidance checks
-  const pendingCount = linkedInStats?.postCommentStats?.pending ?? 0
-  const completedCount = linkedInStats?.postCommentStats?.completed ?? 0
-  const scheduledCount = linkedInStats?.postCommentStats?.scheduled ?? 0
+  // Zero-activity guidance checks. These read the un-gated `/post/stats`
+  // endpoint rather than `/li-stats`, which is Pro-only — sourcing them from
+  // there made every sub-Pro plan look permanently idle.
+  const pendingCount = postStats?.pending ?? 0
+  const completedCount = postStats?.completed ?? 0
+  const scheduledCount = postStats?.scheduled ?? 0
   const arePostStatsZero =
     Number(pendingCount) === 0 &&
     Number(completedCount) === 0 &&
@@ -174,7 +185,7 @@ export default function Dashboard() {
           className='space-y-4'
         >
           <TabsContent value='overview' className='space-y-4'>
-            {isLoadingLinkedInStats ? (
+            {isLoadingPostStats ? (
               <div className='mt-10 flex w-full items-center justify-center'>
                 <Card>
                   <CardContent>
@@ -182,7 +193,7 @@ export default function Dashboard() {
                       <IconFidgetSpinner className='animate-spin' />
                       <p className='mt-2 text-sm'>
                         <span className='font-bold'>
-                          Pulling your LinkedIn numbers{' '}
+                          Pulling your latest numbers{' '}
                         </span>
                         <br />
                         <span className='text-muted-foreground text-sm'>
@@ -197,7 +208,7 @@ export default function Dashboard() {
             ) : (
               <>
                 {/* Guidance when no activity yet */}
-                {arePostStatsZero && activeProfile && (
+                {postStats && arePostStatsZero && activeProfile && (
                   <Card className='w-full'>
                     <CardContent>
                       <div className='py-3 text-center text-sm'>
@@ -232,9 +243,9 @@ export default function Dashboard() {
                   </Card>
                 )}
                 {/* Fallback: nothing available at all */}
-                {!linkedInStats?.followersStats &&
-                !linkedInStats?.profileViewerStats &&
-                !linkedInStats?.postCommentStats ? (
+                {!postStats &&
+                !linkedInStats?.followersStats &&
+                !linkedInStats?.profileViewerStats ? (
                   <Card className='mt-8 w-full'>
                     <CardContent>
                       <div className='flex flex-col items-center justify-center text-center'>
@@ -340,7 +351,7 @@ export default function Dashboard() {
                     )}
 
                     {/* Post comment stats (render only when available) */}
-                    {linkedInStats?.postCommentStats && (
+                    {postStats && (
                       <div className='grid gap-4 lg:grid-cols-3'>
                         <Card>
                           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -350,9 +361,7 @@ export default function Dashboard() {
                           </CardHeader>
                           <CardContent>
                             <div className='text-2xl font-bold'>
-                              {formatNumber(
-                                linkedInStats?.postCommentStats?.scheduled
-                              )}
+                              {formatNumber(scheduledCount)}
                             </div>
                           </CardContent>
                         </Card>
@@ -365,9 +374,7 @@ export default function Dashboard() {
                           </CardHeader>
                           <CardContent>
                             <div className='text-2xl font-bold'>
-                              {formatNumber(
-                                linkedInStats?.postCommentStats?.pending
-                              )}
+                              {formatNumber(pendingCount)}
                             </div>
                           </CardContent>
                         </Card>
@@ -380,25 +387,46 @@ export default function Dashboard() {
                           </CardHeader>
                           <CardContent>
                             <div className='text-2xl font-bold'>
-                              {formatNumber(
-                                linkedInStats?.postCommentStats?.completed
-                              )}
+                              {formatNumber(completedCount)}
                             </div>
                           </CardContent>
                         </Card>
                       </div>
                     )}
 
-                    {/* LinkedIn unavailable notice when only post stats exist */}
-                    {!linkedInStats?.followersStats &&
-                      !linkedInStats?.profileViewerStats &&
-                      linkedInStats?.postCommentStats && (
+                    {/* Growth stats missing: Pro gate vs. transient failure */}
+                    {!isLoadingLinkedInStats &&
+                      !linkedInStats?.followersStats &&
+                      !linkedInStats?.profileViewerStats && (
                         <Card className='w-full'>
                           <CardContent>
-                            <div className='text-muted-foreground flex items-center justify-center py-3 text-center text-sm'>
-                              We’re a little sad… we usually show your follower
-                              stats here, <br />
-                              but LinkedIn ghosted us this time 👻
+                            <div className='text-muted-foreground flex flex-col items-center justify-center gap-2 py-3 text-center text-sm'>
+                              {isGrowthPlanGated ? (
+                                <>
+                                  <span>
+                                    Follower and profile view analytics are part
+                                    of Pro.
+                                  </span>
+                                  <Button variant='outline' size='sm' asChild>
+                                    <Link
+                                      to='/plans'
+                                      onClick={() =>
+                                        posthog?.capture(
+                                          'upgrade_plan_growth_stats_clicked'
+                                        )
+                                      }
+                                    >
+                                      Upgrade to Pro
+                                    </Link>
+                                  </Button>
+                                </>
+                              ) : (
+                                <span>
+                                  We’re a little sad… we usually show your
+                                  follower stats here, but LinkedIn ghosted us
+                                  this time 👻
+                                </span>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
