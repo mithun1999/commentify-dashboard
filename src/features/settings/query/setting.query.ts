@@ -1,21 +1,29 @@
 import { AxiosError } from 'axios'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { showSubmittedData } from '@/utils/show-submitted-data'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 import {
   ICommentSettingPayload,
+  IRevertTargetingChangeResult,
   IScrapeSettingPayload,
+  ITargetingChange,
 } from '../interface/setting.interface'
 import {
   createCommentSetting,
   createOrUpdateTwitterCommentSetting,
   createOrUpdateTwitterScrapeSetting,
   createScrapeSetting,
+  getTargetingChanges,
+  revertTargetingChange,
   updateCommentSetting,
   updateMonitoredProfiles,
   updateScrapeSetting,
 } from '../types/setting.api'
+
+export enum SettingQueryEnum {
+  GET_TARGETING_CHANGES = 'get-targeting-changes',
+}
 
 type UserPlan = 'starter' | 'pro' | 'premium'
 
@@ -222,4 +230,67 @@ export const useTwitterCommentSettingQuery = () => {
   })
 
   return { saveTwitterCommentSetting: mutate, isSavingTwitterCommentSetting: isPending }
+}
+
+/**
+ * What Commentify changed on this profile's behalf.
+ *
+ * Errors are swallowed rather than toasted. The endpoint 404s for a profile
+ * with no setting document yet, which is an ordinary state for a new signup,
+ * and an error toast on opening the settings page would be alarming and wrong.
+ * An empty history and an unreachable history both render nothing.
+ */
+export const useTargetingChangesQuery = (profileId?: string) => {
+  const { data, isLoading } = useQuery<ITargetingChange[]>({
+    queryKey: [SettingQueryEnum.GET_TARGETING_CHANGES, profileId],
+    queryFn: () => getTargetingChanges(profileId as string),
+    enabled: Boolean(profileId),
+    retry: false,
+  })
+
+  return { targetingChanges: data ?? [], isLoadingTargetingChanges: isLoading }
+}
+
+export const useRevertTargetingChangeQuery = () => {
+  const queryClient = useQueryClient()
+  const { mutate, isPending } = useMutation<
+    IRevertTargetingChangeResult,
+    AxiosError<{ message?: string }>,
+    { profileId: string; changeId: string }
+  >({
+    mutationFn: revertTargetingChange,
+    onSuccess: (result) => {
+      // A partial undo has to say so. Fields the customer edited after the
+      // change are left as they set them, and reporting "restored" for those
+      // would tell them their settings went back when they did not.
+      if (result?.skipped?.length) {
+        toast.warning(
+          `Restored your earlier settings, except ${result.skipped.length} ` +
+            `field(s) you have changed since — those were left as you set them.`
+        )
+      } else {
+        showSubmittedData('Your earlier targeting settings are back')
+      }
+      queryClient.invalidateQueries({
+        queryKey: [SettingQueryEnum.GET_TARGETING_CHANGES],
+        refetchType: 'active',
+      })
+      queryClient.invalidateQueries({
+        queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
+        refetchType: 'active',
+      })
+    },
+    onError: (error) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Something went wrong while undoing that change'
+      )
+    },
+  })
+
+  return {
+    revertTargetingChange: mutate,
+    isRevertingTargetingChange: isPending,
+  }
 }
