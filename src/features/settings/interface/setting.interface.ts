@@ -7,6 +7,35 @@ export type AgentMode = 'branding' | 'sales'
 export type PitchIntensity = 'subtle' | 'moderate' | 'direct'
 export type MatchMode = 'strict' | 'flexible'
 
+/**
+ * A targeting change Commentify made on the customer's behalf.
+ *
+ * Written when an under-delivering agent is corrected without waiting for the
+ * customer to notice. `changed` is keyed by scrape-setting field, so the UI can
+ * show exactly what moved rather than telling someone their settings are
+ * different and leaving them to diff it.
+ */
+export interface ITargetingChange {
+  id: string
+  at: string
+  actor: string
+  reason: string
+  changed: Record<string, { from: unknown; to: unknown }>
+  revertedAt?: string
+  revertedBy?: string
+}
+
+/**
+ * `skipped` holds fields the customer has edited since the change, which an
+ * undo deliberately leaves alone — overwriting a later choice of theirs would
+ * be a second unrequested change.
+ */
+export interface IRevertTargetingChangeResult {
+  restored: string[]
+  cleared: string[]
+  skipped: string[]
+}
+
 export interface ISalesSetting {
   websiteUrl: string
   productDescription: string

@@ -1,7 +1,9 @@
 import { axiosInstance } from '@/utils/axios.util'
 import {
   ICommentSettingPayload,
+  IRevertTargetingChangeResult,
   IScrapeSettingPayload,
+  ITargetingChange,
 } from '../interface/setting.interface'
 
 export async function createScrapeSetting(
@@ -96,4 +98,23 @@ export async function createOrUpdateTwitterCommentSetting(payload: {
     data: payload,
   })
   return data
+}
+
+export async function getTargetingChanges(profileId: string) {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/setting/targeting-changes/${profileId}`,
+  })
+  return data as ITargetingChange[]
+}
+
+export async function revertTargetingChange(payload: {
+  profileId: string
+  changeId: string
+}) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/setting/targeting-changes/${payload.profileId}/revert/${payload.changeId}`,
+  })
+  return data as IRevertTargetingChangeResult
 }

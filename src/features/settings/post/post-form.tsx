@@ -66,6 +66,7 @@ import {
 import { useValidateOnboardingKeywords } from '@/features/onboarding/query/onboarding.query'
 import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { TargetingChangedBanner } from '../components/targeting-changed-banner'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 import {
   MonitoredProfiles,
@@ -396,6 +397,8 @@ export function PostForm() {
         onSubmit={form.handleSubmit(handleSubmitForm)}
         className='space-y-8'
       >
+        <TargetingChangedBanner profileId={activeProfile?._id} />
+
         {/* Keywords Section */}
         <div className='mb-8'>
           <div className='mb-4 flex items-center gap-x-6'>
