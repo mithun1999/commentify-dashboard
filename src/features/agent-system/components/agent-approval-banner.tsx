@@ -12,8 +12,8 @@ import {
 // LIVE query on the tagged posts, so it disappears once they're approved.
 //
 // Onboarding-preview drafts are counted separately and take precedence. They
-// are older, they were written before the card went on, and the user was told
-// they would wait in the queue - so the explanation they need is different.
+// were written before the card went on and the user was told they would wait
+// in the queue, so the explanation they need is different.
 export function AgentApprovalBanner({
   profileId,
   queueHref,
@@ -33,13 +33,11 @@ export function AgentApprovalBanner({
       <Banner
         queueHref={queueHref}
         title={`${previewCount} ${one ? 'comment' : 'comments'} from your setup, ready to publish`}
-        cta={one ? 'Review it' : 'Review them'}
+        cta={one ? 'Approve it' : 'Approve them'}
       >
-        Your agent wrote {one ? 'this' : 'these'} while you were setting up, but
-        could not publish {one ? 'it' : 'them'} until your trial started. Now it
-        has. Have a read and publish the {one ? 'one' : 'ones'} you like - some
-        may be on older posts, so it is worth a look before {one ? 'it goes' : 'they go'}{' '}
-        out.
+        Your agent wrote {one ? 'this comment' : 'these comments'} while you
+        were setting up. Approve {one ? 'it' : 'them'} to make{' '}
+        {one ? 'it' : 'them'} live.
       </Banner>
     )
   }
