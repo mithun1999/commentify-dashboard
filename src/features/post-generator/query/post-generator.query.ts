@@ -18,7 +18,7 @@ import {
   publishPost,
   reschedulePost,
   scheduleAll,
-  getCalendarHistory,
+  getPostTimeline,
   startOnboarding,
   updateAgentTypes,
   getOnboardingStatus,
@@ -58,7 +58,7 @@ export enum PostGeneratorQueryEnum {
   GET_CURRENT_CALENDAR = 'post-gen-current-calendar',
   GET_ACTIVE_CALENDARS = 'post-gen-active-calendars',
   GET_CALENDAR = 'post-gen-calendar',
-  GET_CALENDAR_HISTORY = 'post-gen-calendar-history',
+  GET_POST_TIMELINE = 'post-gen-post-timeline',
   ONBOARDING_STATUS = 'post-gen-onboarding-status',
   CREATORS = 'post-gen-creators',
   POSTING_PREFERENCES = 'post-gen-preferences',
@@ -83,11 +83,20 @@ export const useCalendar = (calendarId: string | undefined) => {
   })
 }
 
-export const useCalendarHistory = (profileId: string | undefined) => {
+/**
+ * Keyed on the window so paging back through months is cached per month
+ * rather than refetching the one the user just left.
+ */
+export const usePostTimeline = (
+  profileId: string | undefined,
+  from: string,
+  to: string
+) => {
   return useQuery({
-    queryKey: [PostGeneratorQueryEnum.GET_CALENDAR_HISTORY, profileId],
+    queryKey: [PostGeneratorQueryEnum.GET_POST_TIMELINE, profileId, from, to],
     enabled: Boolean(profileId),
-    queryFn: () => getCalendarHistory(profileId!),
+    queryFn: () => getPostTimeline(profileId!, from, to),
+    placeholderData: (prev) => prev,
   })
 }
 
@@ -275,7 +284,7 @@ export const useCreateManualPost = () => {
       })
       queryClient.invalidateQueries({
         queryKey: [
-          PostGeneratorQueryEnum.GET_CALENDAR_HISTORY,
+          PostGeneratorQueryEnum.GET_POST_TIMELINE,
           payload.profileId,
         ],
       })

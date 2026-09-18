@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo } from 'react'
-import { Link, useLocation, useNavigate } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { IconArrowLeft, IconClock } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,9 +28,11 @@ const COMMENTING_TABS = [
   { value: 'settings', label: 'Settings' },
 ]
 
+// "Upcoming" is the week view you act on; "Calendar" is every post ever
+// generated. Naming both "Calendar" would make the split unreadable.
 const POSTING_TABS = [
-  { value: 'calendar', label: 'Calendar' },
-  { value: 'history', label: 'History' },
+  { value: 'calendar', label: 'Upcoming' },
+  { value: 'history', label: 'Calendar' },
   { value: 'settings', label: 'Settings' },
 ]
 
@@ -81,6 +83,11 @@ export function AgentLayout({ children }: { children: ReactNode }) {
   const { agent, profile, agentTypeDef } = useCurrentAgent()
   const location = useLocation()
   const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as {
+    calendarId?: string
+    month?: string
+    week?: number
+  }
 
   const isPostingAgent = agent?.type === 'linkedin-posting'
   const { data: onboardingStatus, isLoading: isLoadingOnboarding } =
@@ -169,12 +176,22 @@ export function AgentLayout({ children }: { children: ReactNode }) {
   }
 
   if (isPostDetailPage) {
+    // A `calendarId` in the URL means the all-time calendar linked here, and
+    // the week view it would otherwise return to may not hold this post. The
+    // month/week ride back too, so the user lands where they left.
+    const postBackPath = search.calendarId
+      ? `${basePath}/history`
+      : `${basePath}/calendar`
+    const postBackSearch = search.calendarId
+      ? { month: search.month }
+      : { week: search.week }
+
     return (
       <>
         <Header fixed>
           <div className='flex items-center gap-3'>
             <Button variant='ghost' size='icon' asChild>
-              <Link to={`${basePath}/calendar` as string}>
+              <Link to={postBackPath as string} search={postBackSearch}>
                 <IconArrowLeft className='size-4' />
               </Link>
             </Button>
