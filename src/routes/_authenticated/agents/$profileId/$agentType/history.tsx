@@ -1,8 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { CalendarHistory } from '@/features/post-generator/components/calendar-history'
+import { z } from 'zod'
+import { PostCalendarGrid } from '@/features/post-generator/components/post-calendar-grid'
+
+// `month` is the visible month as `YYYY-MM`. Persisted in the URL so the
+// selection survives navigating to a post detail and back.
+const searchSchema = z.object({
+  month: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .optional(),
+})
 
 export const Route = createFileRoute(
   '/_authenticated/agents/$profileId/$agentType/history'
 )({
-  component: CalendarHistory,
+  validateSearch: searchSchema,
+  component: PostCalendarGrid,
 })

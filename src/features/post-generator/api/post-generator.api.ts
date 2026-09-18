@@ -185,12 +185,44 @@ export async function scheduleAll(calendarId: string) {
   return data
 }
 
-export async function getCalendarHistory(profileId: string) {
+export interface TimelinePost {
+  _id: string
+  calendarId: string
+  status: string
+  /** The day the post belongs to. Slot time, not the real publish instant. */
+  date: string
+  scheduledAt: string | null
+  scheduledTime: string | null
+  publishedAt: string | null
+  topic: string | null
+  pillar: string | null
+  hook: string
+  charCount: number
+  hasMedia: boolean
+  mediaKind: 'image' | 'pdf' | null
+  overallScore: number | null
+  publishedActivityUrn: string | null
+  generationWarning: string | null
+}
+
+interface PostTimeline {
+  /** IANA zone the posts were scheduled in — days must be bucketed in it. */
+  timezone: string
+  range: { from: string; to: string }
+  posts: TimelinePost[]
+}
+
+export async function getPostTimeline(
+  profileId: string,
+  from: string,
+  to: string
+) {
   const { data } = await axiosInstance({
     method: 'GET',
-    url: `/post-generator/calendar/history/${profileId}`,
+    url: `/post-generator/posts/timeline/${profileId}`,
+    params: { from, to },
   })
-  return data
+  return data as PostTimeline
 }
 
 export type ComposerOutputType =

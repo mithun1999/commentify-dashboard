@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { format } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
-import { useParams, useNavigate } from '@tanstack/react-router'
+import { useParams, useNavigate, useSearch } from '@tanstack/react-router'
 import {
   IconAlertTriangle,
   IconArrowBackUp,
@@ -51,6 +51,7 @@ import { Textarea } from '@/components/ui/textarea'
 import type { CarouselPayload, PostMedia } from '../api/post-generator.api'
 import {
   useActiveCalendars,
+  useCalendar,
   useApprovePost,
   useUnapprovePost,
   useCalendarStream,
@@ -131,14 +132,23 @@ export function PostEditorPage() {
     postId: string
   }
   const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as { calendarId?: string }
   const { data: weeks } = useActiveCalendars(profileId)
 
   const weekList = (weeks as any[]) ?? []
   const matchedWeek = weekList.find((w: any) =>
     w.posts?.some((p: any) => p._id === postId)
   )
-  const calendar = matchedWeek?.calendar
-  const posts: any[] = matchedWeek?.posts ?? []
+
+  // Active weeks start at `now - 7 days`, so a post the all-time calendar
+  // links to can be outside them entirely. Those links carry the calendar id,
+  // which is enough to load the week directly.
+  const { data: linkedCalendar } = useCalendar(
+    matchedWeek ? undefined : search.calendarId
+  )
+
+  const calendar = matchedWeek?.calendar ?? linkedCalendar?.calendar
+  const posts: any[] = matchedWeek?.posts ?? linkedCalendar?.posts ?? []
   const post = posts.find((p: any) => p._id === postId)
   const postIndex = posts.findIndex((p: any) => p._id === postId)
 
@@ -460,9 +470,13 @@ export function PostEditorPage() {
     else if (suggestion.suggestion === 'pdf') handleAttachClick('pdf')
   }, [suggestion])
 
+  // A `calendarId` in the URL means the all-time calendar sent us here, so
+  // that is where back belongs — the week view may not even contain this post.
   const goBack = () => {
     navigate({
-      to: `/agents/$profileId/$agentType/calendar` as any,
+      to: search.calendarId
+        ? (`/agents/$profileId/$agentType/history` as any)
+        : (`/agents/$profileId/$agentType/calendar` as any),
     })
   }
 
@@ -470,6 +484,8 @@ export function PostEditorPage() {
     navigate({
       to: `/agents/$profileId/$agentType/post/$postId` as any,
       params: { postId: id },
+      // Paging to a sibling in the same week has to keep resolving it.
+      search: (prev: any) => prev,
     } as any)
   }
 
