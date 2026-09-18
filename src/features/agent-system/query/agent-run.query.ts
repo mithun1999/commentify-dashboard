@@ -24,7 +24,11 @@ export function useGetAgentRunStatus(profileId?: string, platform?: string) {
 
 export function usePendingApprovalCount(profileId?: string) {
   return useQuery({
-    queryKey: [AgentRunQueryEnum.PENDING_APPROVAL_COUNT, profileId],
+    queryKey: [
+      AgentRunQueryEnum.PENDING_APPROVAL_COUNT,
+      profileId,
+      ApprovalReasonEnum.KEYWORD_BROADENING,
+    ],
     enabled: Boolean(profileId),
     staleTime: 60 * 1000,
     queryFn: async () => {
@@ -32,6 +36,31 @@ export function usePendingApprovalCount(profileId?: string) {
       return getPendingApprovalCount(
         profileId,
         ApprovalReasonEnum.KEYWORD_BROADENING
+      )
+    },
+  })
+}
+
+/**
+ * Comments the agent wrote during signup. They could not be published then -
+ * the free preview allows zero - and the copy at that point promises they stay
+ * in the queue until a trial starts, so something has to point back at them
+ * once one has.
+ */
+export function useOnboardingPreviewCount(profileId?: string) {
+  return useQuery({
+    queryKey: [
+      AgentRunQueryEnum.PENDING_APPROVAL_COUNT,
+      profileId,
+      ApprovalReasonEnum.ONBOARDING_PREVIEW,
+    ],
+    enabled: Boolean(profileId),
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      if (!profileId) return { count: 0 }
+      return getPendingApprovalCount(
+        profileId,
+        ApprovalReasonEnum.ONBOARDING_PREVIEW
       )
     },
   })

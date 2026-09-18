@@ -1,4 +1,5 @@
 import { IProfile } from '@/features/users/interface/profile.interface'
+import { ApprovalReasonEnum } from '@/features/agent-system/enum/agent-run.enum'
 import { CommentStatusEnum } from '../enum/comment.enum'
 
 export type IntentSignal =
@@ -39,4 +40,6 @@ export interface IPostComment {
   scheduledAt: Date
   postedAt: Date
   status: CommentStatusEnum
+  /** Absent on comments the agent drafted on its normal daily run. */
+  approvalReason?: ApprovalReasonEnum
 }
