@@ -11,6 +11,7 @@ import {
   useAgentDeletePosts,
 } from '../hooks/use-agent-posts'
 import { useCurrentAgent } from '../hooks/use-current-agent'
+import { ApprovalReasonEnum } from '../enum/agent-run.enum'
 import { useHistoryStore } from '@/features/history/store/history.store'
 import { Button } from '@/components/ui/button'
 import type { IPost } from '@/features/history/interface/post.interface'
@@ -99,16 +100,33 @@ export function AgentQueue() {
   const selectedCount = Object.values(rowSelection).filter(Boolean).length
   const hasSelection = selectedCount > 0
 
+  // Onboarding-preview drafts are excluded from the blanket approve. The
+  // preview searches all of LinkedIn rather than the current day to find a
+  // good example, so these can sit on posts that are weeks or months old, and
+  // publishing one of those unread reads worse than not commenting at all.
+  // Selecting a row is an explicit choice and is still honoured - this only
+  // removes them from the sweep nobody chose row by row.
+  const approvableRows = useMemo(() => {
+    if (hasSelection) return getSelectedRows()
+    return (tableData as IPost[]).filter(
+      (row) =>
+        row.comment?.approvalReason !== ApprovalReasonEnum.ONBOARDING_PREVIEW
+    )
+  }, [hasSelection, getSelectedRows, tableData])
+
+  const heldBackCount = hasSelection
+    ? 0
+    : (tableData as IPost[]).length - approvableRows.length
+
   const handleApprove = useCallback(() => {
-    const rows = getTargetRows()
-    const posts = rows.map(({ activityUrn, profileId }) => ({
+    const posts = approvableRows.map(({ activityUrn, profileId }) => ({
       activityUrn,
       profileId,
     }))
     if (posts.length > 0) {
       approvePosts({ posts })
     }
-  }, [getTargetRows, approvePosts])
+  }, [approvableRows, approvePosts])
 
   const handleDelete = useCallback(() => {
     const rows = getTargetRows()
@@ -147,17 +165,21 @@ export function AgentQueue() {
       </div>
       {status === 'pending' && tableData.length > 0 && (
         <div className='mb-4 flex items-center gap-2'>
-          <Button
-            size='sm'
-            disabled={isApprovingPosts}
-            onClick={handleApprove}
-          >
-            {isApprovingPosts
-              ? 'Approving…'
-              : hasSelection
-                ? `Approve Selected (${selectedCount})`
-                : 'Approve All'}
-          </Button>
+          {/* Straight after onboarding the queue is nothing but held-back
+              drafts, so a bulk approve has nothing to act on. Offering a
+              disabled one reads as a broken page at the worst moment - the
+              row checkboxes are the action here. */}
+          {approvableRows.length > 0 && (
+            <Button size='sm' disabled={isApprovingPosts} onClick={handleApprove}>
+              {isApprovingPosts
+                ? 'Approving…'
+                : hasSelection
+                  ? `Approve Selected (${selectedCount})`
+                  : heldBackCount > 0
+                    ? `Approve All (${approvableRows.length})`
+                    : 'Approve All'}
+            </Button>
+          )}
           <Button
             size='sm'
             variant='destructive'
@@ -170,11 +192,17 @@ export function AgentQueue() {
                 ? `Delete Selected (${selectedCount})`
                 : 'Delete All'}
           </Button>
-          {hasSelection && (
+          {hasSelection ? (
             <span className='text-muted-foreground text-sm'>
               {selectedCount} of {tableData.length} selected
             </span>
-          )}
+          ) : heldBackCount > 0 ? (
+            <span className='text-muted-foreground text-sm'>
+              {approvableRows.length > 0
+                ? `${heldBackCount} from your setup ${heldBackCount === 1 ? 'is' : 'are'} excluded - tick ${heldBackCount === 1 ? 'it' : 'them'} to publish`
+                : `Tick the ${heldBackCount === 1 ? 'one' : 'ones'} you want to publish`}
+            </span>
+          ) : null}
           <ConfirmDialog
             open={isDeleteConfirmOpen}
             onOpenChange={setIsDeleteConfirmOpen}

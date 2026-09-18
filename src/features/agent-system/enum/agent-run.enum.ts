@@ -14,4 +14,11 @@ export enum ShortfallReasonEnum {
 
 export enum ApprovalReasonEnum {
   KEYWORD_BROADENING = 'keyword-broadening',
+  /**
+   * Written during signup, before there was a card on file. The preview
+   * searches all of LinkedIn rather than the current day to find the best
+   * example, so these can sit on posts that are weeks or months old - they
+   * are safe to show, but not to publish in bulk unread.
+   */
+  ONBOARDING_PREVIEW = 'onboarding-preview',
 }

@@ -1,6 +1,8 @@
 import { format } from 'date-fns'
 import { ColumnDef } from '@tanstack/react-table'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
+import { ApprovalReasonEnum } from '@/features/agent-system/enum/agent-run.enum'
 import { IPost } from '../interface/post.interface'
 import { DataTableColumnHeader } from './data-table-column-header'
 import { DataTableRowActions } from './data-table-row-actions'
@@ -75,9 +77,20 @@ export function getPostColumns(_status: 'pending' | 'completed') {
       ),
       accessorFn: (row) => row.comment?.content ?? '',
       cell: ({ row }) => (
-        <span className='line-clamp-2 max-w-[32rem] break-words'>
-          {row.original.comment?.content ?? '--'}
-        </span>
+        <div className='max-w-[32rem]'>
+          {row.original.comment?.approvalReason ===
+            ApprovalReasonEnum.ONBOARDING_PREVIEW && (
+            // These were written during signup and held, so they are older
+            // than the rest of the queue and need saying so - the post may
+            // have moved on since.
+            <Badge variant='secondary' className='mb-1'>
+              From your setup
+            </Badge>
+          )}
+          <span className='line-clamp-2 break-words'>
+            {row.original.comment?.content ?? '--'}
+          </span>
+        </div>
       ),
     },
     {

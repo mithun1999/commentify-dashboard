@@ -58,6 +58,8 @@ import {
 } from '@/stores/onboarding.store'
 import { useProfileStore } from '@/stores/profile.store'
 import { getAgentTypeFor } from '@/features/agent-system/registry'
+import { getPendingApprovalCount } from '@/features/agent-system/api/agent-run.api'
+import { ApprovalReasonEnum } from '@/features/agent-system/enum/agent-run.enum'
 import { OnboardingCard } from '../onboarding-card'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 
@@ -174,17 +176,24 @@ function formatCents(cents: number, symbol: string) {
  * Post-capability users land on their content calendar rather than the comment
  * hub: the draft written during onboarding is sitting there waiting to be
  * scheduled, and sending them to the hub buries it two clicks deep.
+ *
+ * Comment-capability users get the same treatment for the same reason. The
+ * preview writes about three comments that could not be published at the time,
+ * because the free allowance is zero, and the refusal they saw promises they
+ * stay in the queue until a trial starts. This is that trial starting, so the
+ * queue is where they should land - the hub does not mention those drafts at
+ * all. Gated on the count because a preview that never ran would otherwise
+ * drop them onto an empty page.
  */
 function useAfterTrialNavigate() {
   const navigate = useNavigate()
   const { data: onboardingData } = useOnboarding()
   const activeProfile = useProfileStore((s) => s.activeProfile)
 
-  return useCallback(() => {
+  return useCallback(async () => {
     const profileId = onboardingData.linkedProfileId ?? activeProfile?._id
-    const wantsPost = (onboardingData.selectedCapabilities ?? []).includes(
-      'post'
-    )
+    const capabilities = onboardingData.selectedCapabilities ?? []
+    const wantsPost = capabilities.includes('post')
     const agentType = getAgentTypeFor('linkedin', 'post')?.slug
 
     if (wantsPost && profileId && agentType) {
@@ -194,6 +203,23 @@ function useAfterTrialNavigate() {
       })
       return
     }
+
+    const commentAgentType = getAgentTypeFor('linkedin', 'comment')?.slug
+    if (capabilities.includes('comment') && profileId && commentAgentType) {
+      const pending = await getPendingApprovalCount(
+        profileId,
+        ApprovalReasonEnum.ONBOARDING_PREVIEW
+      ).catch(() => ({ count: 0 }))
+
+      if (pending.count > 0) {
+        void navigate({
+          to: '/agents/$profileId/$agentType/queue',
+          params: { profileId, agentType: commentAgentType },
+        })
+        return
+      }
+    }
+
     void navigate({ to: '/' })
   }, [
     navigate,
@@ -477,7 +503,7 @@ export function ActivateTrialStep() {
 
   if (user?.status && user.status !== UserSubscriptionStatus.PENDING) {
     if (checkoutState !== 'success' && !isExistingSubscriber) {
-      afterTrialNavigate()
+      void afterTrialNavigate()
     }
   }
 
