@@ -132,7 +132,11 @@ export function PostEditorPage() {
     postId: string
   }
   const navigate = useNavigate()
-  const search = useSearch({ strict: false }) as { calendarId?: string }
+  const search = useSearch({ strict: false }) as {
+    calendarId?: string
+    month?: string
+    week?: number
+  }
   const { data: weeks } = useActiveCalendars(profileId)
 
   const weekList = (weeks as any[]) ?? []
@@ -472,12 +476,20 @@ export function PostEditorPage() {
 
   // A `calendarId` in the URL means the all-time calendar sent us here, so
   // that is where back belongs — the week view may not even contain this post.
+  // Either way the view state rides back with us, so the user returns to the
+  // month or week they left rather than to today.
   const goBack = () => {
+    if (search.calendarId) {
+      navigate({
+        to: `/agents/$profileId/$agentType/history` as any,
+        search: { month: search.month },
+      } as any)
+      return
+    }
     navigate({
-      to: search.calendarId
-        ? (`/agents/$profileId/$agentType/history` as any)
-        : (`/agents/$profileId/$agentType/calendar` as any),
-    })
+      to: `/agents/$profileId/$agentType/calendar` as any,
+      search: { week: search.week },
+    } as any)
   }
 
   const goToPost = (id: string) => {

@@ -435,6 +435,8 @@ export function CalendarView() {
                         navigate({
                           to: '/agents/$profileId/$agentType/post/$postId',
                           params: { profileId, agentType, postId: post._id },
+                          // What the back button returns to.
+                          search: { week: activeWeekIndex },
                         } as any)
                       }
                     />

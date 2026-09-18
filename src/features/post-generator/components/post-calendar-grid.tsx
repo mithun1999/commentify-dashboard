@@ -112,8 +112,9 @@ export function PostCalendarGrid() {
       to: '/agents/$profileId/$agentType/post/$postId',
       params: { profileId, agentType, postId: post._id },
       // The editor resolves the post from the active-week window, which does
-      // not reach back this far — hand it the calendar directly.
-      search: { calendarId: post.calendarId },
+      // not reach back this far — hand it the calendar directly. `month` is
+      // what the back button returns to.
+      search: { calendarId: post.calendarId, month: monthKey },
     })
   }
 

@@ -83,7 +83,11 @@ export function AgentLayout({ children }: { children: ReactNode }) {
   const { agent, profile, agentTypeDef } = useCurrentAgent()
   const location = useLocation()
   const navigate = useNavigate()
-  const search = useSearch({ strict: false }) as { calendarId?: string }
+  const search = useSearch({ strict: false }) as {
+    calendarId?: string
+    month?: string
+    week?: number
+  }
 
   const isPostingAgent = agent?.type === 'linkedin-posting'
   const { data: onboardingStatus, isLoading: isLoadingOnboarding } =
@@ -173,17 +177,21 @@ export function AgentLayout({ children }: { children: ReactNode }) {
 
   if (isPostDetailPage) {
     // A `calendarId` in the URL means the all-time calendar linked here, and
-    // the week view it would otherwise return to may not hold this post.
+    // the week view it would otherwise return to may not hold this post. The
+    // month/week ride back too, so the user lands where they left.
     const postBackPath = search.calendarId
       ? `${basePath}/history`
       : `${basePath}/calendar`
+    const postBackSearch = search.calendarId
+      ? { month: search.month }
+      : { week: search.week }
 
     return (
       <>
         <Header fixed>
           <div className='flex items-center gap-3'>
             <Button variant='ghost' size='icon' asChild>
-              <Link to={postBackPath as string}>
+              <Link to={postBackPath as string} search={postBackSearch}>
                 <IconArrowLeft className='size-4' />
               </Link>
             </Button>
