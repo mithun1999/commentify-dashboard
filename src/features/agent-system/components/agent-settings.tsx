@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useCurrentAgent } from '../hooks/use-current-agent'
+import { AgentDangerZone } from './agent-danger-zone'
 import { SalesSettingsForm } from '@/features/linkedin-sales/components/sales-settings-form'
 import { useSwitchAgentMode } from '@/features/linkedin-sales/query/sales.query'
 import type { AgentMode } from '../types/agent.types'
@@ -143,6 +144,8 @@ export function AgentSettings() {
           <CommentComponent profileId={agent.profileId} />
         </TabsContent>
       </Tabs>
+
+      <AgentDangerZone profile={profile ?? null} />
 
       <AlertDialog
         open={!!pendingMode}

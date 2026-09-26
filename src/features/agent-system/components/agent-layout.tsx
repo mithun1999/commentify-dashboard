@@ -7,7 +7,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
+import ProfileListError from '@/components/profile-list-error'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { getReadableErrorMessage } from '@/lib/connection-recovery'
 import { useCurrentAgent } from '../hooks/use-current-agent'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { AgentPauseButton } from './agent-pause-button'
@@ -80,7 +82,8 @@ function statusVariant(
 }
 
 export function AgentLayout({ children }: { children: ReactNode }) {
-  const { agent, profile, agentTypeDef } = useCurrentAgent()
+  const { agent, profile, agentTypeDef, listState, listError, isFetching, refetch } =
+    useCurrentAgent()
   const location = useLocation()
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as {
@@ -104,12 +107,27 @@ export function AgentLayout({ children }: { children: ReactNode }) {
           </div>
         </Header>
         <Main>
-          <div className='flex flex-col items-center justify-center py-20'>
-            <p className='text-muted-foreground'>Agent not found.</p>
-            <Button asChild variant='link'>
-              <Link to='/'>Back to Agent Hub</Link>
-            </Button>
-          </div>
+          {listState === 'load-error' ? (
+            <ProfileListError
+              message={getReadableErrorMessage(
+                listError,
+                'Something went wrong while loading this agent.'
+              )}
+              onRetry={() => void refetch()}
+              isRetrying={isFetching}
+            />
+          ) : listState === 'loading' ? (
+            <div className='flex items-center justify-center py-20'>
+              <p className='text-muted-foreground'>Loading…</p>
+            </div>
+          ) : (
+            <div className='flex flex-col items-center justify-center py-20'>
+              <p className='text-muted-foreground'>Agent not found.</p>
+              <Button asChild variant='link'>
+                <Link to='/'>Back to Agent Hub</Link>
+              </Button>
+            </div>
+          )}
         </Main>
       </>
     )

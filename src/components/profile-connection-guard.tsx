@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback } from 'react'
 import { envConfig } from '@/config/env.config'
 import {
   Download,
@@ -11,7 +10,8 @@ import {
 } from 'lucide-react'
 import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
-import { detectExtension } from '@/lib/extension'
+import { describeExtensionState } from '@/lib/extension'
+import { useExtensionDetection } from '@/hooks/use-extension-detection'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -60,38 +60,24 @@ export function ProfileConnectionGuard() {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const { linkProfile, isLinkingProfile } = useLinkProfile()
 
-  const [extensionInstalled, setExtensionInstalled] = useState<boolean | null>(
-    null
-  )
-  const [isChecking, setIsChecking] = useState(false)
-
   const isDisconnected =
     activeProfile?.status === ProfileStatusEnum.ACTION_REQUIRED
 
-  const checkExtension = useCallback(async () => {
-    try {
-      setIsChecking(true)
-      const result = await detectExtension()
-      setExtensionInstalled(result.installed)
-    } catch {
-      setExtensionInstalled(false)
-    } finally {
-      setIsChecking(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isDisconnected) {
-      checkExtension()
-    }
-  }, [isDisconnected, checkExtension])
+  // Shared bounded detection: rechecks on demand and when the tab regains
+  // focus after the user installs or enables the extension.
+  const {
+    state: extensionState,
+    isChecking,
+    recheck: checkExtension,
+  } = useExtensionDetection({ enabled: Boolean(isDisconnected) })
+  const extensionInstalled =
+    extensionState.status === 'checking'
+      ? null
+      : extensionState.status === 'ready'
 
   const handleReconnect = async () => {
-    const { installed } = await detectExtension()
-    if (!installed) {
-      setExtensionInstalled(false)
-      return
-    }
+    const { installed } = await checkExtension()
+    if (!installed) return
     await linkProfile()
   }
 
@@ -123,13 +109,13 @@ export function ProfileConnectionGuard() {
         ) : showInstallSteps ? (
           <>
             <DialogHeader>
-              <DialogTitle>Extension Not Detected</DialogTitle>
+              <DialogTitle>We couldn't reach the Commentify extension</DialogTitle>
               <DialogDescription>
-                The Commentify Chrome extension is required to reconnect your
-                LinkedIn account.{' '}
+                {describeExtensionState(extensionState)} The extension is only
+                needed to reconnect; your other agents keep running.{' '}
                 {chromeExtensionAvailable
-                  ? 'Install it from the Chrome Web Store to continue.'
-                  : 'Follow these steps to install it.'}
+                  ? 'Install or enable it from the Chrome Web Store, then check again.'
+                  : 'Follow these steps to install it, then check again.'}
               </DialogDescription>
             </DialogHeader>
 

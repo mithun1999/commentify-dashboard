@@ -17,9 +17,12 @@ export function useExtensionGuard() {
 
     async function check() {
       try {
-        const { installed } = await detectExtension()
+        const { state } = await detectExtension()
 
-        if (!installed) {
+        // Only a definitive "not detected" after the bounded retry sends the
+        // user back a step. An unsupported browser is not something the
+        // extension step can fix, and a probe failure proves nothing.
+        if (state.status === 'not-detected') {
           updateData({ isExtensionInstalled: false })
           removeCompletedStep('extension')
           await updateOnboardingStatusAsync({

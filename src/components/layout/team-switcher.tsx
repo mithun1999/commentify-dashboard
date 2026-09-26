@@ -1,6 +1,6 @@
 // src/components/team-switcher.tsx
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { ChevronsUpDown, Plus, Trash2 } from 'lucide-react'
 // import { useAuthStore } from '@/stores/auth.store'
 import { useProfileStore } from '@/stores/profile.store'
@@ -25,18 +25,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { DisconnectAccountDialog } from '@/features/users/components/disconnect-account-dialog'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { IProfile } from '@/features/users/interface/profile.interface'
 import {
-  useDeleteProfile,
+  useGetAllProfileQuery,
   useLinkProfile,
 } from '@/features/users/query/profile.query'
-import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 
 export function TeamSwitcher() {
   const { isMobile } = useSidebar()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { data: profiles, isLoading } = useGetAllProfileQuery()
   const { data: user } = useGetUserQuery()
   const [isLinking, setIsLinking] = useState(false)
@@ -57,16 +58,15 @@ export function TeamSwitcher() {
     setIsLinking(false)
   }
 
-  const handleSuccessDeleteProfile = () => {
-    setActiveProfile(null)
-    window.location.reload()
+  // Cache and selection are cleaned up by the disconnect hook; the only thing
+  // left to decide here is whether the user is looking at the account that
+  // just went away.
+  const handleDisconnected = (_result: unknown, disconnected: IProfile) => {
+    setProfileToDelete(null)
+    if (location.pathname.startsWith(`/agents/${disconnected._id}`)) {
+      navigate({ to: '/' })
+    }
   }
-
-  const { deleteProfile, isDeletingProfile } = useDeleteProfile({
-    onSuccess: handleSuccessDeleteProfile,
-  })
-
-  // no-op
 
   if (isLoading) {
     return (
@@ -182,7 +182,7 @@ export function TeamSwitcher() {
                       setProfileToDelete(profile)
                       setIsConfirmOpen(true)
                     }}
-                    disabled={isDeletingProfile}
+                    aria-label={`Disconnect ${profile.firstName} ${profile.lastName}`}
                   >
                     <Trash2 className='size-4' />
                   </Button>
@@ -222,26 +222,14 @@ export function TeamSwitcher() {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
-      <ConfirmDialog
+      <DisconnectAccountDialog
+        profile={profileToDelete}
         open={isConfirmOpen}
         onOpenChange={(open) => {
           setIsConfirmOpen(open)
           if (!open) setProfileToDelete(null)
         }}
-        destructive
-        title='Delete profile'
-        desc={`Are you sure you want to delete ${profileToDelete ? `"${profileToDelete.firstName}" profile` : 'this profile'}? This action cannot be undone.`}
-        isLoading={isDeletingProfile}
-        handleConfirm={() => {
-          if (profileToDelete) {
-            if (activeProfile?._id === profileToDelete._id) {
-              setActiveProfile(null)
-            }
-            deleteProfile(profileToDelete._id)
-          }
-          setIsConfirmOpen(false)
-        }}
-        confirmText='Delete'
+        onDisconnected={handleDisconnected}
       />
     </SidebarMenu>
   )

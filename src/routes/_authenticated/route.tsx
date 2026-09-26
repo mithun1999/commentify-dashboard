@@ -16,6 +16,7 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import ConnectProfileCard from '@/components/connect-profile-card'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import MainLoader from '@/components/main-loader'
+import ProfileListError from '@/components/profile-list-error'
 import SkipToMain from '@/components/skip-to-main'
 import { TrialBanner } from '@/components/trial-banner'
 import useInitiatePosthog from '@/features/auth/hooks/useInitiatePosthog'
@@ -23,6 +24,8 @@ import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedire
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import GeneralError from '@/features/errors/general-error'
+import { getReadableErrorMessage } from '@/lib/connection-recovery'
+import { ReconnectAccountDialog } from '@/features/users/components/reconnect-account-dialog'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 
 export const Route = createFileRoute('/_authenticated')({
@@ -40,9 +43,11 @@ function RouteComponent() {
   const { data: user, isFetched, isLoading } = useGetUserQuery()
   // Preload user profiles and set default activeProfile globally
   const {
-    data: profiles,
     isLoading: isLoadingProfiles,
-    isFetched: isProfilesFetched,
+    listState: profileListState,
+    error: profilesError,
+    isFetching: isFetchingProfiles,
+    refetch: refetchProfiles,
   } = useGetAllProfileQuery()
   const activeProfile = useProfileStore((s) => s.activeProfile)
 
@@ -122,15 +127,27 @@ function RouteComponent() {
                 }
               />
             )}
-          {!isLoadingProfiles &&
-          isProfilesFetched &&
-          (!profiles || profiles.length === 0) &&
-          isCoreFeaturePage() ? (
+          {/*
+            Only a successful, empty response means "no accounts connected".
+            A failed initial read gets a retry, never the connect card; a
+            failed background refresh keeps the cached list on screen.
+          */}
+          {profileListState === 'load-error' && isCoreFeaturePage() ? (
+            <ProfileListError
+              message={getReadableErrorMessage(
+                profilesError,
+                'Something went wrong while loading your connected accounts.'
+              )}
+              onRetry={() => void refetchProfiles()}
+              isRetrying={isFetchingProfiles}
+            />
+          ) : profileListState === 'empty' && isCoreFeaturePage() ? (
             <ConnectProfileCard />
           ) : (
             <Outlet />
           )}
         </div>
+        <ReconnectAccountDialog />
       </SidebarProvider>
     </SearchProvider>
   )
