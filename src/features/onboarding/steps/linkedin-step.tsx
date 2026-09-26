@@ -288,8 +288,17 @@ export function LinkedInStep() {
 
       posthog?.capture(`onboarding_${platform}_link_success`)
     } catch (error) {
-      console.error('Error linking profile:', error)
       hasLinkedRef.current = false
+      // API failures are already surfaced by the link mutations' onError.
+      if (!(error as { response?: unknown })?.response) {
+        const detail =
+          typeof error === 'string' ? error : (error as Error)?.message
+        toast.error('Could not reach the Commentify extension', {
+          description:
+            detail ||
+            'Make sure the extension is installed and enabled, then try again.',
+        })
+      }
     } finally {
       setIsLinking(false)
     }
