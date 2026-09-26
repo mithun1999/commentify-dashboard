@@ -222,7 +222,7 @@ function LinkedInStatsView({
                     {formatNumber(weeklyFollowersValue)}
                   </div>
                   <p className='text-muted-foreground text-xs'>
-                    {formatPercent(weeklyFollowersPercent)} vs last week
+                    {formatPercent(weeklyFollowersPercent)} growth this week
                   </p>
                 </CardContent>
               </Card>

@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { IconBrandLinkedin, IconBrandX, IconPlus } from '@tabler/icons-react'
 import { toast } from 'sonner'
+import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,6 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { envConfig } from '@/config/env.config'
+import { detectExtension } from '@/lib/extension'
 import { cn } from '@/lib/utils'
 import {
   getAgentType,
@@ -66,6 +69,9 @@ export function AddAgentDialog({
   const { data: user } = useGetUserQuery()
   const { data: profiles } = useGetAllProfileQuery()
   const navigate = useNavigate()
+  const chromeExtensionAvailable = useFeatureFlagEnabled(
+    'chrome-extension-available'
+  )
 
   const { linkProfile, isLinkingProfile } = useLinkProfile(false)
   const { linkTwitterProfile, isLinkingTwitterProfile } = useLinkTwitterProfile(false)
@@ -134,6 +140,25 @@ export function AddAgentDialog({
     try {
       let profileId: string | undefined
       if (platform === 'twitter') {
+        // This dialog is usually the first thing on the page to talk to the
+        // extension, so the cached extension id is still empty and the message
+        // would go to the manual-install id. Web Store installs never answer
+        // that, and the rejection was only logged: the button did nothing.
+        const { installed } = await detectExtension()
+        if (!installed) {
+          toast.error('Commentify extension is not installed', {
+            description: chromeExtensionAvailable
+              ? 'Please install the extension from the Chrome Web Store.'
+              : 'Please install the Chrome extension to continue.',
+          })
+          window.open(
+            chromeExtensionAvailable
+              ? envConfig.chromeWebStoreUrl
+              : envConfig.extensionUrl,
+            '_blank'
+          )
+          return
+        }
         const details = await getTwitterProfileDetailsFromExtension()
         if (!details?.authToken) {
           toast.error('Please log in to X.com first, then try again.')
@@ -148,7 +173,15 @@ export function AddAgentDialog({
       }
       if (profileId) await activateAllAndNavigate(profileId)
     } catch (error) {
-      console.error('Error connecting profile:', error)
+      // API failures are already surfaced by the link mutations' onError.
+      if ((error as { response?: unknown })?.response) return
+      const detail =
+        typeof error === 'string' ? error : (error as Error)?.message
+      toast.error('Could not reach the Commentify extension', {
+        description:
+          detail ||
+          'Make sure the extension is installed and enabled, then try again.',
+      })
     } finally {
       setIsLinking(false)
     }
