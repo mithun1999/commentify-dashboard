@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
+import ProfileListError from '@/components/profile-list-error'
+import { getReadableErrorMessage } from '@/lib/connection-recovery'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
@@ -18,7 +20,8 @@ import { ComingSoonCards } from './components/coming-soon-card'
 import { EmptyState } from './components/empty-state'
 
 export default function AgentHub() {
-  const { agents, isLoading, profiles } = useAgents()
+  const { agents, isLoading, profiles, listState, error, isFetching, refetch } =
+    useAgents()
   const { data: user } = useGetUserQuery()
   const posthog = usePostHog()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -70,7 +73,18 @@ export default function AgentHub() {
         {/* Room for the docked composer, which floats over the bottom of the
             viewport and would otherwise sit on top of the last row of cards. */}
         <div className='pb-28'>
-          {!isLoading && agents.length === 0 ? (
+          {listState === 'load-error' ? (
+            <ProfileListError
+              message={getReadableErrorMessage(
+                error,
+                'Something went wrong while loading your agents.'
+              )}
+              onRetry={() => void refetch()}
+              isRetrying={isFetching}
+            />
+          ) : listState === 'empty' ? (
+            <EmptyState onAddAgent={() => openAddDialog()} />
+          ) : !isLoading && agents.length === 0 ? (
             <EmptyState onAddAgent={() => openAddDialog()} />
           ) : (
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>

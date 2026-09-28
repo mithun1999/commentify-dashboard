@@ -94,10 +94,13 @@ export function ExtensionStep() {
   const hasCheckedOnMount = useRef(false)
   const [copiedAction, setCopiedAction] = useState<string | null>(null)
 
+  const [lastCheckFailed, setLastCheckFailed] = useState(false)
+
   const checkExtensionInstallation = async () => {
     try {
       setIsChecking(true)
       const { installed } = await detectExtension()
+      setLastCheckFailed(!installed)
 
       if (installed) {
         posthog?.capture('onboarding_extension_installed')
@@ -127,6 +130,17 @@ export function ExtensionStep() {
     hasCheckedOnMount.current = true
     checkExtensionInstallation()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The user installs in another tab and comes back: detect it without
+  // making them find the button.
+  useEffect(() => {
+    if (isInstalled) return
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') checkExtensionInstallation()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [isInstalled]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDownload = () => {
     posthog?.capture('onboarding_extension_download_clicked')
@@ -178,6 +192,12 @@ export function ExtensionStep() {
 
           {!isInstalled ? (
             <div className='w-full max-w-xs space-y-3 text-center'>
+              {lastCheckFailed && !isChecking && (
+                <p className='text-muted-foreground text-sm' role='status'>
+                  We couldn't reach the Commentify extension. If it's already
+                  installed, make sure it's enabled, then check again.
+                </p>
+              )}
               {chromeExtensionAvailable ? (
                 <Button
                   className='w-full transition-all hover:shadow-md active:scale-95'

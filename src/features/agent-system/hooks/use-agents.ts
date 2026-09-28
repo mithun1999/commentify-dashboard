@@ -44,7 +44,15 @@ export function deriveAgentFromProfile(profile: IProfile, overrideType?: string)
 }
 
 export function useAgents() {
-  const { data: profiles, isLoading, isFetched } = useGetAllProfileQuery()
+  const {
+    data: profiles,
+    isLoading,
+    isFetched,
+    listState,
+    error,
+    isFetching,
+    refetch,
+  } = useGetAllProfileQuery()
 
   const agents = useMemo(() => {
     if (!profiles) return []
@@ -61,5 +69,15 @@ export function useAgents() {
     return result
   }, [profiles])
 
-  return { agents, isLoading, isFetched, profiles }
+  return {
+    agents,
+    isLoading,
+    isFetched,
+    profiles,
+    // A failed initial read is not "no agents": callers render a retry.
+    listState,
+    error,
+    isFetching,
+    refetch,
+  }
 }

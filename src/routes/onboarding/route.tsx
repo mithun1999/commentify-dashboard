@@ -6,6 +6,7 @@ import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedire
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import GeneralError from '@/features/errors/general-error'
 import { OnboardingLayout } from '@/features/onboarding/onboarding-layout'
+import { ReconnectAccountDialog } from '@/features/users/components/reconnect-account-dialog'
 
 export const Route = createFileRoute('/onboarding')({
   component: RouteComponent,
@@ -40,6 +41,7 @@ function RouteComponent() {
   return (
     <OnboardingLayout>
       <Outlet />
+      <ReconnectAccountDialog />
     </OnboardingLayout>
   )
 }

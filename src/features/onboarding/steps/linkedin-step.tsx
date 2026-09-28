@@ -8,8 +8,11 @@ import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { useOnboarding } from '@/stores/onboarding.store'
 import { useProfileStore } from '@/stores/profile.store'
-import { detectExtension } from '@/lib/extension'
-import { getProfileDetailsFromExtension } from '@/lib/utils'
+import {
+  detectExtension,
+  getProfileDetailsFromExtension,
+  type ExtensionState,
+} from '@/lib/extension'
 import { getAgentType, getAgentTypeFor } from '@/features/agent-system/registry'
 import { updateAgentTypes } from '@/features/post-generator/api/post-generator.api'
 import {
@@ -92,7 +95,11 @@ export function LinkedInStep() {
   const { linkTwitterProfile, isLinkingTwitterProfile } = useLinkTwitterProfile(true)
   const { updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
-  const [isExtensionInstalled, setIsExtensionInstalled] = useState(false)
+  const [extensionState, setExtensionState] = useState<ExtensionState>({
+    status: 'checking',
+  })
+  const isExtensionInstalled = extensionState.status === 'ready'
+  const isExtensionChecking = extensionState.status === 'checking'
   const [isLinking, setIsLinking] = useState(false)
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const hasLinkedRef = useRef(false)
@@ -121,8 +128,8 @@ export function LinkedInStep() {
   const connectNextKey = stepKeyForPath(connectNextStep) ?? 'identity'
 
   const checkIfExtensionIsInstalled = async () => {
-    const { installed } = await detectExtension()
-    setIsExtensionInstalled(installed)
+    const { installed, state } = await detectExtension()
+    setExtensionState(state)
     return installed
   }
 
@@ -178,7 +185,14 @@ export function LinkedInStep() {
         hasLinkedRef.current = true
 
         try {
-          await linkTwitterProfile(details)
+          // Only a completed backend link (including a confirmed reconnect)
+          // counts as connected; a cancelled reconnect prompt or a failed
+          // write leaves the step where it is.
+          const linked = await linkTwitterProfile(details)
+          if (!linked?.profile) {
+            hasLinkedRef.current = false
+            return
+          }
 
           hasCollectedRef.current = true
           setProfileData({ ...details, _platform: 'twitter' })
@@ -210,7 +224,11 @@ export function LinkedInStep() {
         hasLinkedRef.current = true
 
         try {
-          await linkProfile(details)
+          const linked = await linkProfile(details)
+          if (!linked?.profile) {
+            hasLinkedRef.current = false
+            return
+          }
 
           hasCollectedRef.current = true
           setProfileData({ ...details, _platform: 'linkedin' })
@@ -259,13 +277,37 @@ export function LinkedInStep() {
       hasLinkedRef.current = true
 
       if (profileData) {
-        if (profileData._platform === 'linkedin') {
-          await linkProfile(profileData)
-        } else {
-          await linkTwitterProfile(profileData)
+        const linked =
+          profileData._platform === 'linkedin'
+            ? await linkProfile(profileData)
+            : await linkTwitterProfile(profileData)
+        if (!linked?.profile) {
+          hasLinkedRef.current = false
+          return
         }
       } else if (platform === 'linkedin') {
-        await linkProfile()
+        const details = await collectLinkedInInfo()
+        if (!details) {
+          toast.error(config.loginPrompt)
+          window.open(config.loginUrl, '_blank')
+          hasLinkedRef.current = false
+          return
+        }
+        const linked = await linkProfile(details)
+        if (!linked?.profile) {
+          hasLinkedRef.current = false
+          return
+        }
+        hasCollectedRef.current = true
+        setProfileData({ ...details, _platform: 'linkedin' })
+        markStepCompleted('connect-account')
+        updateData({
+          isLinkedInConnected: true,
+          userProfile: {
+            name: `${details.firstName} ${details.lastName}`,
+            title: `${details.publicIdentifier}`,
+          },
+        })
       } else {
         const details = await getTwitterProfileDetailsFromExtension()
         if (!details?.authToken) {
@@ -274,7 +316,12 @@ export function LinkedInStep() {
           hasLinkedRef.current = false
           return
         }
-        await linkTwitterProfile(details)
+        const linked = await linkTwitterProfile(details)
+        if (!linked?.profile) {
+          hasLinkedRef.current = false
+          return
+        }
+        hasCollectedRef.current = true
         setProfileData({ ...details, _platform: 'twitter' })
         markStepCompleted('connect-account')
         updateData({
@@ -427,9 +474,9 @@ export function LinkedInStep() {
                 <div className='flex items-center gap-2 text-green-500 dark:text-green-400'>
                   <CheckCircle2 className='h-5 w-5' />
                   <span className='font-medium'>
-                    {isConnectStepCompleted && !profileData
-                      ? 'Account connected'
-                      : 'Profile data fetched!'}
+                    {platform === 'twitter'
+                      ? 'X account connected'
+                      : 'LinkedIn account connected'}
                   </span>
                 </div>
 
@@ -468,7 +515,12 @@ export function LinkedInStep() {
                         onClick={handleLinking}
                         disabled={!isExtensionInstalled || isLinking || isLinkingProfile || isLinkingTwitterProfile}
                       >
-                        {isLinking || isLinkingProfile || isLinkingTwitterProfile ? (
+                        {isExtensionChecking ? (
+                          <>
+                            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                            Checking extension...
+                          </>
+                        ) : isLinking || isLinkingProfile || isLinkingTwitterProfile ? (
                           <>
                             <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                             {config.connectingLabel}
@@ -482,12 +534,21 @@ export function LinkedInStep() {
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  {!isExtensionInstalled && (
+                  {!isExtensionInstalled && !isExtensionChecking && (
                     <TooltipContent>
-                      <p>Please install the Commentify extension first</p>
+                      <p>We couldn't reach the Commentify extension. Install or enable it, then check again.</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
+                {!isExtensionInstalled && !isExtensionChecking && (
+                  <button
+                    type='button'
+                    className='text-muted-foreground hover:text-foreground mt-2 flex w-full items-center justify-center gap-1.5 text-sm underline transition-colors'
+                    onClick={() => void checkIfExtensionIsInstalled()}
+                  >
+                    Check again
+                  </button>
+                )}
               </TooltipProvider>
             )}
           </div>

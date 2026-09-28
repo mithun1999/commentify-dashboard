@@ -1,6 +1,12 @@
 import { axiosInstance } from '@/utils/axios.util'
 import type { ITwitterProfileFromExtension } from '@/features/twitter-commenting/utils/extension'
-import { ILinkProfilePayload, ILinkedInStats, IProfile } from '../interface/profile.interface'
+import {
+  IDisconnectProfileResponse,
+  ILinkProfilePayload,
+  ILinkProfileResponse,
+  ILinkedInStats,
+  IProfile,
+} from '../interface/profile.interface'
 
 export async function getAllProfile() {
   const { data } = await axiosInstance({
@@ -10,12 +16,16 @@ export async function getAllProfile() {
   return data as IProfile[]
 }
 
-export async function deleteProfile(profileId: string) {
+/**
+ * Revokes the account's connection: credentials are wiped and every agent on
+ * it stops. Drafts, history and billing are untouched. Safe to repeat.
+ */
+export async function disconnectProfile(profileId: string) {
   const { data } = await axiosInstance({
     method: 'DELETE',
     url: `/profile/${profileId}`,
   })
-  return data as { deleted: number }
+  return data as IDisconnectProfileResponse
 }
 
 export async function pauseAgent(profileId: string, agentType: string) {
@@ -40,16 +50,20 @@ export async function linkProfile(payload: ILinkProfilePayload) {
     url: `/profile/link`,
     data: payload,
   })
-  return data as { profile: IProfile; isExisting: boolean }
+  return data as ILinkProfileResponse
 }
 
-export async function linkTwitterProfile(payload: ITwitterProfileFromExtension) {
+export type ILinkTwitterProfilePayload = ITwitterProfileFromExtension & {
+  reconnect?: boolean
+}
+
+export async function linkTwitterProfile(payload: ILinkTwitterProfilePayload) {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/profile/link`,
     data: payload,
   })
-  return data as { profile: IProfile; isExisting: boolean }
+  return data as ILinkProfileResponse
 }
 
 export async function getLinkedInStats(profileId: string) {

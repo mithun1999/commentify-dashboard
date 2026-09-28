@@ -9,9 +9,10 @@ export function useCurrentAgent() {
     profileId?: string
     agentType?: string
   }
-  const { data: profiles } = useGetAllProfileQuery()
+  const { data: profiles, listState, error, isFetching, refetch } =
+    useGetAllProfileQuery()
 
-  return useMemo(() => {
+  const resolved = useMemo(() => {
     if (!profileId || !agentType || !profiles) {
       return { agent: null, profile: null, agentTypeDef: null }
     }
@@ -35,4 +36,8 @@ export function useCurrentAgent() {
 
     return { agent, profile, agentTypeDef: agentTypeDef ?? null }
   }, [profileId, agentType, profiles])
+
+  // Exposed so the layout can tell "this agent does not exist" apart from
+  // "the account list could not be loaded", which needs a retry, not a 404.
+  return { ...resolved, listState, listError: error, isFetching, refetch }
 }

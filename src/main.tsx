@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { AxiosError } from 'axios'
 import {
+  MutationCache,
   QueryCache,
   QueryClient,
   QueryClientProvider,
@@ -15,6 +16,13 @@ import { envConfig } from './config/env.config'
 import { FontProvider } from './context/font-context'
 import { ThemeProvider } from './context/theme-context'
 import { signOut } from './features/auth/utils/auth.util'
+import {
+  buildQueryErrorToastId,
+  getReadableErrorMessage,
+  isSessionExpiredError,
+  queryHasCachedData,
+  shouldSuppressGlobalErrorNotice,
+} from './lib/connection-recovery'
 // Add this import
 import './index.css'
 import './features/linkedin-commenting/register'
@@ -58,35 +66,57 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: import.meta.env.PROD,
       staleTime: 10 * 1000, // 10s
     },
-    mutations: {
-      onError: (error) => {
-        handleServerError(error)
-
-        if (error instanceof AxiosError) {
-          if (error.response?.status === 304) {
-            toast.error('Content not modified!')
-          }
-        }
-      },
-    },
   },
-  queryCache: new QueryCache({
-    onError: (error) => {
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      // Mutations that render their own error UI (link/reconnect prompt,
+      // disconnect dialog) opt out the same way queries do.
+      if (shouldSuppressGlobalErrorNotice(mutation)) return
+      handleServerError(error)
+
       if (error instanceof AxiosError) {
-        if (error.response?.status === 401) {
-          toast.error('Session expired!')
-          signOut()
-          const redirect = `${router.history.location.href}`
-          router.navigate({ to: '/sign-in', search: { redirect } })
-        }
-        if (error.response?.status === 500) {
-          toast.error('Internal Server Error!')
-          router.navigate({ to: '/500' })
-        }
-        if (error.response?.status === 403) {
-          // router.navigate("/forbidden", { replace: true });
+        if (error.response?.status === 304) {
+          toast.error('Content not modified!')
         }
       }
+    },
+  }),
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      // Session policy is unchanged by this workstream: 401 still signs the
+      // user out and redirects to sign-in.
+      if (isSessionExpiredError(error)) {
+        toast.error('Session expired!')
+        signOut()
+        const redirect = `${router.history.location.href}`
+        router.navigate({ to: '/sign-in', search: { redirect } })
+        return
+      }
+
+      // No more blanket navigation to /500 for an arbitrary query failure —
+      // that could fire for a background stats/settings refresh and yank the
+      // user off whatever they were doing. Components with their own error
+      // state (e.g. the profile list) opt out via query meta so they are not
+      // double-notified.
+      if (shouldSuppressGlobalErrorNotice(query)) return
+
+      toast.error(getReadableErrorMessage(error), {
+        // Stable id so sonner updates one toast per query instead of
+        // stacking a new one on every retry/background refetch.
+        id: buildQueryErrorToastId(query.queryKey),
+        description: queryHasCachedData(query)
+          ? 'Showing previously loaded data.'
+          : undefined,
+        action: {
+          label: 'Retry',
+          onClick: () => {
+            // Retries the failed read itself, not a mutation.
+            query.fetch().catch(() => {
+              // Surfaced again through this same handler on the next failure.
+            })
+          },
+        },
+      })
     },
   }),
 })

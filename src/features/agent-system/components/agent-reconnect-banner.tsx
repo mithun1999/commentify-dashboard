@@ -11,9 +11,13 @@ import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { envConfig } from '@/config/env.config'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { detectExtension } from '@/lib/extension'
-import { getProfileDetailsFromExtension } from '@/utils/utils'
-import { getTwitterProfileDetailsFromExtension } from '@/features/twitter-commenting/utils/extension'
+import {
+  describeExtensionState,
+  detectExtension,
+  getProfileDetailsFromExtension,
+  getTwitterProfileDetailsFromExtension,
+  type ExtensionState,
+} from '@/lib/extension'
 import {
   useLinkProfile,
   useLinkTwitterProfile,
@@ -24,7 +28,7 @@ import type { IProfile } from '@/features/users/interface/profile.interface'
 type BannerState =
   | { kind: 'idle' }
   | { kind: 'checking' }
-  | { kind: 'no-extension' }
+  | { kind: 'no-extension'; extension: ExtensionState }
   | { kind: 'mismatch'; extensionName: string; agentName: string }
 
 export function AgentReconnectBanner({ profile }: { profile: IProfile }) {
@@ -42,9 +46,9 @@ export function AgentReconnectBanner({ profile }: { profile: IProfile }) {
 
   const checkExtension = useCallback(async () => {
     setState({ kind: 'checking' })
-    const { installed } = await detectExtension()
+    const { installed, state: extension } = await detectExtension()
     if (!installed) {
-      setState({ kind: 'no-extension' })
+      setState({ kind: 'no-extension', extension })
       return false
     }
     setState({ kind: 'idle' })
@@ -54,9 +58,9 @@ export function AgentReconnectBanner({ profile }: { profile: IProfile }) {
   const handleReconnect = useCallback(async () => {
     setState({ kind: 'checking' })
 
-    const { installed } = await detectExtension()
+    const { installed, state: extension } = await detectExtension()
     if (!installed) {
-      setState({ kind: 'no-extension' })
+      setState({ kind: 'no-extension', extension })
       return
     }
 
@@ -118,12 +122,12 @@ export function AgentReconnectBanner({ profile }: { profile: IProfile }) {
       <Alert className='mb-6 border-amber-500/50 bg-amber-50 dark:bg-amber-950/20'>
         <AlertTriangle className='text-amber-600' />
         <AlertTitle className='text-amber-800 dark:text-amber-300'>
-          Extension not detected
+          We couldn't reach the Commentify extension
         </AlertTitle>
         <AlertDescription>
           <p>
-            The Commentify Chrome extension is required to reconnect your{' '}
-            {platformLabel} account.
+            {describeExtensionState(state.extension)} It is only needed to
+            reconnect your {platformLabel} account; nothing else is blocked.
           </p>
           <div className='mt-3 flex flex-wrap items-center gap-2'>
             {chromeExtensionAvailable ? (

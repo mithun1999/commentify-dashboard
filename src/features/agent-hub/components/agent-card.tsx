@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   IconDotsVertical,
   IconSettings,
   IconRefresh,
   IconMessageCheck,
+  IconPlugConnectedX,
   IconSend,
 } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +25,7 @@ import { cn } from '@/lib/utils'
 import { AgentPauseButton } from '@/features/agent-system/components/agent-pause-button'
 import { getAgentType } from '@/features/agent-system/registry'
 import type { DerivedAgent } from '@/features/agent-system/types/agent.types'
+import { DisconnectAccountDialog } from '@/features/users/components/disconnect-account-dialog'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import type { IProfile } from '@/features/users/interface/profile.interface'
 import {
@@ -65,6 +68,7 @@ export function AgentCard({ agent, profile }: AgentCardProps) {
   const { data: postingStats } = useGetPostingStats(
     isPosting ? agent.profileId : undefined,
   )
+  const [disconnectOpen, setDisconnectOpen] = useState(false)
   if (!typeDef) return null
 
   const Icon = typeDef.icon
@@ -152,8 +156,24 @@ export function AgentCard({ agent, profile }: AgentCardProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
+              {profile && (
+                <DropdownMenuItem
+                  className='text-destructive focus:text-destructive'
+                  onSelect={() => setDisconnectOpen(true)}
+                >
+                  <IconPlugConnectedX className='mr-2 size-4' />
+                  Disconnect account
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
+          {profile && (
+            <DisconnectAccountDialog
+              profile={profile}
+              open={disconnectOpen}
+              onOpenChange={setDisconnectOpen}
+            />
+          )}
         </div>
       </CardHeader>
       <CardContent className='pt-0'>
