@@ -1,8 +1,7 @@
 import Cookies from 'js-cookie'
 import { SupabaseInstance } from '@/services/supabase.service'
-import { Session } from '@supabase/supabase-js'
+import { Session, isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { toast } from 'sonner'
-import { useAuthStore } from '@/stores/auth.store'
 import { AuthEnum } from '../enum/auth.enum'
 
 export async function signInWithPassword(data: {
@@ -101,9 +100,42 @@ export async function signOut() {
   return supabase.auth.signOut()
 }
 
-export function getAuthToken() {
-  const { session } = useAuthStore.getState()
-  return session?.access_token
+/**
+ * The access token to send right now. Read through supabase rather than the
+ * store: getSession() refreshes a token that is expired (or about to be) and
+ * queues behind the refresh supabase runs when a background tab becomes
+ * visible again, so a request fired on refocus never goes out with the stale
+ * token the store still holds.
+ */
+export async function getAuthToken() {
+  const supabase = SupabaseInstance.getSupabase()
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token
+}
+
+let pendingRefresh: Promise<string | null> | null = null
+
+/**
+ * Recovers from a 401 on `rejectedToken`. Resolves to a token worth retrying
+ * with, or null when the session is gone for good. Throws when supabase could
+ * not be reached, so a network blip is never mistaken for a dead session.
+ * Concurrent 401s share one refresh: refresh tokens rotate on use.
+ */
+export function refreshAuthToken(rejectedToken?: string) {
+  pendingRefresh ??= (async () => {
+    // Another request, or supabase's own refocus refresh, may already have
+    // replaced the token this request went out with.
+    const current = await getAuthToken()
+    if (current && current !== rejectedToken) return current
+
+    const supabase = SupabaseInstance.getSupabase()
+    const { data, error } = await supabase.auth.refreshSession()
+    if (isAuthRetryableFetchError(error)) throw error
+    return data.session?.access_token ?? null
+  })().finally(() => {
+    pendingRefresh = null
+  })
+  return pendingRefresh
 }
 
 export function getUserId() {

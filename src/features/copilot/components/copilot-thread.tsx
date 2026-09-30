@@ -33,7 +33,9 @@ export function CopilotThread({ conversationId }: { conversationId: string }) {
       api: `${envConfig.apiUrl}/copilot/chat`,
       // Read at request time, not at mount: the token is refreshed while a
       // long thread stays open.
-      headers: () => ({ Authorization: `Bearer ${getAuthToken()}` }),
+      headers: async () => ({
+        Authorization: `Bearer ${await getAuthToken()}`,
+      }),
       body: () => ({ conversationId }),
     }),
     // The list is keyed on titles the server derives from the first message,
