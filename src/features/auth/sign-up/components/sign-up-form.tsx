@@ -70,7 +70,7 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
         posthog?.capture('signup_success', { method: 'email' })
         toast.success('Account created successfully')
         setTimeout(() => {
-          navigate({ to: '/onboarding/extension' })
+          navigate({ to: '/onboarding/agent-type' })
         }, 500)
       }
     } catch (error) {
