@@ -160,7 +160,7 @@ export function openPreviewStream(
       `${envConfig.apiUrl}/onboarding-preview/${profileId}/stream`,
       {
         headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
+          Authorization: `Bearer ${await getAuthToken()}`,
           Accept: 'text/event-stream',
         },
         signal: controller.signal,
