@@ -41,7 +41,7 @@
       "headers": [
         {
           "key": "access-control-allow-origin",
-          "value": "https://dash.cmfy.fyi"
+          "value": "https://app.commentify.co"
         },
         {
           "key": "access-control-allow-methods",
