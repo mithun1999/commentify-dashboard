@@ -45,7 +45,9 @@ export default function UpdatePassword() {
   }
 
   return (
-    <AuthLayout>
+    // The reset link signs the user in, so a session here is expected: keep
+    // them on the form until they submit it.
+    <AuthLayout redirectIfSignedIn={false}>
       <Card className='gap-4'>
         <CardHeader>
           <CardTitle className='text-lg tracking-tight'>
