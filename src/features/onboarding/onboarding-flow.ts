@@ -1,4 +1,8 @@
 import type { OnboardingPlatform } from '@/stores/onboarding.store'
+import {
+  UserSubscriptionStatus,
+  type IUser,
+} from '@/features/auth/interface/user.interface'
 
 export type OnboardingStepKey =
   | 'agent-type'
@@ -243,4 +247,44 @@ export function resolveSavedStep(
   if (known) return saved.stepKey as OnboardingStepKey
   if (saved.stepKey) return 'connect-account'
   return stepKeyFromLegacyStep(saved.step ?? 0, platform)
+}
+
+/**
+ * Where the onboarding guard should send this account from `pathname`, or
+ * undefined to leave it where it is.
+ */
+export function onboardingRedirectTarget(
+  user: Pick<IUser, 'status' | 'metadata'>,
+  pathname: string,
+  picked?: OnboardingPlatform | null
+): string | undefined {
+  const onboarding = user.metadata?.onboarding
+  if (onboarding?.status === 'completed') return
+  // The wizard ends in starting a trial; anyone past pending has nothing to
+  // activate there.
+  if (user.status !== UserSubscriptionStatus.PENDING) return
+
+  const platform = platformFor(onboarding?.selectedAgentType, picked)
+  const savedKey = resolveSavedStep(
+    {
+      stepKey: onboarding?.stepKey,
+      step: onboarding?.step,
+    },
+    platform
+  )
+  const currentKey = stepKeyForPath(pathname)
+
+  // On a step we recognise, only intervene when they are ahead of their saved
+  // progress. Pulling someone backwards would undo a step they just finished
+  // but whose save has not landed yet.
+  //
+  // A step belonging to the other platform's flow indexes as -1, which is
+  // never ahead - the route itself sends those on, and racing it from here
+  // would fight that redirect.
+  if (currentKey) {
+    if (stepIndexOf(currentKey, platform) <= stepIndexOf(savedKey, platform))
+      return
+  }
+
+  return stepDefFor(savedKey, platform)?.path ?? '/onboarding/agent-type'
 }
