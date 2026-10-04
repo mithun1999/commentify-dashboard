@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { resolvePlanSetting } from '@/config/plan-setting.config'
+import { UnlockWrapper } from '@/features/settings/components/UnlockWrapper'
 import { useProfileStore } from '@/stores/profile.store'
 import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
@@ -100,6 +101,10 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
   const { extractAsync, isExtracting } = useExtractFromWebsite()
 
   const maxMentionsPerDay = (resolvePlanSetting('salesMentionsPerDay', user) as number) ?? 15
+  // Job-title targeting is the same plan gate as Author Titles in Scrape Settings
+  // (new Pro, legacy Premium). Without it the backend drops these titles on save,
+  // so on Starter the field looked like it worked and silently did nothing.
+  const canTargetJobTitles = Boolean(resolvePlanSetting('authorTitles', user))
 
   const profile = profiles?.find((p) => p._id === profileId)
   const existingSalesSetting = profile?.setting?.salesSetting
@@ -389,18 +394,20 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
         <MonitoredProfiles ref={monitoredRef} profileId={profileId} />
 
         {/* Target Job Titles */}
-        <TagSection
-          label='Target Job Titles'
-          icon={<Users className='text-muted-foreground h-4 w-4' />}
-          tooltip="Job titles of your ideal customers. We'll prioritize posts from these people."
-          items={suggestedJobTitles}
-          max={6}
-          inputValue={jobTitleInput}
-          onInputChange={setJobTitleInput}
-          onAdd={(v) => { addTag('suggestedJobTitles', v, 6); setJobTitleInput('') }}
-          onRemove={(v) => removeTag('suggestedJobTitles', v)}
-          placeholder='e.g. CTO, VP Engineering...'
-        />
+        <UnlockWrapper isUnlocked={canTargetJobTitles}>
+          <TagSection
+            label='Target Job Titles'
+            icon={<Users className='text-muted-foreground h-4 w-4' />}
+            tooltip="Job titles of your ideal customers. We'll prioritize posts from these people."
+            items={suggestedJobTitles}
+            max={6}
+            inputValue={jobTitleInput}
+            onInputChange={setJobTitleInput}
+            onAdd={(v) => { addTag('suggestedJobTitles', v, 6); setJobTitleInput('') }}
+            onRemove={(v) => removeTag('suggestedJobTitles', v)}
+            placeholder='e.g. CTO, VP Engineering...'
+          />
+        </UnlockWrapper>
 
         {/* Competitors */}
         <TagSection
