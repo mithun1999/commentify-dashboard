@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { AxiosError } from 'axios'
 import { envConfig } from '@/config/env.config'
 import { useFeatureFlagEnabled } from 'posthog-js/react'
 import { toast } from 'sonner'
@@ -462,7 +463,7 @@ export const useGetLinkedInStats = (profileId?: string) => {
   const resolvedId = profileId ?? activeProfile?._id
   const ONE_HOUR_MS = 60 * 60 * 1000
 
-  const { data, isLoading } = useQuery<ILinkedInStats | null>({
+  const { data, isLoading, error } = useQuery<ILinkedInStats | null>({
     queryKey: [ProfileQueryEnum.GET_LINKEDIN_STATS, resolvedId],
     enabled: Boolean(resolvedId),
     staleTime: ONE_HOUR_MS,
@@ -473,7 +474,11 @@ export const useGetLinkedInStats = (profileId?: string) => {
     },
   })
 
-  return { data, isLoading }
+  // `/li-stats` sits behind PlanGuard('pro'), so sub-Pro plans always get a 403
+  // here. Callers need to tell that apart from a genuine LinkedIn failure.
+  const isPlanGated = (error as AxiosError | null)?.response?.status === 403
+
+  return { data, isLoading, isPlanGated }
 }
 
 export const useGetPostStats = (profileId?: string) => {
