@@ -25,6 +25,7 @@ import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { getAgentPlanTier } from '@/features/agent-system/registry'
 import { isLegacyProduct } from '@/features/pricing/utils/prices.util'
+import { SubscriptionStatusEnum } from '@/features/subscription/enum/subscription.enum'
 import {
   useGetCustomerPortalUrlQuery,
   useGetPaymentRecoveryQuery,
@@ -32,6 +33,7 @@ import {
 import { CancelSubscriptionDialog } from './components/cancel-subscription-dialog'
 import { PaymentAttentionCard } from './components/payment-attention-card'
 import { PostCreditsCard } from './components/post-credits-card'
+import { useCheckoutReturn } from './hooks/use-checkout-return'
 
 function formatDate(value?: string | null) {
   if (!value) return null
@@ -51,7 +53,10 @@ export default function Billing() {
   const [cancelOpen, setCancelOpen] = useState(false)
   const isLegacy = isLegacyProduct(user?.subscribedProduct)
   const isCancelled = Boolean(user?.subscription?.isCancelled)
-  const canCancel = Boolean(user?.subscription) && !isCancelled
+  const canCancel =
+    Boolean(user?.subscription) &&
+    !isCancelled &&
+    user?.subscription?.status !== SubscriptionStatusEnum.PENDING
   // The optimistic cancel doesn't set endsAt until the provider webhook lands,
   // so fall back to the next renewal date (= when access actually ends).
   const cancelDate = formatDate(
@@ -137,19 +142,22 @@ export default function Billing() {
     }
   }
 
+  const checkout = useCheckoutReturn(user)
+  const paymentConfirming =
+    checkout.state === 'confirming' || checkout.state === 'pending'
+
   const { data: portal, isLoading } = useGetCustomerPortalUrlQuery({
     // @ts-expect-error shared hook expects a user, placeholder handled inside
     user,
+    enabled: !paymentConfirming,
   })
 
   const { data: paymentRecovery } = useGetPaymentRecoveryQuery({ user })
 
-  const searchParams = new URLSearchParams(window.location.search)
-  const paymentStatus = searchParams.get('status')
   // The recovery card says the same thing with an actual way to fix it, so the
   // generic checkout-return alert would just be a second red box.
   const showCheckoutFailedAlert =
-    paymentStatus === 'failed' && !paymentRecovery?.needsAttention
+    checkout.state === 'failed' && !paymentRecovery?.needsAttention
 
   const handleChatSupportClick = () => {
     if (Crisp.isCrispInjected()) {
@@ -173,7 +181,27 @@ export default function Billing() {
           <h2 className='text-2xl font-bold tracking-tight'>Billing</h2>
         </div>
 
-        {paymentStatus === 'active' && (
+        {checkout.state === 'confirming' && (
+          <Alert className='mt-4'>
+            <Loader2 className='h-4 w-4 animate-spin' />
+            <AlertTitle>Confirming your payment…</AlertTitle>
+            <AlertDescription>This only takes a moment.</AlertDescription>
+          </Alert>
+        )}
+
+        {checkout.state === 'pending' && (
+          <Alert className='mt-4 border-amber-500/40 bg-amber-500/5'>
+            <Loader2 className='h-4 w-4 animate-spin text-amber-500' />
+            <AlertTitle>Payment processing</AlertTitle>
+            <AlertDescription>
+              {checkout.timedOut
+                ? 'Your bank still hasn’t confirmed this payment. Your plan switches on by itself as soon as it does. If nothing changes within an hour, message us and we’ll check it.'
+                : 'Your bank is still confirming this payment. Your plan switches on by itself once it clears, usually within a few minutes. You don’t need to pay again.'}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {checkout.state === 'active' && (
           <Alert className='mt-4 border-green-500/40 bg-green-500/5'>
             <CheckCircle2 className='h-4 w-4 text-green-500' />
             <AlertTitle>Payment Successful</AlertTitle>
@@ -339,7 +367,14 @@ export default function Billing() {
                   </div>
                 </div>
                 <div className='flex items-center gap-1 text-sm'>
-                  {isCancelled ? (
+                  {checkout.state === 'pending' ? (
+                    <>
+                      <Loader2 className='h-4 w-4 animate-spin text-amber-500' />
+                      <span className='text-amber-600 dark:text-amber-400'>
+                        Processing
+                      </span>
+                    </>
+                  ) : isCancelled ? (
                     <>
                       <XCircle className='h-4 w-4 text-amber-500' />
                       <span className='text-amber-600 dark:text-amber-400'>

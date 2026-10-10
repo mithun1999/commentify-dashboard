@@ -76,7 +76,9 @@ export async function verifyCheckout(subscriptionId: string) {
     method: 'POST',
     url: `/subscription/verify/${subscriptionId}`,
   })
-  return data as { success: boolean }
+  // status is the subscription's status after the sync ("pending" while the
+  // bank is still confirming), or "failed" for a declined payment.
+  return data as { success: boolean; status?: string }
 }
 
 export async function getCustomerPortalUrl() {
