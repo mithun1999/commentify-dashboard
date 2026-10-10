@@ -1,15 +1,26 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router'
-import { useOnboardingPlatform } from '@/features/onboarding/hooks/useOnboardingPlatform'
+import { useOnboardingFlow } from '@/features/onboarding/hooks/useOnboardingPlatform'
+import { stepDefFor } from '@/features/onboarding/onboarding-flow'
 import { TwitterTargetingStep } from '@/features/onboarding/steps/twitter-targeting-step'
 
 /**
- * X asks for targeting; LinkedIn derives it on the connect step, so a LinkedIn
- * tab or bookmark left here resumes where that now happens.
+ * X's reply agent asks for targeting. LinkedIn derives it on the connect step,
+ * so a LinkedIn tab or bookmark left here resumes where that now happens; X
+ * posting has nothing to target and goes on to its preview.
  */
 function PostSettingsRoute() {
-  const platform = useOnboardingPlatform()
-  if (platform !== 'twitter') {
-    return <Navigate to='/onboarding/connect-account' replace />
+  const flow = useOnboardingFlow()
+  if (!stepDefFor('post-settings', flow)) {
+    return (
+      <Navigate
+        to={
+          flow === 'linkedin'
+            ? '/onboarding/connect-account'
+            : '/onboarding/preview'
+        }
+        replace
+      />
+    )
   }
   return <TwitterTargetingStep />
 }

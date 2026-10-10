@@ -17,11 +17,32 @@ import {
 import { useIsClamped } from '../hooks/useIsClamped'
 import { useTypewriter } from '../hooks/useTypewriter'
 import { PostingProgressList } from './posting-progress'
+import { QuickSampleNote, QuickSampleTag } from './quick-sample'
 
 interface PreviewPostProps {
   profileId: string | undefined
   /** Comment-only users see an offer instead; the draft is built on click. */
   wantsPost: boolean
+  /** X drafts are a single text post: no image, and counted against 280. */
+  platform?: 'linkedin' | 'twitter'
+}
+
+/** X's limit for a single post. Plain length is close for link-free text. */
+const X_POST_LIMIT = 280
+
+/**
+ * What the calendar posts get that this sample skipped. The preview is cut
+ * down to arrive while someone is watching: a shallow read of their posts and
+ * a single review. Judged as the agent's best work it undersells the product,
+ * so the card says what it is. Kept to what the pipeline actually does: the
+ * full voice build (30 posts on LinkedIn, up to 200 on X, plus tracked
+ * creators), research on slots that need it, and up to three review rounds.
+ */
+const CALENDAR_POSTS_GO_FURTHER: Record<'linkedin' | 'twitter', string> = {
+  linkedin:
+    'The posts your agent writes for your calendar go further: it learns from your best-performing posts and the creators you pick, looks up facts where a post needs them, and reviews every draft up to three times before it reaches you.',
+  twitter:
+    'The posts your agent writes for your calendar go further: it learns from up to 200 of your posts and the creators you pick, looks up facts where a post needs them, and reviews every draft up to three times before it reaches you.',
 }
 
 /**
@@ -67,7 +88,12 @@ function awaitingImage(preview: PostingPreview | undefined): boolean {
  * already being built (pre-warmed at connect) so this only polls. Comment-only
  * users get an offer, and the minute of work starts when they take it.
  */
-export function PreviewPost({ profileId, wantsPost }: PreviewPostProps) {
+export function PreviewPost({
+  profileId,
+  wantsPost,
+  platform = 'linkedin',
+}: PreviewPostProps) {
+  const isX = platform === 'twitter'
   const [optedIn, setOptedIn] = useState(wantsPost)
   const [requesting, setRequesting] = useState(false)
   const [stalled, setStalled] = useState(false)
@@ -140,6 +166,11 @@ export function PreviewPost({ profileId, wantsPost }: PreviewPostProps) {
     () => data?.post?.media?.find((m) => m.type === 'image'),
     [data]
   )
+  const draft = data?.post?.content ?? ''
+  const segments =
+    data?.post?.segments && data.post.segments.length > 1
+      ? data.post.segments
+      : null
 
   // The draft is polled, so it lands as one finished block after minutes of a
   // spinner. Typing it out is what makes those minutes read as writing.
@@ -217,8 +248,9 @@ export function PreviewPost({ profileId, wantsPost }: PreviewPostProps) {
           Your post draft did not finish this time
         </p>
         <p className='text-muted-foreground text-sm'>
-          Your commenting agent is unaffected, and you can write one from the
-          dashboard whenever you like.
+          {isX
+            ? 'Your agent writes your first week of posts once your trial is on, and you can try this again now.'
+            : 'Your commenting agent is unaffected, and you can write one from the dashboard whenever you like.'}
         </p>
         <Button
           type='button'
@@ -249,7 +281,9 @@ export function PreviewPost({ profileId, wantsPost }: PreviewPostProps) {
           progress={data?.progress}
           fallback={
             noOwnPosts
-              ? 'No posts on this profile yet. Drafting from your About section instead\u2026'
+              ? isX
+                ? 'No posts on this account yet. Writing a first one for you\u2026'
+                : 'No posts on this profile yet. Drafting from your About section instead\u2026'
               : phase === 'voice'
                 ? 'Reading your recent posts to learn how you write\u2026'
                 : 'Writing a post in your voice\u2026'
@@ -271,8 +305,9 @@ export function PreviewPost({ profileId, wantsPost }: PreviewPostProps) {
 
         {/* The image is drawn from the idea rather than the finished draft, so
             it can and does land first. Holding it back until there are words
-            to sit above buys nothing but a longer blank screen. */}
-        {image ? (
+            to sit above buys nothing but a longer blank screen. X posts have
+            no image, so there is nothing to hold a place for. */}
+        {isX ? null : image ? (
           <img
             src={image.url}
             alt='Generated illustration for the draft post'
@@ -290,8 +325,18 @@ export function PreviewPost({ profileId, wantsPost }: PreviewPostProps) {
       <div className='flex items-center gap-2'>
         <Sparkles className='h-4 w-4 text-violet-500' />
         <span className='text-sm font-medium'>
-          A post written in your voice
+          {isX ? 'An X post written in your voice' : 'A post written in your voice'}
         </span>
+        <QuickSampleTag />
+        {isX && draftTyped && !segments && (
+          <span
+            className={`text-muted-foreground ml-auto text-xs ${
+              draft.length > X_POST_LIMIT ? 'text-red-500' : ''
+            }`}
+          >
+            {draft.length}/{X_POST_LIMIT}
+          </span>
+        )}
         {data?.post?.isCarousel && (
           <span className='rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-300'>
             Pro
@@ -299,34 +344,41 @@ export function PreviewPost({ profileId, wantsPost }: PreviewPostProps) {
         )}
       </div>
 
-      {noOwnPosts && (
-        <p className='text-muted-foreground text-xs'>
-          This profile has no posts yet, so the draft is based on your About
-          section. After you publish a few times — or add creators in settings —
-          later drafts will match a real writing style.
-        </p>
-      )}
-
-      <div>
-        <p
-          ref={draftRef}
-          className={`text-sm whitespace-pre-wrap ${expanded ? '' : 'line-clamp-6'}`}
-        >
-          {typedDraft}
-          {!draftTyped && (
-            <span className='bg-foreground ml-0.5 inline-block h-3.5 w-[2px] animate-pulse align-middle' />
-          )}
-        </p>
-        {draftTyped && (clamped || expanded) && (
-          <button
-            type='button'
-            onClick={() => setExpanded((prev) => !prev)}
-            className='text-primary mt-1 text-xs font-medium hover:underline'
+      {segments ? (
+        // A thread reads as separate posts; typing it out as one block would
+        // run the separators through the middle of it.
+        <ol className='space-y-2'>
+          {segments.map((segment, i) => (
+            <li key={i} className='rounded-md border p-3'>
+              <p className='text-muted-foreground mb-1 text-[11px] font-medium'>
+                {i + 1}/{segments.length}
+              </p>
+              <p className='text-sm whitespace-pre-wrap'>{segment}</p>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <div>
+          <p
+            ref={draftRef}
+            className={`text-sm whitespace-pre-wrap ${expanded ? '' : 'line-clamp-6'}`}
           >
-            {expanded ? 'See less' : 'See more'}
-          </button>
-        )}
-      </div>
+            {typedDraft}
+            {!draftTyped && (
+              <span className='bg-foreground ml-0.5 inline-block h-3.5 w-[2px] animate-pulse align-middle' />
+            )}
+          </p>
+          {draftTyped && (clamped || expanded) && (
+            <button
+              type='button'
+              onClick={() => setExpanded((prev) => !prev)}
+              className='text-primary mt-1 text-xs font-medium hover:underline'
+            >
+              {expanded ? 'See less' : 'See more'}
+            </button>
+          )}
+        </div>
+      )}
 
       {image ? (
         <img
@@ -348,6 +400,19 @@ export function PreviewPost({ profileId, wantsPost }: PreviewPostProps) {
           </div>
         </div>
       ) : null}
+
+      {/* Read after the draft, where the judgement is being made; the pill in
+          the header has already said it is a sample. */}
+      <QuickSampleNote>
+        {noOwnPosts
+          ? isX
+            ? 'Your account has no posts yet, so it is not in your voice yet. '
+            : 'Your profile has no posts yet, so it is based on your About section. '
+          : `It was written on the spot from ${
+              postsAnalyzed ? `${postsAnalyzed} of your posts` : 'a few of your posts'
+            }, so you could see your agent work. `}
+        {CALENDAR_POSTS_GO_FURTHER[platform]}
+      </QuickSampleNote>
 
       {data?.post?.isCarousel && (
         <p className='text-muted-foreground text-xs'>

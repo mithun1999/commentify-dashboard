@@ -125,6 +125,15 @@ export const postPlanSetting: Record<
     starter: true, // CONFIRM
     pro: true, // CONFIRM
   },
+  // X posting profiles. Mirrors backend postPlanMapper.xPostsPerDay / xThreads.
+  xPostsPerDay: {
+    starter: 1, // CONFIRM
+    pro: 3, // CONFIRM
+  },
+  xThreads: {
+    starter: false, // CONFIRM
+    pro: true, // CONFIRM
+  },
 }
 
 /**

@@ -64,6 +64,50 @@ function getHookPreview(content: string | undefined) {
   return firstLine.length > 120 ? firstLine.slice(0, 120) + '...' : firstLine
 }
 
+/** X counts each post against 280; JS length is close for link-free text. */
+const X_POST_LIMIT = 280
+
+/**
+ * Length, judged by the post's own platform. LinkedIn keeps its sweet-spot
+ * colours; an X post shows its count against 280, and a thread its post count.
+ */
+function PostLength({ post, charCount }: { post: any; charCount: number }) {
+  const base = 'shrink-0 whitespace-nowrap'
+  if (post.platform === 'twitter') {
+    if (post.outputType === 'thread') {
+      const segments: string[] = post.segments?.length
+        ? post.segments
+        : (post.content ?? '').split(/\n[ \t]*---[ \t]*\n/)
+      const over = segments.some((s) => s.trim().length > X_POST_LIMIT)
+      return (
+        <span className={cn(base, over && 'text-red-500')}>
+          Thread · {segments.length} posts
+        </span>
+      )
+    }
+    const limit = post.outputType === 'long_post' ? 4000 : X_POST_LIMIT
+    return (
+      <span className={cn(base, charCount > limit && 'text-red-500')}>
+        {charCount}/{limit}
+      </span>
+    )
+  }
+  return (
+    <span
+      className={cn(
+        base,
+        charCount >= 1000 && charCount <= 1200
+          ? 'text-green-600'
+          : charCount >= 800 && charCount <= 1300
+            ? 'text-yellow-600'
+            : 'text-red-500'
+      )}
+    >
+      {charCount} chars
+    </span>
+  )
+}
+
 export function PostCard({ post, calendarId, onClick, stage }: PostCardProps) {
   const approvePost = useApprovePost(calendarId)
   const unapprovePost = useUnapprovePost(calendarId)
@@ -137,35 +181,35 @@ export function PostCard({ post, calendarId, onClick, stage }: PostCardProps) {
         </div>
       )}
 
-      <div className='flex items-center justify-between'>
-        <div className='text-muted-foreground flex items-center gap-3 text-xs'>
-          {post.topic && <span>{post.topic}</span>}
+      <div className='flex items-center justify-between gap-3'>
+        {/* One line: topic and pillar give way with an ellipsis (full text on
+            hover) so the separators and the length never wrap mid-row. */}
+        <div className='text-muted-foreground flex min-w-0 items-center gap-3 text-xs'>
+          {post.topic && (
+            <span className='min-w-0 truncate' title={post.topic}>
+              {post.topic}
+            </span>
+          )}
           {post.pillar && (
             <>
-              <span className='text-muted-foreground/40'>|</span>
-              <span>{post.pillar}</span>
+              <span className='text-muted-foreground/40 shrink-0'>|</span>
+              <span className='min-w-0 truncate' title={post.pillar}>
+                {post.pillar}
+              </span>
             </>
           )}
           {charCount > 0 && (
             <>
-              <span className='text-muted-foreground/40'>|</span>
-              <span
-                className={cn(
-                  charCount >= 1000 && charCount <= 1200
-                    ? 'text-green-600'
-                    : charCount >= 800 && charCount <= 1300
-                      ? 'text-yellow-600'
-                      : 'text-red-500'
-                )}
-              >
-                {charCount} chars
-              </span>
+              <span className='text-muted-foreground/40 shrink-0'>|</span>
+              <PostLength post={post} charCount={charCount} />
             </>
           )}
           {post.overallScore != null && (
             <>
-              <span className='text-muted-foreground/40'>|</span>
-              <span>Score: {post.overallScore.toFixed(1)}</span>
+              <span className='text-muted-foreground/40 shrink-0'>|</span>
+              <span className='shrink-0 whitespace-nowrap'>
+                Score: {post.overallScore.toFixed(1)}
+              </span>
             </>
           )}
         </div>

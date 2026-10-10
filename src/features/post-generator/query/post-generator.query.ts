@@ -266,6 +266,61 @@ const useProfileSteps = (
 export const useVoiceStream = (profileId: string | undefined) =>
   useProfileSteps(profileId, 'voice_edit_progress')
 
+export interface VoiceAnalysisStep {
+  key: string
+  label: string
+  detail?: string
+  status: 'active' | 'done'
+}
+
+export interface VoiceAnalysisState {
+  steps: VoiceAnalysisStep[]
+  /** First lines of the posts the current step is working on. */
+  previews: string[]
+  finished: boolean
+  error?: string
+}
+
+const EMPTY_ANALYSIS: VoiceAnalysisState = { steps: [], previews: [], finished: false }
+
+/**
+ * Live progress of a voice analysis (onboarding "Analyze" and settings
+ * "Re-analyze"). Listens only while `active`, i.e. while the analyze request
+ * is in flight; each event carries the whole step list, so opening the stream
+ * as the request starts never misses a step.
+ */
+export const useVoiceAnalysisProgress = (
+  profileId: string | undefined,
+  active: boolean
+): VoiceAnalysisState => {
+  const [state, setState] = useState<VoiceAnalysisState>(EMPTY_ANALYSIS)
+
+  useEffect(() => {
+    if (!profileId || !active) return
+    setState(EMPTY_ANALYSIS)
+    const es = new EventSource(getProfileStreamUrl(profileId))
+    es.onmessage = (event) => {
+      let payload: any
+      try {
+        payload = JSON.parse(event.data)
+      } catch {
+        return
+      }
+      if (payload?.type !== 'voice_analysis_progress') return
+      setState({
+        steps: payload.steps ?? [],
+        previews: payload.previews ?? [],
+        finished: !!payload.finished,
+        error: payload.error,
+      })
+    }
+    es.onerror = () => es.close()
+    return () => es.close()
+  }, [profileId, active])
+
+  return state
+}
+
 export const usePostEditStream = (
   profileId: string | undefined,
   postId: string

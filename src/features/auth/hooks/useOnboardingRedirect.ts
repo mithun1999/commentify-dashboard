@@ -9,17 +9,27 @@ export const useOnboardingRedirect = () => {
   const location = useLocation()
   const { data: user, isFetched, isLoading } = useGetUserQuery()
   const pickedPlatform = useOnboardingStore((s) => s.data.selectedPlatform)
+  const pickedCapabilities = useOnboardingStore(
+    (s) => s.data.selectedCapabilities
+  )
 
   useEffect(() => {
     if (!isFetched || isLoading || !user) return
 
-    const target = onboardingRedirectTarget(
-      user,
-      location.pathname,
-      pickedPlatform
-    )
+    const target = onboardingRedirectTarget(user, location.pathname, {
+      platform: pickedPlatform,
+      capabilities: pickedCapabilities,
+    })
     if (target) navigate({ to: target })
-  }, [user, isFetched, isLoading, navigate, location.pathname, pickedPlatform])
+  }, [
+    user,
+    isFetched,
+    isLoading,
+    navigate,
+    location.pathname,
+    pickedPlatform,
+    pickedCapabilities,
+  ])
 
   return { user, isFetched }
 }

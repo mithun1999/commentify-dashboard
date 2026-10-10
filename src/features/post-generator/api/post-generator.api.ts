@@ -273,6 +273,10 @@ export interface PostingPreferences {
     preferredDays: string[]
     preferredTime: string
   }
+  // X posting profiles only: planned per day, one time per daily post.
+  postsPerDay?: number
+  preferredTimes?: string[]
+  allowThreads?: boolean
 }
 
 export async function getPostingPreferences(
@@ -323,11 +327,16 @@ export async function completeOnboarding(profileId: string) {
   return data
 }
 
-export async function addCreator(profileId: string, linkedinUrl: string) {
+/**
+ * `url` is a LinkedIn profile URL for LinkedIn agents, or an @handle / x.com
+ * link for X agents. Sent under both names so a backend that only knows
+ * `linkedinUrl` keeps working.
+ */
+export async function addCreator(profileId: string, url: string) {
   const { data } = await axiosInstance({
     method: 'POST',
     url: '/post-generator/creator/add',
-    data: { profileId, linkedinUrl },
+    data: { profileId, linkedinUrl: url, url },
   })
   return data
 }

@@ -42,6 +42,56 @@ export function platformFor(
 }
 
 /**
+ * Which sequence an account follows. LinkedIn has one, because its preview
+ * shows commenting and posting together. X splits by what was picked, since
+ * its two agents onboard differently: the reply agent is told what to target
+ * and how to sound, and the posting agent writes a draft on the preview the
+ * way LinkedIn's does.
+ *
+ * `twitter` is the reply agent alone, which is what every X account in
+ * onboarding was before X posting existed.
+ */
+export type OnboardingFlowKind =
+  | 'linkedin'
+  | 'twitter'
+  | 'twitter-posting'
+  | 'twitter-both'
+
+const ALL_FLOWS: OnboardingFlowKind[] = [
+  'linkedin',
+  'twitter',
+  'twitter-posting',
+  'twitter-both',
+]
+
+/**
+ * The flow for an account. The saved slug is the primary agent, and
+ * commenting wins when both were picked, so a saved posting slug means posting
+ * alone. Whether a commenting pick also wanted posting lives only in the
+ * wizard's store; without it the account gets the reply-agent flow, which is
+ * still a complete one.
+ */
+export function flowFor(
+  savedAgentType?: string | null,
+  picked?: {
+    platform?: OnboardingPlatform | null
+    capabilities?: string[] | null
+  } | null
+): OnboardingFlowKind {
+  const platform = platformFor(savedAgentType, picked?.platform)
+  if (platform !== 'twitter') return 'linkedin'
+
+  const pickedX = picked?.platform === 'twitter' ? picked.capabilities ?? [] : []
+  const comment = savedAgentType
+    ? !savedAgentType.includes('posting')
+    : pickedX.includes('comment') || !pickedX.includes('post')
+  const post = savedAgentType?.includes('posting') || pickedX.includes('post')
+
+  if (comment && post) return 'twitter-both'
+  return post ? 'twitter-posting' : 'twitter'
+}
+
+/**
  * Single source of truth for the onboarding sequence.
  *
  * Agent type comes first because it is the only step that costs the user
@@ -53,14 +103,14 @@ export function platformFor(
  * the agent actually working - every field the old forms asked for either had
  * a sensible default or was already being filled in by the same analysis.
  *
- * X keeps those forms. The preview reads LinkedIn specifically, from the
- * customer's own LinkedIn session, and there is no X equivalent of it; sending
- * an X account down that path searches the wrong network with credentials it
- * does not have. Until that exists, an X user says what to target rather than
- * being shown it.
+ * X's reply agent keeps those forms. The comment preview reads LinkedIn
+ * specifically, from the customer's own LinkedIn session, and there is no X
+ * equivalent of it; until that exists, an X user says what to target rather
+ * than being shown it. X's posting agent does get the preview: writing a post
+ * in their voice reads their own X account, which they have just connected.
  */
 export function buildOnboardingFlow(
-  platform: OnboardingPlatform = 'linkedin'
+  flow: OnboardingFlowKind = 'linkedin'
 ): OnboardingStepDef[] {
   const steps: OnboardingStepDef[] = [
     {
@@ -86,7 +136,10 @@ export function buildOnboardingFlow(
     },
   ]
 
-  if (platform === 'twitter') {
+  const xComment = flow === 'twitter' || flow === 'twitter-both'
+  const preview = flow !== 'twitter'
+
+  if (xComment) {
     steps.push(
       {
         path: '/onboarding/post-settings',
@@ -103,7 +156,8 @@ export function buildOnboardingFlow(
         bar: true,
       }
     )
-  } else {
+  }
+  if (preview) {
     steps.push({
       path: '/onboarding/preview',
       key: 'preview',
@@ -135,9 +189,9 @@ export function buildOnboardingFlow(
 
 /** Steps shown in the progress bar. */
 export function getProgressSteps(
-  platform?: OnboardingPlatform
+  flow?: OnboardingFlowKind
 ): OnboardingStepDef[] {
-  return buildOnboardingFlow(platform).filter((s) => s.bar)
+  return buildOnboardingFlow(flow).filter((s) => s.bar)
 }
 
 const normalize = (pathname: string) => pathname.replace(/\/+$/, '')
@@ -145,48 +199,49 @@ const normalize = (pathname: string) => pathname.replace(/\/+$/, '')
 /** Position in the flow, used for ordering and progress. -1 when unknown. */
 export function stepIndexOf(
   key: OnboardingStepKey | undefined,
-  platform?: OnboardingPlatform
+  flow?: OnboardingFlowKind
 ): number {
   if (!key) return -1
-  return buildOnboardingFlow(platform).findIndex((s) => s.key === key)
+  return buildOnboardingFlow(flow).findIndex((s) => s.key === key)
 }
 
 export function stepDefFor(
   key: OnboardingStepKey,
-  platform?: OnboardingPlatform
+  flow?: OnboardingFlowKind
 ): OnboardingStepDef | undefined {
-  return buildOnboardingFlow(platform).find((s) => s.key === key)
+  return buildOnboardingFlow(flow).find((s) => s.key === key)
 }
 
 /**
- * Matched against every step either flow can show, not just the current
- * platform's. The caller uses this to recognise where the user is standing,
- * and an X user who lands on the LinkedIn preview is somewhere real that needs
+ * Matched against every step any flow can show, not just the current one's.
+ * The caller uses this to recognise where the user is standing, and an X
+ * reply-agent user who lands on the preview is somewhere real that needs
  * redirecting - reporting it as unknown would leave them there.
  */
 export function stepKeyForPath(pathname: string): OnboardingStepKey | undefined {
   const current = normalize(pathname)
-  const match = [
-    ...buildOnboardingFlow('linkedin'),
-    ...buildOnboardingFlow('twitter'),
-  ].find((s) => normalize(s.path) === current)
+  const match = ALL_FLOWS.flatMap((flow) => buildOnboardingFlow(flow)).find(
+    (s) => normalize(s.path) === current
+  )
   return match?.key
 }
 
 /** Prev/next paths for the current route. */
 export function getStepNav(
   currentPath: string,
-  platform?: OnboardingPlatform
+  flow?: OnboardingFlowKind
 ): {
   prev?: string
   next?: string
 } {
-  const flow = buildOnboardingFlow(platform)
-  const idx = flow.findIndex((s) => normalize(s.path) === normalize(currentPath))
+  const steps = buildOnboardingFlow(flow)
+  const idx = steps.findIndex(
+    (s) => normalize(s.path) === normalize(currentPath)
+  )
   if (idx < 0) return {}
   return {
-    prev: idx > 0 ? flow[idx - 1].path : undefined,
-    next: idx < flow.length - 1 ? flow[idx + 1].path : undefined,
+    prev: idx > 0 ? steps[idx - 1].path : undefined,
+    next: idx < steps.length - 1 ? steps[idx + 1].path : undefined,
   }
 }
 
@@ -203,21 +258,21 @@ export function getStepNav(
  * Anyone at 0 or 1 is sent to agent-type: it now leads, and neither of those
  * accounts has answered it.
  *
- * The two settings steps still exist for X, so an X account parked on one
- * resumes exactly where it was. On LinkedIn they are gone, and those accounts
- * go back to connect-account rather than forward: they stalled before saving
- * targeting or a comment style, and connect-account is where both are now
- * derived - waving them through to identity would finish onboarding with an
- * agent that has nothing to search for.
+ * The two settings steps still exist for X's reply agent, so an X account
+ * parked on one resumes exactly where it was. On LinkedIn they are gone, and
+ * those accounts go back to connect-account rather than forward: they stalled
+ * before saving targeting or a comment style, and connect-account is where
+ * both are now derived - waving them through to identity would finish
+ * onboarding with an agent that has nothing to search for.
  */
 export function stepKeyFromLegacyStep(
   step: number,
-  platform: OnboardingPlatform = 'linkedin'
+  flow: OnboardingFlowKind = 'linkedin'
 ): OnboardingStepKey {
   if (step <= 1) return 'agent-type'
   if (step === 2) return 'connect-account'
   if (step <= 4) {
-    if (platform !== 'twitter') return 'connect-account'
+    if (!stepDefFor('post-settings', flow)) return 'connect-account'
     return step === 3 ? 'post-settings' : 'comment-settings'
   }
   if (step === 5) return 'identity'
@@ -230,7 +285,7 @@ export function stepKeyFromLegacyStep(
  * the number, and they keep arriving until every one of them finishes or
  * lapses, so both paths stay live rather than being migrated in a batch.
  *
- * A key belonging to the other platform's flow - an X account holding
+ * A key belonging to another flow - an X reply-agent account holding
  * `preview`, a LinkedIn one holding `comment-settings` - is treated the same
  * as a deleted step, since it names a screen this user is never shown.
  */
@@ -239,14 +294,12 @@ export function resolveSavedStep(
     stepKey?: string
     step?: number
   },
-  platform: OnboardingPlatform = 'linkedin'
+  flow: OnboardingFlowKind = 'linkedin'
 ): OnboardingStepKey {
-  const known = buildOnboardingFlow(platform).some(
-    (s) => s.key === saved.stepKey
-  )
+  const known = buildOnboardingFlow(flow).some((s) => s.key === saved.stepKey)
   if (known) return saved.stepKey as OnboardingStepKey
   if (saved.stepKey) return 'connect-account'
-  return stepKeyFromLegacyStep(saved.step ?? 0, platform)
+  return stepKeyFromLegacyStep(saved.step ?? 0, flow)
 }
 
 /**
@@ -256,7 +309,7 @@ export function resolveSavedStep(
 export function onboardingRedirectTarget(
   user: Pick<IUser, 'status' | 'metadata'>,
   pathname: string,
-  picked?: OnboardingPlatform | null
+  picked?: Parameters<typeof flowFor>[1]
 ): string | undefined {
   const onboarding = user.metadata?.onboarding
   if (onboarding?.status === 'completed') return
@@ -264,13 +317,13 @@ export function onboardingRedirectTarget(
   // activate there.
   if (user.status !== UserSubscriptionStatus.PENDING) return
 
-  const platform = platformFor(onboarding?.selectedAgentType, picked)
+  const flow = flowFor(onboarding?.selectedAgentType, picked)
   const savedKey = resolveSavedStep(
     {
       stepKey: onboarding?.stepKey,
       step: onboarding?.step,
     },
-    platform
+    flow
   )
   const currentKey = stepKeyForPath(pathname)
 
@@ -278,13 +331,12 @@ export function onboardingRedirectTarget(
   // progress. Pulling someone backwards would undo a step they just finished
   // but whose save has not landed yet.
   //
-  // A step belonging to the other platform's flow indexes as -1, which is
-  // never ahead - the route itself sends those on, and racing it from here
-  // would fight that redirect.
+  // A step belonging to another flow indexes as -1, which is never ahead -
+  // the route itself sends those on, and racing it from here would fight
+  // that redirect.
   if (currentKey) {
-    if (stepIndexOf(currentKey, platform) <= stepIndexOf(savedKey, platform))
-      return
+    if (stepIndexOf(currentKey, flow) <= stepIndexOf(savedKey, flow)) return
   }
 
-  return stepDefFor(savedKey, platform)?.path ?? '/onboarding/agent-type'
+  return stepDefFor(savedKey, flow)?.path ?? '/onboarding/agent-type'
 }

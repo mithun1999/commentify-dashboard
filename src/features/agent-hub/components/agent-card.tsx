@@ -23,7 +23,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { AgentPauseButton } from '@/features/agent-system/components/agent-pause-button'
-import { getAgentType } from '@/features/agent-system/registry'
+import {
+  getAgentType,
+  isPostingAgentSlug,
+} from '@/features/agent-system/registry'
 import type { DerivedAgent } from '@/features/agent-system/types/agent.types'
 import { DisconnectAccountDialog } from '@/features/users/components/disconnect-account-dialog'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
@@ -61,7 +64,7 @@ interface AgentCardProps {
 
 export function AgentCard({ agent, profile }: AgentCardProps) {
   const typeDef = getAgentType(agent.type)
-  const isPosting = agent.type === 'linkedin-posting'
+  const isPosting = isPostingAgentSlug(agent.type)
   const { data: commentingStats } = useGetPostStats(
     !isPosting ? agent.profileId : undefined,
   )

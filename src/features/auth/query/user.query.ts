@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  platformFor,
+  flowFor,
   resolveSavedStep,
   stepIndexOf,
   type OnboardingStepKey,
@@ -50,6 +50,9 @@ export const useUpdateOnboardingStatus = () => {
   const queryClient = useQueryClient()
   const { data: user } = useGetUserQuery()
   const pickedPlatform = useOnboardingStore((s) => s.data.selectedPlatform)
+  const pickedCapabilities = useOnboardingStore(
+    (s) => s.data.selectedCapabilities
+  )
 
   const { mutate, mutateAsync, isPending } = useMutation<
     IUser,
@@ -61,28 +64,27 @@ export const useUpdateOnboardingStatus = () => {
       // agent-type step reports its pick and its next step together, and
       // reading the old slug there would order the steps by the flow the user
       // has just left.
-      const platform = platformFor(
+      const flow = flowFor(
         rest.selectedAgentType ?? user?.metadata?.onboarding?.selectedAgentType,
-        pickedPlatform
+        { platform: pickedPlatform, capabilities: pickedCapabilities }
       )
       const saved = resolveSavedStep(
         {
           stepKey: user?.metadata?.onboarding?.stepKey,
           step: user?.metadata?.onboarding?.step,
         },
-        platform
+        flow
       )
       // Someone revisiting an earlier screen should not lose the ground they
       // have already covered.
       const target =
-        rewind ||
-        stepIndexOf(stepKey, platform) > stepIndexOf(saved, platform)
+        rewind || stepIndexOf(stepKey, flow) > stepIndexOf(saved, flow)
           ? stepKey
           : saved
       return updateOnboardingStatus({
         ...rest,
         stepKey: target,
-        step: stepIndexOf(target, platform),
+        step: stepIndexOf(target, flow),
       })
     },
     onSuccess: (data) => {

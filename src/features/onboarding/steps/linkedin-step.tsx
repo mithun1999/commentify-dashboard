@@ -41,6 +41,7 @@ import {
 import { prewarmPostingPreview } from '@/features/onboarding/api/preview.api'
 import { useDeriveOnboardingSettings } from '@/features/onboarding/hooks/useDeriveOnboardingSettings'
 import { useExtensionGuard } from '@/features/onboarding/hooks/useExtensionGuard'
+import { useOnboardingFlow } from '@/features/onboarding/hooks/useOnboardingPlatform'
 import { useTrackStepView } from '@/features/onboarding/hooks/useTrackStepView'
 import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
 import {
@@ -119,11 +120,23 @@ export function LinkedInStep() {
   const capabilities = onboardingData.selectedCapabilities ?? []
   const wantsPost = capabilities.includes('post')
   const wantsComment = capabilities.includes('comment')
-  // Platform-aware: the two flows diverge here, and asking for the LinkedIn
-  // one lands an X account on the preview - a step its flow does not contain,
-  // so the save is rejected as out-of-order and the user is bounced back here.
+  // The X copy was written for the reply agent; a posting agent reads the
+  // account's own posts and publishes, which is a different thing to ask for.
+  const xPosting = platform === 'twitter' && wantsPost
+  const description = xPosting
+    ? wantsComment
+      ? 'We need access to your X account to reply and post on your behalf.'
+      : 'We need access to your X account to learn how you write and post on your behalf.'
+    : config.description
+  const tooltip = xPosting
+    ? 'We securely access only what is needed to read your posts and publish the ones you approve.'
+    : config.tooltip
+  // Flow-aware: the flows diverge here, and asking for the wrong one lands an
+  // account on a step its flow does not contain, so the save is rejected as
+  // out-of-order and the user is bounced back here.
+  const flow = useOnboardingFlow()
   const connectNextStep =
-    getStepNav('/onboarding/connect-account', platform).next ??
+    getStepNav('/onboarding/connect-account', flow).next ??
     '/onboarding/identity'
   const connectNextKey = stepKeyForPath(connectNextStep) ?? 'identity'
 
@@ -138,11 +151,15 @@ export function LinkedInStep() {
     userOnboarding &&
     (userOnboarding.status === 'completed' ||
       stepIndexOf(
-        resolveSavedStep({
-          stepKey: userOnboarding.stepKey,
-          step: userOnboarding.step,
-        })
-      ) > stepIndexOf('connect-account'))
+        resolveSavedStep(
+          {
+            stepKey: userOnboarding.stepKey,
+            step: userOnboarding.step,
+          },
+          flow
+        ),
+        flow
+      ) > stepIndexOf('connect-account', flow))
 
   const collectLinkedInInfo = useCallback(async () => {
     try {
@@ -403,6 +420,20 @@ export function LinkedInStep() {
     startDerivation(resolvedProfileId)
   }, [derives, hasProfileInfo, resolvedProfileId, startDerivation])
 
+  // Same idea for X posting's preview: started on link rather than on
+  // Continue, the voice read and the draft run while the user reads the
+  // confirmation. Continue asks again, which is a no-op once it is running.
+  // The just-linked profile is the active one; the stored id can be stale.
+  const xPreviewStarted = useRef(false)
+  const linkedXProfileId =
+    activeProfile?.platform === 'twitter' ? activeProfile._id : undefined
+  useEffect(() => {
+    if (!xPosting || !hasProfileInfo || !linkedXProfileId) return
+    if (xPreviewStarted.current) return
+    xPreviewStarted.current = true
+    void prewarmPostingPreview({ profileId: linkedXProfileId }).catch(() => {})
+  }, [xPosting, hasProfileInfo, linkedXProfileId])
+
   const displayName =
     profileData?._platform === 'twitter'
       ? profileData.displayName ||
@@ -459,13 +490,13 @@ export function LinkedInStep() {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side='right' className='max-w-xs'>
-                  <p>{config.tooltip}</p>
+                  <p>{tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         }
-        description={config.description}
+        description={description}
       >
         <div className='flex flex-col items-center space-y-6 py-4'>
           <div className='w-full max-w-md space-y-6'>
@@ -577,8 +608,8 @@ export function LinkedInStep() {
 
                 // Activate the posting agent up front so it shows in the hub and
                 // runs its own voice-analysis onboarding when opened.
-                if (wantsPost && platform === 'linkedin') {
-                  const postingSlug = getAgentTypeFor('linkedin', 'post')?.slug
+                if (wantsPost) {
+                  const postingSlug = getAgentTypeFor(platform, 'post')?.slug
                   if (postingSlug) {
                     // Called directly rather than through useActivateAgentType:
                     // this runs before checkout, so the posting slot cap is 0 and
@@ -597,7 +628,8 @@ export function LinkedInStep() {
                   }
 
                   // The voice build plus a first draft takes about a minute, so
-                  // it starts here and finishes while the comment preview runs.
+                  // it starts here and finishes while the comment preview runs
+                  // (or, on X, while the reply-agent steps are filled in).
                   void prewarmPostingPreview({ profileId: resolvedId }).catch(
                     () => {}
                   )

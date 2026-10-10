@@ -95,6 +95,21 @@ export const AGENT_TYPES: Record<string, AgentTypeDefinition> = {
     queueColumns: [],
     queueItemComponent: PlaceholderComponent,
   },
+  'twitter-posting': {
+    slug: 'twitter-posting',
+    name: 'X Posting',
+    description:
+      'AI-planned daily posts and threads for X, written in your voice and published on your schedule.',
+    icon: IconPencil,
+    platform: 'twitter',
+    capability: 'post',
+    access: 'open',
+    badge: 'Beta',
+    scrapeSettingsComponent: PlaceholderComponent,
+    commentSettingsComponent: PlaceholderComponent,
+    queueColumns: [],
+    queueItemComponent: PlaceholderComponent,
+  },
   'linkedin-posting': {
     slug: 'linkedin-posting',
     name: 'LinkedIn Posting',
@@ -110,6 +125,11 @@ export const AGENT_TYPES: Record<string, AgentTypeDefinition> = {
     queueColumns: [],
     queueItemComponent: PlaceholderComponent,
   },
+}
+
+/** Posting agents share the calendar, editor and onboarding, whatever the platform. */
+export function isPostingAgentSlug(slug?: string): boolean {
+  return !!slug && AGENT_TYPES[slug]?.capability === 'post'
 }
 
 export function getAgentType(slug: string): AgentTypeDefinition | undefined {

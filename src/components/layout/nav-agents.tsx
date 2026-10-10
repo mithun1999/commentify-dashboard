@@ -10,7 +10,10 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useAgents } from '@/features/agent-system/hooks/use-agents'
-import { getAgentType } from '@/features/agent-system/registry'
+import {
+  getAgentType,
+  isPostingAgentSlug,
+} from '@/features/agent-system/registry'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 
 function StatusDot({
@@ -50,7 +53,7 @@ export function NavAgents() {
           const typeDef = getAgentType(agent.type)
           if (!typeDef) return null
           const Icon = typeDef.icon
-          const defaultTab = agent.type === 'linkedin-posting' ? 'calendar' : 'stats'
+          const defaultTab = isPostingAgentSlug(agent.type) ? 'calendar' : 'stats'
           const agentUrl = `/agents/${agent.profileId}/${agent.type}/${defaultTab}`
           const isActive = href.startsWith(
             `/agents/${agent.profileId}/${agent.type}`

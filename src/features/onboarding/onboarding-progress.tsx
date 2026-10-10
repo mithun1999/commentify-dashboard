@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useOnboardingPlatform } from './hooks/useOnboardingPlatform'
+import { useOnboardingFlow } from './hooks/useOnboardingPlatform'
 import {
   getProgressSteps,
   resolveSavedStep,
@@ -27,19 +27,19 @@ export function OnboardingProgress() {
   const location = useLocation()
   const { completedSteps } = useOnboarding()
   const { data: user } = useGetUserQuery()
-  const platform = useOnboardingPlatform()
+  const flow = useOnboardingFlow()
   const savedStep = resolveSavedStep(
     {
       stepKey: user?.metadata?.onboarding?.stepKey,
       step: user?.metadata?.onboarding?.step,
     },
-    platform
+    flow
   )
 
-  const steps = getProgressSteps(platform)
+  const steps = getProgressSteps(flow)
   // Steps outside the bar still count as progress, so compare on the full flow.
   const furthestUnlocked = steps.filter(
-    (step) => stepIndexOf(step.key, platform) <= stepIndexOf(savedStep, platform)
+    (step) => stepIndexOf(step.key, flow) <= stepIndexOf(savedStep, flow)
   ).length - 1
 
   const pathname = location.pathname
@@ -51,16 +51,16 @@ export function OnboardingProgress() {
   // alone reports someone standing on one as being nowhere - which empties the
   // fill and unticks the step they have just finished.
   const currentKey = stepKeyForPath(pathname)
-  const currentFlowIndex = stepIndexOf(currentKey, platform)
+  const currentFlowIndex = stepIndexOf(currentKey, flow)
   const isPast = (key: OnboardingStepKey) =>
-    currentFlowIndex >= 0 && stepIndexOf(key, platform) < currentFlowIndex
+    currentFlowIndex >= 0 && stepIndexOf(key, flow) < currentFlowIndex
 
   const passed = steps.filter((step) => isPast(step.key)).length
   const progress =
     currentFlowIndex < 0 ? 0 : Math.min(100, (passed / (steps.length - 1)) * 100)
 
   const currentMessage =
-    (currentKey && stepDefFor(currentKey, platform)?.message) ??
+    (currentKey && stepDefFor(currentKey, flow)?.message) ??
     'Complete your agent setup'
 
   const canVisit = (step: OnboardingStepDef, index: number) =>
