@@ -36,6 +36,7 @@ import {
   useUpdateSubscriptionPlan,
 } from '@/features/subscription/query/subscription.query'
 import { verifyCheckout } from '@/features/subscription/api/subscription.api'
+import { SubscriptionStatusEnum } from '@/features/subscription/enum/subscription.enum'
 import { useGetPlans } from '@/features/pricing/query/pricing.query'
 import type {
   ProductAgentType,
@@ -69,6 +70,9 @@ type CheckoutState = 'selecting' | 'processing' | 'success' | 'failed'
 
 const POLL_INTERVAL_MS = 3000
 const POLL_TIMEOUT_MS = 10000
+// A card mandate the bank is still confirming starts the trial only once it
+// clears (subscription.active webhook), which can take several minutes.
+const PENDING_POLL_TIMEOUT_MS = 10 * 60 * 1000
 
 const AGENTS: {
   key: ProductAgentType
@@ -268,6 +272,7 @@ function useCheckoutReturn() {
     return 'processing'
   })
   const [timedOut, setTimedOut] = useState(false)
+  const [paymentPending, setPaymentPending] = useState(false)
 
   useEffect(() => {
     if (hasCheckoutParams && posthog) {
@@ -294,10 +299,22 @@ function useCheckoutReturn() {
     verifyCalledRef.current = true
 
     const run = async () => {
+      let timeoutMs = POLL_TIMEOUT_MS
       if (subscription_id) {
         try {
-          await verifyCheckout(subscription_id)
-          posthog?.capture('onboarding_checkout_verify_success', { subscription_id })
+          const res = await verifyCheckout(subscription_id)
+          posthog?.capture('onboarding_checkout_verify_success', {
+            subscription_id,
+            status: res.status,
+          })
+          if (res.status === 'failed') {
+            setCheckoutState('failed')
+            return
+          }
+          if (res.status === SubscriptionStatusEnum.PENDING) {
+            setPaymentPending(true)
+            timeoutMs = PENDING_POLL_TIMEOUT_MS
+          }
         } catch {
           posthog?.capture('onboarding_checkout_verify_failed', { subscription_id })
         }
@@ -306,7 +323,7 @@ function useCheckoutReturn() {
 
       startTimeRef.current = Date.now()
       pollRef.current = setInterval(async () => {
-        if (Date.now() - startTimeRef.current > POLL_TIMEOUT_MS) {
+        if (Date.now() - startTimeRef.current > timeoutMs) {
           setTimedOut(true)
           if (pollRef.current) clearInterval(pollRef.current)
           return
@@ -354,6 +371,21 @@ function useCheckoutReturn() {
     posthog,
   ])
 
+  // The bank declined the mandate while we waited: the subscription.failed
+  // webhook closes the pending row, and the user never left PENDING.
+  const declinedWhileWaiting =
+    paymentPending &&
+    user?.subscription?.providerId === subscription_id &&
+    user?.subscription?.status === SubscriptionStatusEnum.CANCELLED
+  useEffect(() => {
+    if (checkoutState !== 'processing' || !declinedWhileWaiting) return
+    if (pollRef.current) clearInterval(pollRef.current)
+    setCheckoutState('failed')
+    posthog?.capture('onboarding_checkout_declined_while_pending', {
+      subscription_id,
+    })
+  }, [checkoutState, declinedWhileWaiting, posthog, subscription_id])
+
   const retryCheckout = () => {
     posthog?.capture('onboarding_checkout_retry_clicked')
     navigate({
@@ -362,10 +394,11 @@ function useCheckoutReturn() {
       replace: true,
     })
     setCheckoutState('selecting')
+    setPaymentPending(false)
     verifyCalledRef.current = false
   }
 
-  return { checkoutState, timedOut, retryCheckout }
+  return { checkoutState, timedOut, paymentPending, retryCheckout }
 }
 
 export function ActivateTrialStep() {
@@ -375,7 +408,8 @@ export function ActivateTrialStep() {
   const { data: user } = useGetUserQuery()
   const { data: plans, isLoading: isFetchingPlans } = useGetPlans()
   const { data: onboardingData } = useOnboarding()
-  const { checkoutState, timedOut, retryCheckout } = useCheckoutReturn()
+  const { checkoutState, timedOut, paymentPending, retryCheckout } =
+    useCheckoutReturn()
   const afterTrialNavigate = useAfterTrialNavigate()
 
   const [interval, setBillingInterval] = useState<Interval>('monthly')
@@ -623,7 +657,20 @@ export function ActivateTrialStep() {
     return (
       <OnboardingCard title='Activating your trial...' className='max-w-md'>
         <div className='flex flex-col items-center gap-4 py-8'>
-          {timedOut ? (
+          {timedOut && paymentPending ? (
+            <>
+              <Loader2 className='h-12 w-12 text-amber-500' />
+              <p className='text-foreground text-center font-medium'>
+                Your bank hasn't confirmed the payment yet
+              </p>
+              <p className='text-muted-foreground text-center text-sm'>
+                Your trial starts by itself as soon as it does. You can close this page. If nothing changes within an hour, message us and we'll check it.
+              </p>
+              <Button onClick={() => navigate({ to: '/' })} className='mt-2'>
+                Go to Dashboard
+              </Button>
+            </>
+          ) : timedOut ? (
             <>
               <CheckCircle2 className='h-12 w-12 text-green-500' />
               <p className='text-foreground text-center font-medium'>
@@ -635,6 +682,16 @@ export function ActivateTrialStep() {
               <Button onClick={() => navigate({ to: '/' })} className='mt-2'>
                 Go to Dashboard
               </Button>
+            </>
+          ) : paymentPending ? (
+            <>
+              <Loader2 className='text-primary h-12 w-12 animate-spin' />
+              <p className='text-foreground text-center font-medium'>
+                Waiting for your bank to confirm the payment...
+              </p>
+              <p className='text-muted-foreground text-center text-sm'>
+                Some cards take a few minutes. Your trial starts by itself once it clears, and you don't need to pay again.
+              </p>
             </>
           ) : (
             <>
