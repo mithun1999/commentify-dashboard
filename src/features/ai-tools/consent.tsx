@@ -216,7 +216,7 @@ export default function McpConsent({ requestId }: { requestId: string }) {
       ) : (
         <div className='space-y-3 rounded-lg border p-4'>
           <p className='text-sm font-medium'>
-            Connecting AI tools is part of Pro
+            Connecting AI tools is part of the Pro plan
           </p>
           <p className='text-muted-foreground text-sm'>
             Upgrade, then come back to this tab and refresh it. The link stays

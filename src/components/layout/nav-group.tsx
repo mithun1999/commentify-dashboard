@@ -69,7 +69,8 @@ const SidebarMenuLink = ({ item, href }: { item: NavLink; href: string }) => {
         tooltip={
           item.locked
             ? {
-                children: item.lockedHint ?? 'Part of Pro. Upgrade to use it.',
+                children:
+                  item.lockedHint ?? 'Part of the Pro plan. Upgrade to use it.',
                 hidden: false,
                 // Wraps the hint over a few short lines instead of one long one.
                 className: 'max-w-52',

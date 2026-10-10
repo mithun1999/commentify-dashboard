@@ -110,7 +110,9 @@ export default function AiTools() {
             {locked && (
               <Alert className='border-primary/40 bg-primary/5'>
                 <IconLock className='size-4' />
-                <AlertTitle>Connecting AI tools is part of Pro</AlertTitle>
+                <AlertTitle>
+                  Connecting AI tools is part of the Pro plan
+                </AlertTitle>
                 <AlertDescription>
                   <p>
                     Upgrade to Pro to use Commentify from Claude, ChatGPT and

@@ -27,7 +27,7 @@ export const sidebarData: SidebarData = {
           icon: IconPlugConnected,
           requiresPro: true,
           lockedHint:
-            'Part of Pro. Upgrade to use Commentify from Claude, ChatGPT and Cursor.',
+            'Part of the Pro plan. Upgrade to use Commentify from Claude, ChatGPT and Cursor.',
         },
       ],
     },
