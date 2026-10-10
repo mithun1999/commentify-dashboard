@@ -9,6 +9,8 @@ import { NavAgents } from '@/components/layout/nav-agents'
 import { NavGroup } from '@/components/layout/nav-group'
 import { NavUser } from '@/components/layout/nav-user'
 import { useTheme } from '@/context/theme-context'
+import { canUseMcp } from '@/features/ai-tools/plan'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { CopilotLauncher } from '@/features/copilot/components/copilot-launcher'
 import { sidebarData } from './data/sidebar-data'
 import logoWhite from '@/assets/images/logo.svg'
@@ -16,6 +18,16 @@ import logoBlack from '@/assets/images/logo-black.svg'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { theme } = useTheme()
+  const { data: user } = useGetUserQuery()
+  // Only once the user is loaded, so a Pro account never sees the lock flash.
+  const proLocked = Boolean(user) && !canUseMcp(user)
+  const navGroups = sidebarData.navGroups.map((group) => ({
+    ...group,
+    items: group.items.map((item) =>
+      item.requiresPro && proLocked ? { ...item, locked: true } : item
+    ),
+  }))
+
   const isDark =
     theme === 'dark' ||
     (theme === 'system' &&
@@ -32,7 +44,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
-        {sidebarData.navGroups.map((props, index) => (
+        {navGroups.map((props, index) => (
           <NavGroup key={index} {...props} />
         ))}
         <NavAgents />

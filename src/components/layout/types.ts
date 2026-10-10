@@ -8,6 +8,12 @@ interface BaseNavItem {
   title: string
   badge?: string
   icon?: React.ElementType
+  /** Shown with a lock and an upgrade tooltip to accounts not on Pro. */
+  requiresPro?: boolean
+  /** The tooltip a locked item shows. */
+  lockedHint?: string
+  /** Set at render time when the account's plan does not include the item. */
+  locked?: boolean
 }
 
 type NavLink = BaseNavItem & {

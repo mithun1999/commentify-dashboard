@@ -7,6 +7,7 @@ import {
   useLocation,
 } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth.store'
+import { takePostLoginRedirect } from '@/lib/post-login-redirect'
 import { useProfileStore } from '@/stores/profile.store'
 import { cn } from '@/lib/utils'
 import { SearchProvider } from '@/context/search-context'
@@ -53,7 +54,14 @@ function RouteComponent() {
 
   const isCoreFeaturePage = () => {
     const pathname = location.pathname
-    const nonCorePages = ['/pricing', '/plans', '/billing', '/agents', '/']
+    const nonCorePages = [
+      '/pricing',
+      '/plans',
+      '/billing',
+      '/agents',
+      '/ai-tools',
+      '/',
+    ]
     return !nonCorePages.some((page) =>
       page === '/' ? pathname === '/' : pathname.startsWith(page)
     )
@@ -73,6 +81,14 @@ function RouteComponent() {
       navigate({ to: '/sign-in' })
     }
   }, [isSessionLoaded, isSignedIn, navigate])
+
+  // A page that sent the user to sign in (the MCP consent screen) gets them
+  // back. Every sign-in path lands here on `/`, Google's redirect included.
+  useEffect(() => {
+    if (!isSessionLoaded || !isSignedIn) return
+    const target = takePostLoginRedirect()
+    if (target) window.location.replace(target)
+  }, [isSessionLoaded, isSignedIn])
 
   const isPending = user?.status === UserSubscriptionStatus.PENDING
   const isOnboardingCompleted =

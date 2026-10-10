@@ -23,6 +23,7 @@ import { Route as OnboardingConnectAccountImport } from './routes/onboarding/con
 import { Route as OnboardingCommentSettingsImport } from './routes/onboarding/comment-settings'
 import { Route as OnboardingAgentTypeImport } from './routes/onboarding/agent-type'
 import { Route as OnboardingActivateTrialImport } from './routes/onboarding/activate-trial'
+import { Route as OauthConsentImport } from './routes/oauth/consent'
 import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
 import { Route as errors503Import } from './routes/(errors)/503'
 import { Route as errors500Import } from './routes/(errors)/500'
@@ -42,6 +43,7 @@ import { Route as AuthenticatedPlansIndexImport } from './routes/_authenticated/
 import { Route as AuthenticatedHistoryIndexImport } from './routes/_authenticated/history/index'
 import { Route as AuthenticatedHelpCenterIndexImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedCopilotIndexImport } from './routes/_authenticated/copilot/index'
+import { Route as AuthenticatedAiToolsIndexImport } from './routes/_authenticated/ai-tools/index'
 import { Route as AuthenticatedSettingsPostImport } from './routes/_authenticated/settings/post'
 import { Route as AuthenticatedSettingsCommentsImport } from './routes/_authenticated/settings/comments'
 import { Route as AuthenticatedCopilotConversationIdImport } from './routes/_authenticated/copilot/$conversationId'
@@ -124,6 +126,12 @@ const OnboardingActivateTrialRoute = OnboardingActivateTrialImport.update({
   id: '/activate-trial',
   path: '/activate-trial',
   getParentRoute: () => OnboardingRouteRoute,
+} as any)
+
+const OauthConsentRoute = OauthConsentImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => rootRoute,
 } as any)
 
 const AuthenticatedBillingRoute = AuthenticatedBillingImport.update({
@@ -240,6 +248,12 @@ const AuthenticatedHelpCenterIndexRoute =
 const AuthenticatedCopilotIndexRoute = AuthenticatedCopilotIndexImport.update({
   id: '/copilot/',
   path: '/copilot/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
+const AuthenticatedAiToolsIndexRoute = AuthenticatedAiToolsIndexImport.update({
+  id: '/ai-tools/',
+  path: '/ai-tools/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -421,6 +435,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBillingImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentImport
+      parentRoute: typeof rootRoute
+    }
     '/onboarding/activate-trial': {
       id: '/onboarding/activate-trial'
       path: '/activate-trial'
@@ -511,6 +532,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/post'
       preLoaderRoute: typeof AuthenticatedSettingsPostImport
       parentRoute: typeof AuthenticatedSettingsRouteImport
+    }
+    '/_authenticated/ai-tools/': {
+      id: '/_authenticated/ai-tools/'
+      path: '/ai-tools'
+      fullPath: '/ai-tools'
+      preLoaderRoute: typeof AuthenticatedAiToolsIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/copilot/': {
       id: '/_authenticated/copilot/'
@@ -659,6 +687,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedCopilotConversationIdRoute: typeof AuthenticatedCopilotConversationIdRoute
+  AuthenticatedAiToolsIndexRoute: typeof AuthenticatedAiToolsIndexRoute
   AuthenticatedCopilotIndexRoute: typeof AuthenticatedCopilotIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
@@ -674,6 +703,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedCopilotConversationIdRoute:
     AuthenticatedCopilotConversationIdRoute,
+  AuthenticatedAiToolsIndexRoute: AuthenticatedAiToolsIndexRoute,
   AuthenticatedCopilotIndexRoute: AuthenticatedCopilotIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
@@ -731,6 +761,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
@@ -744,6 +775,7 @@ export interface FileRoutesByFullPath {
   '/copilot/$conversationId': typeof AuthenticatedCopilotConversationIdRoute
   '/settings/comments': typeof AuthenticatedSettingsCommentsRoute
   '/settings/post': typeof AuthenticatedSettingsPostRoute
+  '/ai-tools': typeof AuthenticatedAiToolsIndexRoute
   '/copilot': typeof AuthenticatedCopilotIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/history': typeof AuthenticatedHistoryIndexRoute
@@ -773,6 +805,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
@@ -786,6 +819,7 @@ export interface FileRoutesByTo {
   '/copilot/$conversationId': typeof AuthenticatedCopilotConversationIdRoute
   '/settings/comments': typeof AuthenticatedSettingsCommentsRoute
   '/settings/post': typeof AuthenticatedSettingsPostRoute
+  '/ai-tools': typeof AuthenticatedAiToolsIndexRoute
   '/copilot': typeof AuthenticatedCopilotIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/history': typeof AuthenticatedHistoryIndexRoute
@@ -818,6 +852,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
   '/onboarding/comment-settings': typeof OnboardingCommentSettingsRoute
@@ -831,6 +866,7 @@ export interface FileRoutesById {
   '/_authenticated/copilot/$conversationId': typeof AuthenticatedCopilotConversationIdRoute
   '/_authenticated/settings/comments': typeof AuthenticatedSettingsCommentsRoute
   '/_authenticated/settings/post': typeof AuthenticatedSettingsPostRoute
+  '/_authenticated/ai-tools/': typeof AuthenticatedAiToolsIndexRoute
   '/_authenticated/copilot/': typeof AuthenticatedCopilotIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
@@ -864,6 +900,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
+    | '/oauth/consent'
     | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
@@ -877,6 +914,7 @@ export interface FileRouteTypes {
     | '/copilot/$conversationId'
     | '/settings/comments'
     | '/settings/post'
+    | '/ai-tools'
     | '/copilot'
     | '/help-center'
     | '/history'
@@ -905,6 +943,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
+    | '/oauth/consent'
     | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
@@ -918,6 +957,7 @@ export interface FileRouteTypes {
     | '/copilot/$conversationId'
     | '/settings/comments'
     | '/settings/post'
+    | '/ai-tools'
     | '/copilot'
     | '/help-center'
     | '/history'
@@ -948,6 +988,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/billing'
+    | '/oauth/consent'
     | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
     | '/onboarding/comment-settings'
@@ -961,6 +1002,7 @@ export interface FileRouteTypes {
     | '/_authenticated/copilot/$conversationId'
     | '/_authenticated/settings/comments'
     | '/_authenticated/settings/post'
+    | '/_authenticated/ai-tools/'
     | '/_authenticated/copilot/'
     | '/_authenticated/help-center/'
     | '/_authenticated/history/'
@@ -991,6 +1033,7 @@ export interface RootRouteChildren {
   errors404Route: typeof errors404Route
   errors500Route: typeof errors500Route
   errors503Route: typeof errors503Route
+  OauthConsentRoute: typeof OauthConsentRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -1007,6 +1050,7 @@ const rootRouteChildren: RootRouteChildren = {
   errors404Route: errors404Route,
   errors500Route: errors500Route,
   errors503Route: errors503Route,
+  OauthConsentRoute: OauthConsentRoute,
 }
 
 export const routeTree = rootRoute
@@ -1031,7 +1075,8 @@ export const routeTree = rootRoute
         "/(errors)/403",
         "/(errors)/404",
         "/(errors)/500",
-        "/(errors)/503"
+        "/(errors)/503",
+        "/oauth/consent"
       ]
     },
     "/_authenticated": {
@@ -1041,6 +1086,7 @@ export const routeTree = rootRoute
         "/_authenticated/billing",
         "/_authenticated/",
         "/_authenticated/copilot/$conversationId",
+        "/_authenticated/ai-tools/",
         "/_authenticated/copilot/",
         "/_authenticated/help-center/",
         "/_authenticated/history/",
@@ -1109,6 +1155,9 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/billing.tsx",
       "parent": "/_authenticated"
     },
+    "/oauth/consent": {
+      "filePath": "oauth/consent.tsx"
+    },
     "/onboarding/activate-trial": {
       "filePath": "onboarding/activate-trial.tsx",
       "parent": "/onboarding"
@@ -1160,6 +1209,10 @@ export const routeTree = rootRoute
     "/_authenticated/settings/post": {
       "filePath": "_authenticated/settings/post.tsx",
       "parent": "/_authenticated/settings"
+    },
+    "/_authenticated/ai-tools/": {
+      "filePath": "_authenticated/ai-tools/index.tsx",
+      "parent": "/_authenticated"
     },
     "/_authenticated/copilot/": {
       "filePath": "_authenticated/copilot/index.tsx",

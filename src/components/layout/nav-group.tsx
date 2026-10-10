@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Lock } from 'lucide-react'
 import {
   Collapsible,
   CollapsibleContent,
@@ -64,12 +64,30 @@ const SidebarMenuLink = ({ item, href }: { item: NavLink; href: string }) => {
       <SidebarMenuButton
         asChild
         isActive={checkIsActive(href, item)}
-        tooltip={item.title}
+        // A locked item explains itself on hover whether or not the sidebar
+        // is collapsed; the default tooltip only shows when it is.
+        tooltip={
+          item.locked
+            ? {
+                children:
+                  item.lockedHint ?? 'Part of the Pro plan. Upgrade to use it.',
+                hidden: false,
+                // Wraps the hint over a few short lines instead of one long one.
+                className: 'max-w-52',
+              }
+            : item.title
+        }
       >
         <Link to={item.url} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
           <span>{item.title}</span>
           {item.badge && <NavBadge>{item.badge}</NavBadge>}
+          {item.locked && (
+            <Lock
+              aria-label='Pro feature'
+              className='text-muted-foreground ml-auto size-3.5'
+            />
+          )}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
