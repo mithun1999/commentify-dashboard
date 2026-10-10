@@ -227,6 +227,10 @@ export async function getPostTimeline(
 
 export type ComposerOutputType =
   | 'auto'
+  // X formats; the backend holds them to what the plan and account allow.
+  | 'tweet'
+  | 'thread'
+  | 'long_post'
   | 'text_only'
   | 'concept_illustration'
   | 'chat_screenshot'
@@ -691,6 +695,39 @@ export async function switchCarouselTemplate(
     method: 'POST',
     url: `/post-generator/posts/${postId}/carousel/switch-template`,
     data: { styleKey },
+  })
+  return data
+}
+
+export interface EngagementSnapshot {
+  capturedAt: string
+  hoursSincePublish: number | null
+  impressions: number | null
+  reactions: number | null
+  comments: number | null
+  reposts: number | null
+  saves: number | null
+  views: number | null
+  quotes: number | null
+  bookmarks: number | null
+  profileViewers: number | null
+  followersGained: number | null
+}
+
+export interface PostEngagement {
+  postId: string
+  platform: 'linkedin' | 'twitter'
+  publishedUrl: string | null
+  /** Set a day after publishing: true when it beat most of the author's recent posts. */
+  topPerformer: boolean | null
+  snapshots: EngagementSnapshot[]
+}
+
+/** How a published post has done, one snapshot per capture, oldest first. */
+export async function getPostEngagement(postId: string): Promise<PostEngagement> {
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/post-generator/posts/${postId}/engagement`,
   })
   return data
 }
