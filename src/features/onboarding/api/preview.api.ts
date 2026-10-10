@@ -373,7 +373,10 @@ export interface PostingPreview {
     calendarId?: string
     content: string
     status: string
+    platform?: 'linkedin' | 'twitter'
     outputType?: string
+    /** An X thread, one entry per post; null for a single post. */
+    segments?: string[] | null
     isCarousel: boolean
     media: {
       type: 'image' | 'pdf'

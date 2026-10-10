@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import {
   getAgentType,
   getAgentTypeFor,
+  isPostingAgentSlug,
 } from '@/features/agent-system/registry'
 import {
   PlatformCapabilityPicker,
@@ -119,7 +120,7 @@ export function AddAgentDialog({
   }
 
   const defaultTabForAgent = (slug?: string) =>
-    slug === 'linkedin-posting' ? 'calendar' : 'settings'
+    isPostingAgentSlug(slug) ? 'calendar' : 'settings'
 
   const activateAllAndNavigate = async (profileId: string) => {
     for (const slug of selectedSlugs) {

@@ -3,6 +3,8 @@ import { IconCheck, IconExternalLink, IconLoader2, IconPlus, IconTrash, IconSpar
 import { VoiceChatPanel } from './voice-chat-panel'
 import { BrandSettingsPanel } from './brand-settings-panel'
 import { MasterySignalsPanel } from './mastery-signals-panel'
+import { XPostingSchedule } from './x-posting-schedule'
+import { VoiceAnalysisProgress } from './voice-analysis-progress'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -26,11 +28,31 @@ import {
 interface PostingOnboardingProps {
   profileId: string
   onComplete: () => void
+  /** The posting agent's network. X skips LinkedIn-only creators and carousels. */
+  platform?: 'linkedin' | 'twitter'
 }
 
 function creatorDisplayName(creator: any): string {
   const name = [creator.firstName, creator.lastName].filter(Boolean).join(' ').trim()
   return name || creator.publicIdentifier || 'Unknown Creator'
+}
+
+function creatorProfileUrl(creator: any): string {
+  return creator.platform === 'twitter'
+    ? `https://x.com/${creator.publicIdentifier}`
+    : `https://www.linkedin.com/in/${creator.publicIdentifier}/`
+}
+
+/** Under the name: the X handle and bio, or the LinkedIn headline. */
+function creatorSubtitle(creator: any): string | null {
+  if (creator.platform === 'twitter') {
+    return [`@${creator.publicIdentifier}`, creator.headline].filter(Boolean).join(' · ')
+  }
+  return creator.headline || null
+}
+
+function creatorPlaceholder(isX: boolean): string {
+  return isX ? 'Paste an X handle (@naval) or profile link...' : 'Paste LinkedIn profile URL...'
 }
 
 const STEPS = [
@@ -52,11 +74,14 @@ function CompletedSettingsView({
   profileId,
   onboardingStatus,
   creators,
+  platform = 'linkedin',
 }: {
   profileId: string
   onboardingStatus: any
   creators: any[]
+  platform?: 'linkedin' | 'twitter'
 }) {
+  const isX = platform === 'twitter'
   const [creatorUrl, setCreatorUrl] = useState('')
   const startOnboarding = useStartOnboarding()
   const addCreator = useAddCreator()
@@ -133,7 +158,9 @@ function CompletedSettingsView({
       <div>
         <h1 className='text-2xl font-bold tracking-tight'>Posting Settings</h1>
         <p className='text-muted-foreground mt-1 text-sm'>
-          Manage your posting schedule, voice profile, and inspirational creators.
+          {isX
+            ? 'Manage your X posting schedule and the voice your posts are written in.'
+            : 'Manage your posting schedule, voice profile, and inspirational creators.'}
         </p>
       </div>
 
@@ -159,6 +186,12 @@ function CompletedSettingsView({
               Re-analyze
             </Button>
           </div>
+
+          {startOnboarding.isPending && (
+            <div className='mb-4 rounded-lg border p-4'>
+              <VoiceAnalysisProgress profileId={profileId} active />
+            </div>
+          )}
 
           {voice ? (
             <div className='space-y-4'>
@@ -280,7 +313,7 @@ function CompletedSettingsView({
                     </Avatar>
                     <div className='min-w-0'>
                       <a
-                        href={`https://www.linkedin.com/in/${creator.publicIdentifier}/`}
+                        href={creatorProfileUrl(creator)}
                         target='_blank'
                         rel='noopener noreferrer'
                         className='group inline-flex items-center gap-1 text-sm font-medium hover:underline'
@@ -288,9 +321,9 @@ function CompletedSettingsView({
                         {creatorDisplayName(creator)}
                         <IconExternalLink className='text-muted-foreground size-3 opacity-0 transition-opacity group-hover:opacity-100' />
                       </a>
-                      {creator.headline ? (
+                      {creatorSubtitle(creator) ? (
                         <p className='text-muted-foreground truncate text-xs'>
-                          {creator.headline}
+                          {creatorSubtitle(creator)}
                         </p>
                       ) : null}
                     </div>
@@ -313,7 +346,7 @@ function CompletedSettingsView({
           {canAddMore ? (
             <div className='flex gap-2'>
               <Input
-                placeholder='Paste LinkedIn profile URL...'
+                placeholder={creatorPlaceholder(isX)}
                 value={creatorUrl}
                 onChange={(e) => setCreatorUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCreator()}
@@ -339,13 +372,17 @@ function CompletedSettingsView({
           )}
         </div>
 
+
         {/* What we know about you (mastery signals) */}
         <MasterySignalsPanel profileId={profileId} />
 
-        {/* Brand for Carousels */}
-        <BrandSettingsPanel profileId={profileId} />
+        {/* Brand for Carousels (no carousels on X) */}
+        {!isX && <BrandSettingsPanel profileId={profileId} />}
 
         {/* Posting Schedule */}
+        {isX ? (
+          <XPostingSchedule profileId={profileId} />
+        ) : (
         <div className='rounded-xl border p-6'>
           <div className='mb-4 flex items-center justify-between'>
             <div className='flex items-center gap-2'>
@@ -492,12 +529,19 @@ function CompletedSettingsView({
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   )
 }
 
-export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingProps) {
+export function PostingOnboarding({
+  profileId,
+  onComplete,
+  platform = 'linkedin',
+}: PostingOnboardingProps) {
+  const isX = platform === 'twitter'
+  const steps = STEPS
   const [currentStep, setCurrentStep] = useState<StepId>('analyze')
   const [creatorUrl, setCreatorUrl] = useState('')
 
@@ -513,7 +557,7 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
   const hasAnalyzed = !!voiceData
   const creatorsRequired = postsAnalyzed === 0 && hasAnalyzed
 
-  const currentStepIndex = STEPS.findIndex((s) => s.id === currentStep)
+  const currentStepIndex = steps.findIndex((s) => s.id === currentStep)
 
   const { data: user } = useGetUserQuery()
 
@@ -568,6 +612,7 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
         profileId={profileId}
         onboardingStatus={onboardingStatus}
         creators={creators}
+        platform={platform}
       />
     )
   }
@@ -583,7 +628,7 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
 
       {/* Step indicators */}
       <div className='mb-10 flex items-center justify-center gap-2'>
-        {STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const isActive = step.id === currentStep
           const isCompleted = i < currentStepIndex
           const StepIcon = step.icon
@@ -630,23 +675,20 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
             <div>
               <h2 className='text-lg font-semibold'>Analyze Your Writing Voice</h2>
               <p className='text-muted-foreground mt-1 text-sm'>
-                We'll scan your recent LinkedIn posts to understand your tone, vocabulary, content themes, and posting patterns.
+                {isX
+                  ? "We'll read your recent X posts to understand your tone, vocabulary, length and line breaks, and what you post about."
+                  : "We'll scan your recent LinkedIn posts to understand your tone, vocabulary, content themes, and posting patterns."}
               </p>
             </div>
 
-            {!hasAnalyzed ? (
-              <Button onClick={handleAnalyze} disabled={startOnboarding.isPending} size='lg' className='w-full'>
-                {startOnboarding.isPending ? (
-                  <>
-                    <IconLoader2 className='mr-2 size-4 animate-spin' />
-                    Analyzing your posts...
-                  </>
-                ) : (
-                  <>
-                    <IconSparkles className='mr-2 size-4' />
-                    Analyze My Voice
-                  </>
-                )}
+            {!hasAnalyzed && startOnboarding.isPending ? (
+              <div className='rounded-lg border p-4'>
+                <VoiceAnalysisProgress profileId={profileId} active />
+              </div>
+            ) : !hasAnalyzed ? (
+              <Button onClick={handleAnalyze} size='lg' className='w-full'>
+                <IconSparkles className='mr-2 size-4' />
+                Analyze My Voice
               </Button>
             ) : (
               <div className='space-y-4'>
@@ -658,8 +700,9 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
 
                   {postsAnalyzed === 0 && (
                     <p className='text-sm text-amber-600'>
-                      No posts found on your profile. You'll need to add inspirational creators so we can learn
-                      from their writing style instead.
+                      {isX
+                        ? "No posts found on this X account. Add X creators whose style you admire and we'll learn from their posts instead."
+                        : "No posts found on your profile. You'll need to add inspirational creators so we can learn from their writing style instead."}
                     </p>
                   )}
 
@@ -686,7 +729,10 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
                 </div>
 
                 <div className='flex justify-end'>
-                  <Button onClick={() => setCurrentStep('creators')} disabled={!canProceedFromAnalyze}>
+                  <Button
+                    onClick={() => setCurrentStep('creators')}
+                    disabled={!canProceedFromAnalyze}
+                  >
                     Continue
                   </Button>
                 </div>
@@ -702,7 +748,9 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
               <p className='text-muted-foreground mt-1 text-sm'>
                 {creatorsRequired
                   ? 'Since we couldn\'t find posts on your profile, add at least one creator whose style you admire. We\'ll use their posts to build your voice profile.'
-                  : 'Optionally add LinkedIn creators whose post structure and format you admire. Their patterns will influence your generated content.'}
+                  : isX
+                    ? 'Optionally add X accounts whose posts you admire. We learn their structure (hooks, length, threads), never their words.'
+                    : 'Optionally add LinkedIn creators whose post structure and format you admire. Their patterns will influence your generated content.'}
               </p>
               {creatorsRequired && (
                 <Badge variant='destructive' className='mt-2 text-xs'>
@@ -714,7 +762,7 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
             {canAddMore ? (
               <div className='flex gap-2'>
                 <Input
-                  placeholder='Paste LinkedIn profile URL...'
+                  placeholder={creatorPlaceholder(isX)}
                   value={creatorUrl}
                   onChange={(e) => setCreatorUrl(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddCreator()}
@@ -757,7 +805,7 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
                       </Avatar>
                       <div className='min-w-0'>
                         <a
-                          href={`https://www.linkedin.com/in/${creator.publicIdentifier}/`}
+                          href={creatorProfileUrl(creator)}
                           target='_blank'
                           rel='noopener noreferrer'
                           className='group inline-flex items-center gap-1 text-sm font-medium hover:underline'
@@ -765,9 +813,9 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
                           {creatorDisplayName(creator)}
                           <IconExternalLink className='text-muted-foreground size-3 opacity-0 transition-opacity group-hover:opacity-100' />
                         </a>
-                        {creator.headline ? (
+                        {creatorSubtitle(creator) ? (
                           <p className='text-muted-foreground truncate text-xs'>
-                            {creator.headline}
+                            {creatorSubtitle(creator)}
                           </p>
                         ) : null}
                       </div>
@@ -840,7 +888,10 @@ export function PostingOnboarding({ profileId, onComplete }: PostingOnboardingPr
             </div>
 
             <div className='flex justify-between'>
-              <Button variant='ghost' onClick={() => setCurrentStep('creators')}>
+              <Button
+                variant='ghost'
+                onClick={() => setCurrentStep('creators')}
+              >
                 Back
               </Button>
               <Button

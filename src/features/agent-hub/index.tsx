@@ -16,7 +16,6 @@ import { HubComposer } from '@/features/copilot/components/hub-composer'
 import { AgentCard } from './components/agent-card'
 import { AddAgentCard } from './components/add-agent-card'
 import { AddAgentDialog } from './components/add-agent-dialog'
-import { ComingSoonCards } from './components/coming-soon-card'
 import { EmptyState } from './components/empty-state'
 
 export default function AgentHub() {
@@ -96,7 +95,6 @@ export default function AgentHub() {
                 />
               ))}
               <AddAgentCard onClick={() => openAddDialog()} />
-              <ComingSoonCards />
             </div>
           )}
         </div>

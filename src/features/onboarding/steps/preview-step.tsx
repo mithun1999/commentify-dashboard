@@ -22,8 +22,10 @@ import { publishPreviewComments } from '../api/preview.api'
 import { PreviewDrafts } from '../components/preview-drafts'
 import { PreviewFeed, type PreviewMode } from '../components/preview-feed'
 import { PreviewPost } from '../components/preview-post'
+import { QuickSampleNote, QuickSampleTag } from '../components/quick-sample'
 import { useDerivationStatus } from '../hooks/useDeriveOnboardingSettings'
 import { useExtensionGuard } from '../hooks/useExtensionGuard'
+import { useOnboardingFlow } from '../hooks/useOnboardingPlatform'
 import { usePreviewRun } from '../hooks/usePreviewRun'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 import { OnboardingCard } from '../onboarding-card'
@@ -189,7 +191,8 @@ function previewCopy(opts: {
   if (wantsPost) {
     return {
       title: 'A draft in your voice',
-      description: 'Keep the draft if it sounds like you.',
+      description:
+        'A quick sample of what your agent writes. The posts on your calendar get the full treatment.',
     }
   }
   return {
@@ -216,14 +219,20 @@ export function PreviewStep() {
     activeProfile?._id ??
     profiles?.[profiles.length - 1]?._id
 
+  const flow = useOnboardingFlow()
+  // X reaches this screen for its posting agent only. Its reply agent was set
+  // up on the steps before, and the comment half here searches LinkedIn.
+  const isX = flow !== 'linkedin'
   const capabilities = onboardingData.selectedCapabilities ?? []
   const slug = onboardingData.selectedAgentType ?? ''
   const wantsPost =
+    isX ||
     capabilities.includes('post') ||
     (!capabilities.length && slug.includes('posting'))
   const wantsComment =
-    capabilities.includes('comment') ||
-    (!capabilities.length && !slug.includes('posting'))
+    !isX &&
+    (capabilities.includes('comment') ||
+      (!capabilities.length && !slug.includes('posting')))
 
   const {
     phase,
@@ -392,8 +401,8 @@ export function PreviewStep() {
     }
   }
 
-  const nextStep =
-    getStepNav('/onboarding/preview', 'linkedin').next ?? '/onboarding/identity'
+  const nav = getStepNav('/onboarding/preview', flow)
+  const nextStep = nav.next ?? '/onboarding/identity'
 
   return (
     <div className='space-y-8'>
@@ -445,8 +454,9 @@ export function PreviewStep() {
           {wantsComment && phase === 'done' && drafts.length > 0 && (
             <>
               <div className='flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1'>
-                <h3 className='text-sm font-semibold'>
+                <h3 className='flex items-center gap-2 text-sm font-semibold'>
                   {drafts.length} comment{drafts.length === 1 ? '' : 's'} ready
+                  <QuickSampleTag />
                 </h3>
                 {!locked && drafts.length > maxSelectable && (
                   <span className='text-muted-foreground text-xs'>
@@ -467,6 +477,15 @@ export function PreviewStep() {
                 onClearSelection={() => setSelected([])}
                 onPublish={publish}
               />
+              {/* A thin day already says this in its own words, above. */}
+              {!thinDay && (
+                <QuickSampleNote>
+                  Your agent picked its topics from your profile and read one
+                  page of results for each. Once it runs daily, it works through
+                  your whole topic list for posts from the last day, and you can
+                  tune what it looks for and how it writes from the dashboard.
+                </QuickSampleNote>
+              )}
             </>
           )}
 
@@ -486,7 +505,11 @@ export function PreviewStep() {
                   <h3 className='text-sm font-semibold'>Posting</h3>
                 </div>
               )}
-              <PreviewPost profileId={profileId} wantsPost={wantsPost} />
+              <PreviewPost
+                profileId={profileId}
+                wantsPost={wantsPost}
+                platform={isX ? 'twitter' : 'linkedin'}
+              />
             </section>
           )}
 
@@ -520,7 +543,7 @@ export function PreviewStep() {
         </div>
 
         <OnboardingNavigation
-          prevStep='/onboarding/connect-account'
+          prevStep={nav.prev ?? '/onboarding/connect-account'}
           nextStep={nextStep}
           nextLabel={
             publishedUrns.length

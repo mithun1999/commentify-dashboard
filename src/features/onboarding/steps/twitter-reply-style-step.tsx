@@ -48,6 +48,8 @@ import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
 import { CommentLengthEnum } from '@/features/settings/enum/setting.enum'
 import { OnboardingCard } from '../onboarding-card'
 import { OnboardingNavigation } from '../onboarding-navigation'
+import { getStepNav, stepKeyForPath } from '../onboarding-flow'
+import { useOnboardingFlow } from '../hooks/useOnboardingPlatform'
 import { useTrackStepView } from '../hooks/useTrackStepView'
 import { useCreateOnboardingCommentQuery } from '../query/onboarding.query'
 
@@ -85,6 +87,13 @@ export function TwitterReplyStyleStep() {
   const [isReplySettingsExpanded, setIsReplySettingsExpanded] = useState(false)
 
   const { data: onboardingData, markStepCompleted } = useOnboarding()
+  // Identity for the reply agent alone; the posting agent's draft comes first
+  // when both X agents were picked.
+  const flow = useOnboardingFlow()
+  const nextStep =
+    getStepNav('/onboarding/comment-settings', flow).next ??
+    '/onboarding/identity'
+  const nextKey = stepKeyForPath(nextStep) ?? 'identity'
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const { data: profiles } = useGetAllProfileQuery()
   const resolvedProfileId =
@@ -387,7 +396,7 @@ export function TwitterReplyStyleStep() {
 
           <OnboardingNavigation
             prevStep='/onboarding/post-settings'
-            nextStep='/onboarding/identity'
+            nextStep={nextStep}
             currentStep='comment-settings'
             loading={isCreatingOnboardingComment || isUpdatingOnboardingStatus}
             onNext={async () => {
@@ -397,7 +406,7 @@ export function TwitterReplyStyleStep() {
               markStepCompleted('comment-settings')
               await updateOnboardingStatusAsync({
                 status: 'in-progress',
-                stepKey: 'identity',
+                stepKey: nextKey,
               })
               return true
             }}

@@ -3,7 +3,11 @@ import {
   UserSubscriptionStatus,
   type IUser,
 } from '@/features/auth/interface/user.interface'
-import { onboardingRedirectTarget } from './onboarding-flow'
+import {
+  buildOnboardingFlow,
+  flowFor,
+  onboardingRedirectTarget,
+} from './onboarding-flow'
 
 type Onboarding = IUser['metadata']['onboarding']
 
@@ -100,5 +104,76 @@ describe('onboardingRedirectTarget', () => {
       // Where the step sends them afterwards must not bounce them back.
       expect(onboardingRedirectTarget(u, '/')).toBe(undefined)
     })
+  })
+})
+
+describe('X onboarding flows', () => {
+  const keys = (flow: Parameters<typeof buildOnboardingFlow>[0]) =>
+    buildOnboardingFlow(flow).map((s) => s.key)
+
+  it('picks the flow from what was chosen on X', () => {
+    expect(flowFor(null, { platform: 'twitter', capabilities: ['comment'] })).toBe(
+      'twitter'
+    )
+    expect(flowFor(null, { platform: 'twitter', capabilities: ['post'] })).toBe(
+      'twitter-posting'
+    )
+    expect(
+      flowFor(null, { platform: 'twitter', capabilities: ['comment', 'post'] })
+    ).toBe('twitter-both')
+    expect(flowFor('linkedin-posting', { platform: 'linkedin' })).toBe(
+      'linkedin'
+    )
+  })
+
+  it('trusts the saved slug over a missing or stale store', () => {
+    expect(flowFor('twitter-posting')).toBe('twitter-posting')
+    expect(flowFor('twitter-commenting')).toBe('twitter')
+    expect(
+      flowFor('twitter-commenting', {
+        platform: 'twitter',
+        capabilities: ['comment', 'post'],
+      })
+    ).toBe('twitter-both')
+  })
+
+  it('gives X posting the preview instead of the reply-agent forms', () => {
+    expect(keys('twitter-posting')).toEqual([
+      'agent-type',
+      'extension',
+      'connect-account',
+      'preview',
+      'identity',
+      'activate-trial',
+    ])
+    expect(keys('twitter-both')).toEqual([
+      'agent-type',
+      'extension',
+      'connect-account',
+      'post-settings',
+      'comment-settings',
+      'preview',
+      'identity',
+      'activate-trial',
+    ])
+    expect(keys('twitter')).not.toContain('preview')
+  })
+
+  it('resumes an X posting account on the preview', () => {
+    const u = user(UserSubscriptionStatus.PENDING, {
+      status: 'in-progress',
+      stepKey: 'preview',
+      selectedAgentType: 'twitter-posting',
+    })
+    expect(onboardingRedirectTarget(u, '/')).toBe('/onboarding/preview')
+    // Saved under the reply agent's flow, the preview is somewhere they never go.
+    const reply = user(UserSubscriptionStatus.PENDING, {
+      status: 'in-progress',
+      stepKey: 'preview',
+      selectedAgentType: 'twitter-commenting',
+    })
+    expect(onboardingRedirectTarget(reply, '/')).toBe(
+      '/onboarding/connect-account'
+    )
   })
 })

@@ -11,6 +11,7 @@ import ProfileListError from '@/components/profile-list-error'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { getReadableErrorMessage } from '@/lib/connection-recovery'
 import { useCurrentAgent } from '../hooks/use-current-agent'
+import { isPostingAgentSlug } from '../registry'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { AgentPauseButton } from './agent-pause-button'
 import { AgentReconnectBanner } from './agent-reconnect-banner'
@@ -92,7 +93,7 @@ export function AgentLayout({ children }: { children: ReactNode }) {
     week?: number
   }
 
-  const isPostingAgent = agent?.type === 'linkedin-posting'
+  const isPostingAgent = isPostingAgentSlug(agent?.type)
   const { data: onboardingStatus, isLoading: isLoadingOnboarding } =
     useOnboardingStatus(isPostingAgent ? agent?.profileId : undefined)
   const onboardingComplete = !isPostingAgent || onboardingStatus?.completed
@@ -182,6 +183,7 @@ export function AgentLayout({ children }: { children: ReactNode }) {
         <Main>
           <PostingOnboarding
             profileId={agent.profileId}
+            platform={agentTypeDef.platform === 'twitter' ? 'twitter' : 'linkedin'}
             onComplete={() =>
               navigate({
                 to: `${basePath}/calendar` as string,

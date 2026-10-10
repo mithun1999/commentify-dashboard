@@ -159,6 +159,33 @@ const PLAN_FEATURES: Record<ProductAgentType, Record<ProductTier, TierCopy>> = {
   },
 }
 
+/**
+ * The posting plans on X. Same agent and price as LinkedIn's; the cadence is
+ * per day, threads are Pro, and there are no images (X posting is text-first).
+ */
+const X_POST_FEATURES: Record<ProductTier, TierCopy> = {
+  starter: {
+    blurb: 'Your X posting, on autopilot.',
+    features: [
+      '1 posting agent (X)',
+      '1 post a day',
+      'AI drafts written in your voice',
+      'Review, edit, schedule, or auto-publish',
+    ],
+  },
+  pro: {
+    blurb: 'Post more, sourced from the best.',
+    popular: true,
+    features: [
+      'Everything in Starter, plus:',
+      'Up to 3 posts a day',
+      'Threads',
+      'Track up to 15 creators for inspiration',
+      'Priority support',
+    ],
+  },
+}
+
 const TRIAL_DAYS = 5
 
 const PLATFORM_META: Record<
@@ -198,7 +225,8 @@ function useAfterTrialNavigate() {
     const profileId = onboardingData.linkedProfileId ?? activeProfile?._id
     const capabilities = onboardingData.selectedCapabilities ?? []
     const wantsPost = capabilities.includes('post')
-    const agentType = getAgentTypeFor('linkedin', 'post')?.slug
+    const platform = onboardingData.selectedPlatform ?? 'linkedin'
+    const agentType = getAgentTypeFor(platform, 'post')?.slug
 
     if (wantsPost && profileId && agentType) {
       void navigate({
@@ -208,7 +236,7 @@ function useAfterTrialNavigate() {
       return
     }
 
-    const commentAgentType = getAgentTypeFor('linkedin', 'comment')?.slug
+    const commentAgentType = getAgentTypeFor(platform, 'comment')?.slug
     if (capabilities.includes('comment') && profileId && commentAgentType) {
       const pending = await getPendingApprovalCount(
         profileId,
@@ -229,6 +257,7 @@ function useAfterTrialNavigate() {
     navigate,
     onboardingData.linkedProfileId,
     onboardingData.selectedCapabilities,
+    onboardingData.selectedPlatform,
     activeProfile?._id,
   ])
 }
@@ -803,7 +832,10 @@ export function ActivateTrialStep() {
               const activeTier = selection[agent.key] ?? 'pro'
               const headerCents = monthlyCents(agent.key, activeTier)
               const isSecond = secondAgent === agent.key && hasBundle
-              const copy = PLAN_FEATURES[agent.key][activeTier]
+              const copy =
+                agent.key === 'post' && connectedPlatform === 'twitter'
+                  ? X_POST_FEATURES[activeTier]
+                  : PLAN_FEATURES[agent.key][activeTier]
               return (
                 <section
                   key={agent.key}
@@ -936,7 +968,7 @@ export function ActivateTrialStep() {
                               {renderSecondPlatform()}
                             </>
                           ) : (
-                            platformRow('linkedin', true)
+                            platformRow(connectedPlatform, true)
                           )}
                         </div>
                         {agent.key === 'post' && (
