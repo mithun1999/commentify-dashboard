@@ -31,9 +31,14 @@ const slotKey = (
 /**
  * Index the flat `/product/list` response into the structures the cart needs.
  * Only active products are indexed, so retired legacy add-ons (the old
- * `agent`/`platform` families, now inactive) are ignored automatically. Legacy
- * comment base plans (no `agentType`/`kind`) are treated as comment base plans,
- * with the tier parsed from the plan name's first word.
+ * `agent`/`platform` families, now inactive) are ignored automatically.
+ *
+ * Legacy base plans (Pro/Premium Monthly/Yearly: no `agentType`/`kind`) stay
+ * active so their existing subscribers keep renewing, but they are never sold:
+ * new checkouts and upgrades always land on the current per-agent plans. They
+ * must not be indexed — they would collide with the new plan's key, the winner
+ * would depend on the API's row order, and the new slot add-ons are not
+ * attached to the legacy plans in Dodo (checkout fails with a 422).
  */
 export function buildPlanCatalog(products: IProduct[]): PlanCatalog {
   const plans = new Map<string, IProduct>()
@@ -49,22 +54,12 @@ export function buildPlanCatalog(products: IProduct[]): PlanCatalog {
       continue
     }
 
-    // Base plan (kind === 'plan' or legacy without kind).
-    const agent: ProductAgentType = p.agentType ?? 'comment'
-    const tier = (p.tier ?? parseLegacyTier(p.name)) as CartTier | undefined
-    if (!tier) continue
-    plans.set(planKey(agent, tier, p.interval), p)
+    if (p.kind === 'plan' && p.agentType && p.tier) {
+      plans.set(planKey(p.agentType, p.tier, p.interval), p)
+    }
   }
 
   return { plans, slots }
-}
-
-/** Legacy names like "Pro Monthly" → "pro". Premium is clamped to pro for the new 2-tier model. */
-function parseLegacyTier(name: string): CartTier | undefined {
-  const word = name?.toLowerCase().trim().split(/\s+/)[0]
-  if (word === 'starter') return 'starter'
-  if (word === 'pro' || word === 'premium') return 'pro'
-  return undefined
 }
 
 export function getPlan(
