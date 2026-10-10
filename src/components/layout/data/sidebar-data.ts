@@ -2,6 +2,7 @@ import {
   IconBubbleText,
   IconCash,
   IconHome,
+  IconPlugConnected,
 } from '@tabler/icons-react'
 import { type SidebarData } from '../types'
 
@@ -19,6 +20,14 @@ export const sidebarData: SidebarData = {
           title: 'Agent Hub',
           url: '/',
           icon: IconHome,
+        },
+        {
+          title: 'AI tools',
+          url: '/ai-tools',
+          icon: IconPlugConnected,
+          requiresPro: true,
+          lockedHint:
+            'Part of Pro. Upgrade to use Commentify from Claude, ChatGPT and Cursor.',
         },
       ],
     },
