@@ -1,5 +1,6 @@
 import {
   IconArrowsLeftRight,
+  IconBooks,
   IconBubbleText,
   IconCash,
   IconHome,
@@ -21,6 +22,12 @@ export const sidebarData: SidebarData = {
           title: 'Agent Hub',
           url: '/',
           icon: IconHome,
+        },
+        {
+          title: 'Library',
+          url: '/library',
+          icon: IconBooks,
+          requiresPosting: true,
         },
         {
           title: 'Linked profiles',

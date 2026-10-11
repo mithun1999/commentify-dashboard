@@ -16,6 +16,8 @@ interface BaseNavItem {
   locked?: boolean
   /** Shown only to accounts with both a LinkedIn and an X profile. */
   requiresLinkablePair?: boolean
+  /** Shown only to accounts with a posting agent on. */
+  requiresPosting?: boolean
 }
 
 type NavLink = BaseNavItem & {

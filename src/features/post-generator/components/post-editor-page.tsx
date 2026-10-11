@@ -78,6 +78,7 @@ import { RegenerateImageDialog } from './regenerate-image-dialog'
 import { RejectPostDialog } from './reject-post-dialog'
 import { PostEngagementPanel } from './post-engagement-panel'
 import { CrossPostCard } from '@/features/profile-links/components/cross-post-card'
+import { GroundedOn } from '@/features/library/components/grounded-on'
 import { XPostEditor, xLengthSummary } from './x-post-editor'
 import { isXFormat } from '../utils/x-text'
 
@@ -660,6 +661,9 @@ export function PostEditorPage() {
                 {researchClaims.length > 0 && (
                   <ResearchSources claims={researchClaims} />
                 )}
+                <GroundedOn
+                  noteIds={((post as any).seedNoteIds ?? []).map(String)}
+                />
                 <CrossPostCard
                   post={{
                     _id: post._id,

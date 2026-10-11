@@ -281,6 +281,8 @@ export interface PostingPreferences {
   postsPerDay?: number
   preferredTimes?: string[]
   allowThreads?: boolean
+  /** How eagerly the planner builds posts on library notes. */
+  libraryUsage?: 'off' | 'when-relevant' | 'prefer'
 }
 
 export async function getPostingPreferences(
