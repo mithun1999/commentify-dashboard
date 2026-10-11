@@ -640,6 +640,9 @@ export const useActivateAgentType = () => {
       profileId: string
       agentType: string
     }) => updateAgentTypes(profileId, { add: agentType }),
+    // The caller shows the refusal itself, with a way to the Plans page when
+    // it's the posting profile limit.
+    meta: { suppressGlobalErrorToast: true },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [ProfileQueryEnum.GET_ALL_PROFILE],
