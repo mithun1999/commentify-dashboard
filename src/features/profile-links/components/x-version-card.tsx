@@ -180,6 +180,9 @@ function TargetRow({
               Draft X version
             </Button>
             <span className='text-muted-foreground text-[11px]'>
+              {link.mirror.linkedinToX === 'auto-draft'
+                ? 'Only posts written after linking get one on their own. '
+                : ''}
               Goes out {link.mirror.offsetHours}h after this post, once you
               approve it.
             </span>

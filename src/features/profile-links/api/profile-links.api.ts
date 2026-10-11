@@ -23,6 +23,8 @@ export interface LinkedProfileSummary {
   /** `@screenName` on X, the public identifier on LinkedIn. */
   handle: string
   postingActive: boolean
+  /** X accounts: whether their own posts read as a person or a company. */
+  speaksAs?: LinkVoice | null
 }
 
 /** One LinkedIn profile feeding one X account. */

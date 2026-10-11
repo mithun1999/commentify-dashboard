@@ -157,10 +157,16 @@ function LinkForm({
         ? `${single.name}'s own X account is ${ownXOf(single._id)!.x.handle}.`
         : null
   const personAllowed = !!single && !personBlock
-  const suggestedVoice: LinkVoice =
-    personAllowed && sameName(single, x) ? 'person' : 'team'
+  // Worked out as the backend does: matching names, then how the X account
+  // writes in its own posts. The author only changes it when it's wrong.
+  const suggestedVoice: LinkVoice = !personAllowed
+    ? 'team'
+    : sameName(single, x)
+      ? 'person'
+      : (x?.speaksAs ?? 'person')
   const effectiveVoice: LinkVoice =
     voice === 'person' && !personAllowed ? 'team' : (voice ?? suggestedVoice)
+  const [showVoice, setShowVoice] = useState(false)
 
   // Automatic for a second X account is off unless asked for: X restricts
   // accounts whose posts look alike.
@@ -330,30 +336,48 @@ function LinkForm({
             )}
           </Field>
 
-          {/* Whose account */}
+          {/* Whose account: worked out, shown as one line, changeable. */}
           {x && toLink.length > 0 && (
-            <Field label={`Whose account is ${x.handle}?`}>
-              <div className='grid gap-2 sm:grid-cols-2'>
-                <VoiceOption
-                  selected={effectiveVoice === 'person'}
-                  disabled={!personAllowed}
-                  icon={<IconUser className='size-4' />}
-                  title={single ? `${single.name}'s own` : "One person's own"}
-                  hint={
-                    personBlock ??
-                    `Written as ${single?.name ?? 'them'}: "I…"`
-                  }
-                  onClick={() => setVoice('person')}
-                />
-                <VoiceOption
-                  selected={effectiveVoice === 'team'}
-                  icon={<IconBuilding className='size-4' />}
-                  title='A company or brand'
-                  hint={`Written as ${x.handle}: "we…", naming ${authorLabel} where it fits.`}
-                  onClick={() => setVoice('team')}
-                />
+            <div className='space-y-2'>
+              <div className='flex items-center justify-between gap-3 rounded-lg border px-3 py-2'>
+                <p className='flex items-center gap-2 text-sm'>
+                  {effectiveVoice === 'person' ? (
+                    <IconUser className='text-muted-foreground size-4 shrink-0' />
+                  ) : (
+                    <IconBuilding className='text-muted-foreground size-4 shrink-0' />
+                  )}
+                  {effectiveVoice === 'person'
+                    ? `Written as ${single?.name ?? 'them'}, in first person`
+                    : `Written as ${x.handle}, the company account${toLink.length === 1 ? `, naming ${authorLabel} where it fits` : ''}`}
+                </p>
+                <button
+                  type='button'
+                  className='text-primary shrink-0 text-xs font-medium hover:underline'
+                  onClick={() => setShowVoice((v) => !v)}
+                >
+                  {showVoice ? 'Done' : 'Change'}
+                </button>
               </div>
-            </Field>
+              {showVoice && (
+                <div className='grid gap-2 sm:grid-cols-2'>
+                  <VoiceOption
+                    selected={effectiveVoice === 'person'}
+                    disabled={!personAllowed}
+                    icon={<IconUser className='size-4' />}
+                    title={single ? `${single.name}'s own account` : "One person's own account"}
+                    hint={personBlock ?? `Written as ${single?.name ?? 'them'}: "I…"`}
+                    onClick={() => setVoice('person')}
+                  />
+                  <VoiceOption
+                    selected={effectiveVoice === 'team'}
+                    icon={<IconBuilding className='size-4' />}
+                    title='A company or brand account'
+                    hint={`Written as ${x.handle}: "we…", naming ${authorLabel} where it fits.`}
+                    onClick={() => setVoice('team')}
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {/* How */}
@@ -370,9 +394,10 @@ function LinkForm({
                   Draft X versions automatically
                 </Label>
                 <p className='text-muted-foreground text-xs'>
-                  Every new LinkedIn post gets one, for you to approve. Each
-                  uses one X generation. Off, you draft them from any
-                  LinkedIn post.
+                  Every LinkedIn post written from now on gets one, for you to
+                  approve. Each uses one X generation. Posts you already have,
+                  or all of them when this is off, get one from the post
+                  itself.
                 </p>
                 {autoElsewhere.length > 0 && (
                   <p className='text-xs text-amber-600'>
