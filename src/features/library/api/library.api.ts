@@ -85,7 +85,10 @@ export async function listNotes(filters: LibraryFilters): Promise<LibraryList> {
 }
 
 export async function getNote(id: string): Promise<LibraryNoteDetail> {
-  const { data } = await axiosInstance({ method: 'GET', url: `/library/notes/${id}` })
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/library/notes/${id}`,
+  })
   return data
 }
 
@@ -138,17 +141,26 @@ export async function updateNote(
 }
 
 export async function deleteNote(id: string) {
-  const { data } = await axiosInstance({ method: 'DELETE', url: `/library/notes/${id}` })
+  const { data } = await axiosInstance({
+    method: 'DELETE',
+    url: `/library/notes/${id}`,
+  })
   return data
 }
 
 export async function retryNote(id: string): Promise<LibraryNote> {
-  const { data } = await axiosInstance({ method: 'POST', url: `/library/notes/${id}/retry` })
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/library/notes/${id}/retry`,
+  })
   return data
 }
 
 export async function noteDownloadUrl(id: string): Promise<{ url: string }> {
-  const { data } = await axiosInstance({ method: 'GET', url: `/library/notes/${id}/download` })
+  const { data } = await axiosInstance({
+    method: 'GET',
+    url: `/library/notes/${id}/download`,
+  })
   return data
 }
 
@@ -168,12 +180,17 @@ export async function setNoteForProfile(
 /** "Use for…": a draft on a profile, built on this note. */
 export async function draftFromNote(
   noteId: string,
-  profileId: string
+  profileId: string,
+  /** What to do with the note: "focus on onboarding, keep it short". */
+  instruction?: string
 ): Promise<{ calendar: { _id: string }; post: { _id: string } }> {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/library/notes/${noteId}/draft`,
-    data: { profileId },
+    data: {
+      profileId,
+      ...(instruction?.trim() ? { instruction: instruction.trim() } : {}),
+    },
   })
   return data
 }

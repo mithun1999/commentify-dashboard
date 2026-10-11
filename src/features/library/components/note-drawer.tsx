@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
 import { format } from 'date-fns'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   IconBrandLinkedin,
   IconBrandX,
@@ -85,6 +85,7 @@ export function NoteDrawer({
   const [claims, setClaims] = useState<LibraryClaim[]>([])
   const [editingClaims, setEditingClaims] = useState(false)
   const [target, setTarget] = useState<string>('')
+  const [instruction, setInstruction] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showAll, setShowAll] = useState(false)
 
@@ -97,6 +98,7 @@ export function NoteDrawer({
     setEditingClaims(false)
     setShowAll(false)
   }, [note?._id, note?.updatedAt])
+  useEffect(() => setInstruction(''), [note?._id])
 
   const postingProfiles = (profiles ?? []).filter((p) =>
     (p.activeAgentTypes ?? []).some((a) => a.endsWith('-posting'))
@@ -109,21 +111,25 @@ export function NoteDrawer({
     }
   }, [defaultProfileId, postingProfiles.length])
 
-  const save = (changes: Parameters<typeof update.mutate>[0]) => update.mutate(changes)
+  const save = (changes: Parameters<typeof update.mutate>[0]) =>
+    update.mutate(changes)
   const shown = showAll ? claims : claims.slice(0, 30)
 
   const useFor = () => {
     if (!note || !target) return
     const profile = postingProfiles.find((p) => p._id === target)
     draft.mutate(
-      { noteId: note._id, profileId: target },
+      { noteId: note._id, profileId: target, instruction },
       {
         onSuccess: ({ calendar, post }) =>
           navigate({
             to: '/agents/$profileId/$agentType/post/$postId' as any,
             params: {
               profileId: target,
-              agentType: profile?.platform === 'twitter' ? 'twitter-posting' : 'linkedin-posting',
+              agentType:
+                profile?.platform === 'twitter'
+                  ? 'twitter-posting'
+                  : 'linkedin-posting',
               postId: post._id,
             } as any,
             search: { calendarId: calendar._id } as any,
@@ -160,13 +166,17 @@ export function NoteDrawer({
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                onBlur={() => title !== note.title && save({ id: note._id, title })}
+                onBlur={() =>
+                  title !== note.title && save({ id: note._id, title })
+                }
                 className='h-auto border-0 px-0 text-lg font-semibold shadow-none focus-visible:ring-0'
               />
               <Textarea
                 value={gist}
                 onChange={(e) => setGist(e.target.value)}
-                onBlur={() => gist !== note.gist && save({ id: note._id, gist })}
+                onBlur={() =>
+                  gist !== note.gist && save({ id: note._id, gist })
+                }
                 placeholder='What it says, in a line or two'
                 className='min-h-[60px] resize-none text-sm'
               />
@@ -209,7 +219,9 @@ export function NoteDrawer({
                 )}
                 <span>
                   Added {format(new Date(note.createdAt), 'd MMM yyyy')}
-                  {note.truncated ? ' · long document, the middle was skipped' : ''}
+                  {note.truncated
+                    ? ' · long document, the middle was skipped'
+                    : ''}
                 </span>
               </div>
             </div>
@@ -225,31 +237,52 @@ export function NoteDrawer({
                   Turn on a posting agent to write posts from your library.
                 </p>
               ) : (
-                <div className='flex flex-wrap items-center gap-2'>
-                  <Select value={target} onValueChange={setTarget}>
-                    <SelectTrigger className='h-8 w-[220px] text-xs'>
-                      <SelectValue placeholder='Choose a profile' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {postingProfiles.map((p) => (
-                        <SelectItem key={p._id} value={p._id} className='text-xs'>
-                          {p.platform === 'twitter'
-                            ? `@${(p as any).screenName ?? ''} on X`
-                            : `${p.firstName} ${p.lastName} on LinkedIn`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    size='sm'
-                    className='h-8'
-                    disabled={!target || draft.isPending || note.status !== 'ready'}
-                    onClick={useFor}
-                  >
-                    {draft.isPending && <IconLoader2 className='mr-1 size-3.5 animate-spin' />}
-                    Write it
-                  </Button>
-                </div>
+                <>
+                  <Textarea
+                    value={instruction}
+                    onChange={(e) => setInstruction(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter')
+                        useFor()
+                    }}
+                    placeholder='What should the post do with it? e.g. "Only the churn numbers, as a short story." Optional.'
+                    className='min-h-[56px] resize-none text-xs'
+                    rows={2}
+                  />
+                  <div className='flex flex-wrap items-center gap-2'>
+                    <Select value={target} onValueChange={setTarget}>
+                      <SelectTrigger className='h-8 w-[220px] text-xs'>
+                        <SelectValue placeholder='Choose a profile' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {postingProfiles.map((p) => (
+                          <SelectItem
+                            key={p._id}
+                            value={p._id}
+                            className='text-xs'
+                          >
+                            {p.platform === 'twitter'
+                              ? `@${(p as any).screenName ?? ''} on X`
+                              : `${p.firstName} ${p.lastName} on LinkedIn`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size='sm'
+                      className='h-8'
+                      disabled={
+                        !target || draft.isPending || note.status !== 'ready'
+                      }
+                      onClick={useFor}
+                    >
+                      {draft.isPending && (
+                        <IconLoader2 className='mr-1 size-3.5 animate-spin' />
+                      )}
+                      Write it
+                    </Button>
+                  </div>
+                </>
               )}
               <p className='text-muted-foreground text-[11px]'>
                 A draft built on this note, for you to review. Uses one
@@ -283,7 +316,10 @@ export function NoteDrawer({
                         onClick={() => {
                           save({
                             id: note._id,
-                            claims: claims.map((c) => ({ id: c.id, text: c.text })),
+                            claims: claims.map((c) => ({
+                              id: c.id,
+                              text: c.text,
+                            })),
                           })
                           setEditingClaims(false)
                         }}
@@ -306,7 +342,10 @@ export function NoteDrawer({
                 {shown.map((claim) => (
                   <div key={claim.id} className='space-y-1 px-3 py-2'>
                     <div className='flex items-start gap-2'>
-                      <Badge variant='outline' className='mt-0.5 shrink-0 text-[10px]'>
+                      <Badge
+                        variant='outline'
+                        className='mt-0.5 shrink-0 text-[10px]'
+                      >
                         {KIND_LABEL[claim.kind] ?? 'Point'}
                       </Badge>
                       {editingClaims ? (
@@ -316,7 +355,9 @@ export function NoteDrawer({
                             onChange={(e) =>
                               setClaims((prev) =>
                                 prev.map((c) =>
-                                  c.id === claim.id ? { ...c, text: e.target.value } : c
+                                  c.id === claim.id
+                                    ? { ...c, text: e.target.value }
+                                    : c
                                 )
                               )
                             }
@@ -328,7 +369,9 @@ export function NoteDrawer({
                             className='size-7 shrink-0'
                             title='Remove this point'
                             onClick={() =>
-                              setClaims((prev) => prev.filter((c) => c.id !== claim.id))
+                              setClaims((prev) =>
+                                prev.filter((c) => c.id !== claim.id)
+                              )
                             }
                           >
                             <IconX className='size-3.5' />
@@ -338,11 +381,13 @@ export function NoteDrawer({
                         <p className='text-sm'>{claim.text}</p>
                       )}
                     </div>
-                    {!editingClaims && claim.evidence && claim.evidence !== claim.text && (
-                      <p className='text-muted-foreground border-l-2 pl-2 text-xs italic'>
-                        {claim.evidence}
-                      </p>
-                    )}
+                    {!editingClaims &&
+                      claim.evidence &&
+                      claim.evidence !== claim.text && (
+                        <p className='text-muted-foreground border-l-2 pl-2 text-xs italic'>
+                          {claim.evidence}
+                        </p>
+                      )}
                   </div>
                 ))}
                 {claims.length === 0 && (
@@ -354,7 +399,12 @@ export function NoteDrawer({
                 )}
               </div>
               {!showAll && claims.length > 30 && (
-                <Button size='sm' variant='ghost' className='h-7' onClick={() => setShowAll(true)}>
+                <Button
+                  size='sm'
+                  variant='ghost'
+                  className='h-7'
+                  onClick={() => setShowAll(true)}
+                >
                   Show all {claims.length}
                 </Button>
               )}
@@ -367,16 +417,22 @@ export function NoteDrawer({
                 <div className='divide-y rounded-lg border'>
                   {note.usedBy.map((u) => {
                     const profile = profiles?.find((p) => p._id === u.profileId)
-                    const Icon = u.platform === 'twitter' ? IconBrandX : IconBrandLinkedin
+                    const Icon =
+                      u.platform === 'twitter' ? IconBrandX : IconBrandLinkedin
                     return (
                       <Link
                         key={u.postId}
                         to={'/agents/$profileId/$agentType/post/$postId' as any}
-                        params={{
-                          profileId: u.profileId,
-                          agentType: u.platform === 'twitter' ? 'twitter-posting' : 'linkedin-posting',
-                          postId: u.postId,
-                        } as any}
+                        params={
+                          {
+                            profileId: u.profileId,
+                            agentType:
+                              u.platform === 'twitter'
+                                ? 'twitter-posting'
+                                : 'linkedin-posting',
+                            postId: u.postId,
+                          } as any
+                        }
                         search={{ calendarId: u.calendarId } as any}
                         className='hover:bg-muted/50 flex items-center gap-2 px-3 py-2 text-xs'
                       >
@@ -391,7 +447,9 @@ export function NoteDrawer({
                               : profile.firstName
                             : ''}{' '}
                           · {u.status}
-                          {u.scheduledAt ? ` · ${format(new Date(u.scheduledAt), 'd MMM')}` : ''}
+                          {u.scheduledAt
+                            ? ` · ${format(new Date(u.scheduledAt), 'd MMM')}`
+                            : ''}
                         </span>
                       </Link>
                     )

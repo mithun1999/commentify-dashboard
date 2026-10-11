@@ -494,8 +494,15 @@ export const useDeletePost = (calendarId: string) => {
 export const useChatEditPost = (calendarId: string) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ postId, message }: { postId: string; message: string }) =>
-      chatEditPost(calendarId, postId, message),
+    mutationFn: ({
+      postId,
+      message,
+      noteIds,
+    }: {
+      postId: string
+      message: string
+      noteIds?: string[]
+    }) => chatEditPost(calendarId, postId, message, noteIds),
     onSuccess: (data) => {
       queryClient.invalidateQueries({
         queryKey: [PostGeneratorQueryEnum.GET_CURRENT_CALENDAR],

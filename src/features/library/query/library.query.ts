@@ -28,7 +28,9 @@ export const useLibraryNotes = (filters: LibraryFilters, enabled = true) =>
     enabled,
     placeholderData: (prev) => prev,
     refetchInterval: (query) =>
-      query.state.data?.items.some((n) => n.status === 'processing') ? 4000 : false,
+      query.state.data?.items.some((n) => n.status === 'processing')
+        ? 4000
+        : false,
   })
 
 export const useLibraryNote = (id: string | undefined) =>
@@ -36,7 +38,8 @@ export const useLibraryNote = (id: string | undefined) =>
     queryKey: [LibraryQueryEnum.NOTE, id],
     queryFn: () => getNote(id!),
     enabled: Boolean(id),
-    refetchInterval: (query) => (query.state.data?.status === 'processing' ? 4000 : false),
+    refetchInterval: (query) =>
+      query.state.data?.status === 'processing' ? 4000 : false,
   })
 
 const useInvalidate = () => {
@@ -62,7 +65,10 @@ export const useCreateNote = () => {
 export const useUpdateNote = () => {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ id, ...changes }: { id: string } & Parameters<typeof updateNote>[1]) =>
+    mutationFn: ({
+      id,
+      ...changes
+    }: { id: string } & Parameters<typeof updateNote>[1]) =>
       updateNote(id, changes),
     onSuccess: invalidate,
     onError: (error) => toast.error(messageOf(error, 'Could not save')),
@@ -109,7 +115,15 @@ export const useSetNoteForProfile = () => {
 
 export const useDraftFromNote = () =>
   useMutation({
-    mutationFn: ({ noteId, profileId }: { noteId: string; profileId: string }) =>
-      draftFromNote(noteId, profileId),
-    onError: (error) => toast.error(messageOf(error, 'Could not start the draft')),
+    mutationFn: ({
+      noteId,
+      profileId,
+      instruction,
+    }: {
+      noteId: string
+      profileId: string
+      instruction?: string
+    }) => draftFromNote(noteId, profileId, instruction),
+    onError: (error) =>
+      toast.error(messageOf(error, 'Could not start the draft')),
   })

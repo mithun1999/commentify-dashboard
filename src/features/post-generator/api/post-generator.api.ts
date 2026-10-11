@@ -105,12 +105,14 @@ export type PostEditAction =
 export async function chatEditPost(
   calendarId: string,
   postId: string,
-  message: string
+  message: string,
+  /** Library notes tagged in this message. */
+  noteIds: string[] = []
 ) {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/calendar/${calendarId}/post/${postId}/chat`,
-    data: { message },
+    data: { message, ...(noteIds.length ? { noteIds } : {}) },
   })
   return data as {
     action?: PostEditAction
@@ -250,6 +252,8 @@ export interface CreateManualPostPayload {
   outputType?: ComposerOutputType
   topic?: string
   pillar?: string
+  /** Library notes tagged in the composer; the post is built on them. */
+  noteIds?: string[]
 }
 
 export async function createManualPost(payload: CreateManualPostPayload) {
