@@ -1,10 +1,11 @@
 import {
-  IconArrowsLeftRight,
-  IconBubbleText,
-  IconCash,
-  IconHome,
-  IconPlugConnected,
-} from '@tabler/icons-react'
+  BookOpen,
+  CreditCard,
+  LayoutGrid,
+  Link2,
+  Sparkles,
+  Users,
+} from 'lucide-react'
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
@@ -20,18 +21,24 @@ export const sidebarData: SidebarData = {
         {
           title: 'Agent Hub',
           url: '/',
-          icon: IconHome,
+          icon: LayoutGrid,
+        },
+        {
+          title: 'Knowledge Hub',
+          url: '/knowledge-hub',
+          icon: BookOpen,
+          requiresPosting: true,
         },
         {
           title: 'Linked profiles',
           url: '/linked-profiles',
-          icon: IconArrowsLeftRight,
+          icon: Link2,
           requiresLinkablePair: true,
         },
         {
           title: 'AI tools',
           url: '/ai-tools',
-          icon: IconPlugConnected,
+          icon: Sparkles,
           requiresPro: true,
           lockedHint:
             'Part of the Pro plan. Upgrade to use Commentify from Claude, ChatGPT and Cursor.',
@@ -45,12 +52,12 @@ export const sidebarData: SidebarData = {
         {
           title: 'Join Community',
           url: 'https://chat.whatsapp.com/HZ65AMvN24YEtBSvswLlcT',
-          icon: IconBubbleText,
+          icon: Users,
         },
         {
           title: 'Billing',
           url: '/billing',
-          icon: IconCash,
+          icon: CreditCard,
         },
       ],
     },

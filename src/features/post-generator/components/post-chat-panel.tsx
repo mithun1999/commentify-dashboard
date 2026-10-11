@@ -1,9 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
-import { IconSend, IconSparkles, IconCheck } from '@tabler/icons-react'
+import {
+  IconBooks,
+  IconSend,
+  IconSparkles,
+  IconCheck,
+} from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ThinkingOrb } from '@/components/thinking-orb'
+import {
+  NoteChips,
+  NotePicker,
+  useNoteTagging,
+} from '@/features/library/components/note-picker'
 import {
   useChatEditPost,
   usePostEditStream,
@@ -22,6 +32,26 @@ interface ChatMessage {
   content: string
   timestamp: string
   postSnapshot?: string
+  /** Library notes tagged in this message. */
+  noteTitles?: string[]
+}
+
+/** The notes a message tagged, under its text. */
+function TaggedTitles({ titles }: { titles?: string[] }) {
+  if (!titles?.length) return null
+  return (
+    <div className='mt-1.5 flex flex-wrap gap-1'>
+      {titles.map((title, i) => (
+        <span
+          key={i}
+          className='inline-flex max-w-full items-center gap-1 rounded bg-black/10 px-1.5 py-0.5 text-[11px] dark:bg-white/15'
+        >
+          <IconBooks className='size-3 shrink-0' />
+          <span className='truncate'>{title}</span>
+        </span>
+      ))}
+    </div>
+  )
 }
 
 /**
@@ -48,6 +78,10 @@ export function PostChatPanel({
   // The transcript is the post's saved history, which only gains this message
   // when the turn ends. Without an echo, sending appears to swallow it.
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
+  const [pendingNotes, setPendingNotes] = useState<string[]>([])
+  // Library notes tagged with "@" or the Library button, sent with the
+  // next message.
+  const tagging = useNoteTagging()
   const chatEditPost = useChatEditPost(calendarId)
   const { steps, clearSteps } = usePostEditStream(
     chatEditPost.isPending ? profileId : undefined,
@@ -75,19 +109,27 @@ export function PostChatPanel({
     return 'edit'
   }
 
+  const canSend =
+    (input.trim().length > 0 || tagging.ids.length > 0) &&
+    !chatEditPost.isPending
+
   const handleSend = () => {
-    const trimmed = input.trim()
-    if (!trimmed || chatEditPost.isPending) return
+    if (!canSend) return
+    // Tagging notes is a request on its own.
+    const trimmed = input.trim() || 'Use the tagged notes in this post.'
+    const noteIds = tagging.ids
 
     setInput('')
     setPendingIntent(guessIntent(trimmed))
     setPendingMessage(trimmed)
+    setPendingNotes(tagging.tagged.map((n) => n.title))
+    tagging.clear()
     // The last turn's steps outlive it, and the first event of this one is a
     // round trip away. Without this the panel opens on the old list.
     clearSteps()
     onBusyChange?.(true)
     chatEditPost.mutate(
-      { postId: post._id, message: trimmed },
+      { postId: post._id, message: trimmed, noteIds },
       {
         onSuccess: (data) => {
           // One turn can rewrite the body and queue a carousel, so the flag
@@ -102,6 +144,7 @@ export function PostChatPanel({
         onSettled: () => {
           setPendingIntent(null)
           setPendingMessage(null)
+          setPendingNotes([])
           onBusyChange?.(false)
         },
       }
@@ -153,6 +196,9 @@ export function PostChatPanel({
                   )}
                 >
                   <p className='whitespace-pre-wrap'>{msg.content}</p>
+                  {msg.role === 'user' && (
+                    <TaggedTitles titles={msg.noteTitles} />
+                  )}
                   <p
                     className={cn(
                       'mt-1 text-[10px] opacity-50',
@@ -173,6 +219,7 @@ export function PostChatPanel({
               <div className='flex justify-end'>
                 <div className='bg-primary text-primary-foreground max-w-[85%] rounded-lg px-3 py-2 text-sm'>
                   <p className='whitespace-pre-wrap'>{pendingMessage}</p>
+                  <TaggedTitles titles={pendingNotes} />
                 </div>
               </div>
             )}
@@ -201,14 +248,21 @@ export function PostChatPanel({
         )}
       </div>
 
-      <div className='shrink-0 border-t p-3'>
+      <div className='shrink-0 space-y-2 border-t p-3'>
+        <NoteChips tagged={tagging.tagged} onRemove={tagging.remove} />
         <div className='flex items-end gap-2'>
           <Textarea
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) =>
+              setInput(tagging.onTextChange(e.target.value, input))
+            }
             onKeyDown={handleKeyDown}
-            placeholder='Edit the post, generate an image, or make it a carousel...'
+            placeholder={
+              tagging.tagged.length > 0
+                ? 'What should it take from these notes?'
+                : 'Edit the post, generate an image, or make it a carousel...'
+            }
             className='max-h-20 min-h-[40px] resize-none text-sm'
             rows={1}
           />
@@ -216,10 +270,21 @@ export function PostChatPanel({
             size='icon'
             className='size-9 shrink-0'
             onClick={handleSend}
-            disabled={!input.trim() || chatEditPost.isPending}
+            disabled={!canSend}
           >
             <IconSend className='size-4' />
           </Button>
+        </div>
+        <div className='flex items-center gap-2'>
+          <NotePicker
+            tagging={tagging}
+            setText={setInput}
+            profileId={profileId}
+            returnFocusTo={inputRef}
+          />
+          <span className='text-muted-foreground text-[11px]'>
+            or type @ to use a note from your Knowledge Hub
+          </span>
         </div>
       </div>
     </div>

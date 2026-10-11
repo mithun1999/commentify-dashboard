@@ -35,6 +35,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ...group,
     items: group.items
       .filter((item) => !item.requiresLinkablePair || hasLinkablePair)
+      .filter((item) => !item.requiresPosting || !!profiles?.some(posting))
       .map((item) =>
         item.requiresPro && proLocked ? { ...item, locked: true } : item
       ),

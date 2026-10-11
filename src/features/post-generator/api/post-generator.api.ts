@@ -105,12 +105,14 @@ export type PostEditAction =
 export async function chatEditPost(
   calendarId: string,
   postId: string,
-  message: string
+  message: string,
+  /** Library notes tagged in this message. */
+  noteIds: string[] = []
 ) {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/calendar/${calendarId}/post/${postId}/chat`,
-    data: { message },
+    data: { message, ...(noteIds.length ? { noteIds } : {}) },
   })
   return data as {
     action?: PostEditAction
@@ -250,6 +252,8 @@ export interface CreateManualPostPayload {
   outputType?: ComposerOutputType
   topic?: string
   pillar?: string
+  /** Library notes tagged in the composer; the post is built on them. */
+  noteIds?: string[]
 }
 
 export async function createManualPost(payload: CreateManualPostPayload) {
@@ -281,6 +285,8 @@ export interface PostingPreferences {
   postsPerDay?: number
   preferredTimes?: string[]
   allowThreads?: boolean
+  /** How eagerly the planner builds posts on library notes. */
+  libraryUsage?: 'off' | 'when-relevant' | 'prefer'
 }
 
 export async function getPostingPreferences(
@@ -468,6 +474,19 @@ export async function regenerateAiImage(
     data: { instruction },
   })
   return data
+}
+
+/**
+ * A new AI image for a post that has none ("Generate one" on the image
+ * suggestion). It is made in the background and joins the post's media.
+ */
+export async function generatePostImage(postId: string, instruction: string) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/generate-image`,
+    data: { instruction },
+  })
+  return data as { imageFit: { type?: string } | null; media: PostMedia[] }
 }
 
 export async function uploadPostMedia(

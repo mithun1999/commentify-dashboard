@@ -6,6 +6,10 @@ import {
   IconLock,
   IconSparkles,
 } from '@tabler/icons-react'
+import {
+  postPlanSetting,
+  resolvePostPlanSetting,
+} from '@/config/plan-setting.config'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -21,24 +25,28 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-  postPlanSetting,
-  resolvePostPlanSetting,
-} from '@/config/plan-setting.config'
-import { useGetUserQuery } from '@/features/auth/query/user.query'
-import {
   getAgentPlanTier,
   getAgentType,
 } from '@/features/agent-system/registry'
-import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
+import {
+  NoteChips,
+  NotePicker,
+  useNoteTagging,
+} from '@/features/library/components/note-picker'
 import { useGetPostCreditsQuery } from '@/features/subscription/query/subscription.query'
-import { useCreateManualPost } from '../query/post-generator.query'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import type { ComposerOutputType } from '../api/post-generator.api'
+import { useCreateManualPost } from '../query/post-generator.query'
 
 const PLACEHOLDER =
   'Describe your idea — e.g. "I doubled my pricing from $9 to $19. Here\'s why I almost didn\'t..."'
 
 const X_PLACEHOLDER =
   'Describe your idea — e.g. "Three things I check before shipping any feature..."'
+
+const TAGGED_PLACEHOLDER =
+  'What should the post take from these notes? Leave empty and we pick the strongest point.'
 
 /** What the X composer offers, and what each locked one needs. */
 type XOption = { value: ComposerOutputType; label: string }
@@ -115,6 +123,9 @@ export function ComposeBanner({
   const [idea, setIdea] = useState('')
   const [outputType, setOutputType] = useState<ComposerOutputType>('auto')
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  // Library notes tagged with "@" or the Library button; the post is built
+  // on them.
+  const tagging = useNoteTagging()
 
   // Auto-grow the textarea — input starts at a single line and grows up to
   // ~6 rows of content before scrolling internally.
@@ -126,7 +137,10 @@ export function ComposeBanner({
   }, [idea])
 
   const trimmed = idea.trim()
-  const canSubmit = trimmed.length > 0 && !createPost.isPending && !outOfCredits
+  const canSubmit =
+    (trimmed.length > 0 || tagging.ids.length > 0) &&
+    !createPost.isPending &&
+    !outOfCredits
 
   const handleSubmit = () => {
     if (!canSubmit) return
@@ -135,6 +149,7 @@ export function ComposeBanner({
         profileId,
         idea: trimmed,
         outputType,
+        ...(tagging.ids.length ? { noteIds: tagging.ids } : {}),
         ...(calendarId
           ? { calendarId }
           : weekStartDate
@@ -148,7 +163,7 @@ export function ComposeBanner({
             params: { profileId, agentType, postId: post._id },
           } as any)
         },
-      },
+      }
     )
   }
 
@@ -181,6 +196,12 @@ export function ComposeBanner({
         </div>
       )}
 
+      {tagging.tagged.length > 0 && (
+        <div className='mb-2 pl-6'>
+          <NoteChips tagged={tagging.tagged} onRemove={tagging.remove} />
+        </div>
+      )}
+
       <div className='flex items-start gap-2'>
         <div className='text-muted-foreground mt-2 shrink-0'>
           <IconSparkles className='size-4' />
@@ -188,9 +209,15 @@ export function ComposeBanner({
         <textarea
           ref={textareaRef}
           value={idea}
-          onChange={(e) => setIdea(e.target.value)}
+          onChange={(e) => setIdea(tagging.onTextChange(e.target.value, idea))}
           onKeyDown={handleKeyDown}
-          placeholder={isX ? X_PLACEHOLDER : PLACEHOLDER}
+          placeholder={
+            tagging.tagged.length > 0
+              ? TAGGED_PLACEHOLDER
+              : isX
+                ? X_PLACEHOLDER
+                : PLACEHOLDER
+          }
           rows={1}
           className='placeholder:text-muted-foreground min-h-[28px] flex-1 resize-none border-0 bg-transparent p-1.5 text-sm leading-6 outline-none focus:ring-0'
         />
@@ -198,6 +225,12 @@ export function ComposeBanner({
 
       <div className='mt-2 flex items-center justify-between gap-2 border-t pt-2'>
         <div className='flex items-center gap-2'>
+          <NotePicker
+            tagging={tagging}
+            setText={setIdea}
+            profileId={profileId}
+            returnFocusTo={textareaRef}
+          />
           <span className='text-muted-foreground text-xs'>Output:</span>
           <Select
             value={outputType}

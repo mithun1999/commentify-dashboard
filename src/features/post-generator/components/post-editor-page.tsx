@@ -14,6 +14,7 @@ import {
   IconDeviceFloppy,
   IconFileTypePdf,
   IconLoader2,
+  IconLock,
   IconPaperclip,
   IconRefresh,
   IconRocket,
@@ -58,8 +59,10 @@ import {
   type ResearchClaim,
   useDeletePostMedia,
   useEditCarouselSlide,
+  useConvertPostToCarousel,
   useEditPost,
   useFormatSuggestions,
+  useGeneratePostImage,
   usePublishPost,
   useRegenerateAiImage,
   useRegenerateCarouselSlide,
@@ -78,8 +81,12 @@ import { RegenerateImageDialog } from './regenerate-image-dialog'
 import { RejectPostDialog } from './reject-post-dialog'
 import { PostEngagementPanel } from './post-engagement-panel'
 import { CrossPostCard } from '@/features/profile-links/components/cross-post-card'
+import { GroundedOn } from '@/features/library/components/grounded-on'
 import { XPostEditor, xLengthSummary } from './x-post-editor'
 import { isXFormat } from '../utils/x-text'
+import { postPlanSetting } from '@/config/plan-setting.config'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { getAgentPlanTier } from '@/features/agent-system/registry'
 
 function charCountColor(count: number) {
   if (count >= 1000 && count <= 1200) return 'text-green-600'
@@ -171,6 +178,13 @@ export function PostEditorPage() {
   const uploadMedia = useUploadPostMedia(calendarId)
   const deleteMedia = useDeletePostMedia(calendarId)
   const regenerateAi = useRegenerateAiImage(calendarId)
+  const generateImage = useGeneratePostImage(calendarId)
+  const convertToCarousel = useConvertPostToCarousel(calendarId)
+  const { data: user } = useGetUserQuery()
+  const carouselUnlocked =
+    postPlanSetting.aiCarousels[
+      getAgentPlanTier(user, 'post') as 'starter' | 'pro'
+    ] ?? true
   const editSlide = useEditCarouselSlide(calendarId)
   const regenerateSlide = useRegenerateCarouselSlide(calendarId)
   const switchTemplate = useSwitchCarouselTemplate(calendarId)
@@ -478,6 +492,36 @@ export function PostEditorPage() {
     else if (suggestion.suggestion === 'pdf') handleAttachClick('pdf')
   }, [suggestion])
 
+  // "Generate one": an AI image built from what the suggestion says it should
+  // show, or the post as a carousel. The banner goes once it has started;
+  // the media strip shows the image or carousel being made.
+  const generateSuggested = useCallback(() => {
+    if (!suggestion || !post?._id) return
+    if (suggestion.suggestion === 'pdf') {
+      if (!carouselUnlocked) {
+        navigate({ to: '/plans' } as any)
+        return
+      }
+      convertToCarousel.mutate(
+        { postId: post._id },
+        { onSuccess: dismissFormatSuggestion }
+      )
+      return
+    }
+    generateImage.mutate(
+      { postId: post._id, instruction: suggestion.reason },
+      { onSuccess: dismissFormatSuggestion }
+    )
+  }, [
+    suggestion,
+    post?._id,
+    carouselUnlocked,
+    convertToCarousel,
+    generateImage,
+    dismissFormatSuggestion,
+    navigate,
+  ])
+
   // A `calendarId` in the URL means the all-time calendar sent us here, so
   // that is where back belongs — the week view may not even contain this post.
   // Either way the view state rides back with us, so the user returns to the
@@ -629,6 +673,13 @@ export function PostEditorPage() {
                 <FormatSuggestionBanner
                   suggestion={suggestion}
                   onAccept={acceptSuggestion}
+                  onGenerate={generateSuggested}
+                  generating={
+                    generateImage.isPending || convertToCarousel.isPending
+                  }
+                  generateLocked={
+                    suggestion.suggestion === 'pdf' && !carouselUnlocked
+                  }
                   onDismiss={dismissFormatSuggestion}
                 />
               )}
@@ -660,6 +711,9 @@ export function PostEditorPage() {
                 {researchClaims.length > 0 && (
                   <ResearchSources claims={researchClaims} />
                 )}
+                <GroundedOn
+                  noteIds={((post as any).seedNoteIds ?? []).map(String)}
+                />
                 <CrossPostCard
                   post={{
                     _id: post._id,
@@ -947,10 +1001,18 @@ export function PostEditorPage() {
 function FormatSuggestionBanner({
   suggestion,
   onAccept,
+  onGenerate,
+  generating,
+  generateLocked,
   onDismiss,
 }: {
   suggestion: { suggestion: 'image' | 'pdf' | 'none'; reason: string }
   onAccept: () => void
+  /** Make the image (or carousel) with AI instead of attaching a file. */
+  onGenerate: () => void
+  generating: boolean
+  /** Carousels are a Pro feature; the button then opens the plans. */
+  generateLocked: boolean
   onDismiss: () => void
 }) {
   const label =
@@ -969,8 +1031,31 @@ function FormatSuggestionBanner({
         variant='outline'
         className='h-7 border-indigo-300 text-xs text-indigo-700 hover:bg-indigo-100'
         onClick={onAccept}
+        disabled={generating}
       >
         Attach
+      </Button>
+      <Button
+        size='sm'
+        className='h-7 gap-1 bg-indigo-600 text-xs text-white hover:bg-indigo-700'
+        onClick={onGenerate}
+        disabled={generating}
+        title={
+          generateLocked
+            ? 'AI carousels are a Pro feature. Upgrade to unlock.'
+            : suggestion.suggestion === 'pdf'
+              ? 'Turn this post into a carousel with AI'
+              : 'Make this image with AI'
+        }
+      >
+        {generating ? (
+          <IconLoader2 className='size-3.5 animate-spin' />
+        ) : generateLocked ? (
+          <IconLock className='size-3.5' />
+        ) : (
+          <IconSparkles className='size-3.5' />
+        )}
+        Generate one
       </Button>
       <Button
         size='icon'

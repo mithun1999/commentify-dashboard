@@ -36,6 +36,7 @@ const COMMENTING_TABS = [
 const POSTING_TABS = [
   { value: 'calendar', label: 'Upcoming' },
   { value: 'history', label: 'Calendar' },
+  { value: 'knowledge-hub', label: 'Knowledge Hub' },
   { value: 'settings', label: 'Settings' },
 ]
 
