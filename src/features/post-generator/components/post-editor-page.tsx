@@ -76,6 +76,9 @@ import { GenerationProgress, ResearchSources } from './generation-progress'
 import { PostChatPanel } from './post-chat-panel'
 import { RegenerateImageDialog } from './regenerate-image-dialog'
 import { RejectPostDialog } from './reject-post-dialog'
+import { PostEngagementPanel } from './post-engagement-panel'
+import { XPostEditor, xLengthSummary } from './x-post-editor'
+import { isXFormat } from '../utils/x-text'
 
 function charCountColor(count: number) {
   if (count >= 1000 && count <= 1200) return 'text-green-600'
@@ -537,6 +540,13 @@ export function PostEditorPage() {
   }
 
   const charCount = content.length
+  // X posts are edited and counted the X way: per post for a thread, against
+  // 280 (or 4,000 for a Premium long post), links and emoji weighted.
+  const isX = (post as any).platform === 'twitter'
+  const xFormat = isXFormat((post as any).outputType)
+    ? (post as any).outputType
+    : 'tweet'
+  const xLength = isX ? xLengthSummary(content, xFormat) : null
   const prevPost = postIndex > 0 ? posts[postIndex - 1] : null
   const nextPost = postIndex < posts.length - 1 ? posts[postIndex + 1] : null
 
@@ -610,7 +620,8 @@ export function PostEditorPage() {
                 message={(post as any).generationWarning}
               />
             )}
-            {suggestion &&
+            {!isX &&
+              suggestion &&
               suggestion.suggestion !== 'none' &&
               !formatDismissed &&
               !suppressImageBannerByClassifier && (
@@ -628,12 +639,23 @@ export function PostEditorPage() {
               />
             ) : (
               <>
-                <Textarea
-                  value={content}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  className='min-h-[60vh] resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0'
-                  placeholder='Post content...'
-                />
+                {isX ? (
+                  <XPostEditor
+                    content={content}
+                    format={xFormat}
+                    onChange={handleContentChange}
+                  />
+                ) : (
+                  <Textarea
+                    value={content}
+                    onChange={(e) => handleContentChange(e.target.value)}
+                    className='min-h-[60vh] resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0'
+                    placeholder='Post content...'
+                  />
+                )}
+                {post.status === 'published' && (
+                  <PostEngagementPanel postId={post._id} />
+                )}
                 {researchClaims.length > 0 && (
                   <ResearchSources claims={researchClaims} />
                 )}
@@ -732,9 +754,20 @@ export function PostEditorPage() {
           </div>
           <div className='flex shrink-0 items-center justify-between border-t px-4 py-3'>
             <div className='flex items-center gap-3 text-xs'>
-              <span className={cn('font-medium', charCountColor(charCount))}>
-                {charCount} chars
-              </span>
+              {xLength ? (
+                <span
+                  className={cn(
+                    'font-medium',
+                    xLength.over ? 'text-red-500' : 'text-muted-foreground'
+                  )}
+                >
+                  {xLength.label}
+                </span>
+              ) : (
+                <span className={cn('font-medium', charCountColor(charCount))}>
+                  {charCount} chars
+                </span>
+              )}
               {media.length > 0 && (
                 <>
                   <Separator orientation='vertical' className='h-4' />

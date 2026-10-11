@@ -38,6 +38,7 @@ import {
   updateBrandSettings,
   rederiveBrandSettings,
   getMasterySignals,
+  getPostEngagement,
   recomputeMasterySignals,
   editCarouselSlide,
   regenerateCarouselSlide,
@@ -64,6 +65,20 @@ export enum PostGeneratorQueryEnum {
   POSTING_PREFERENCES = 'post-gen-preferences',
   BRAND_SETTINGS = 'post-gen-brand-settings',
   MASTERY_SIGNALS = 'post-gen-mastery-signals',
+  POST_ENGAGEMENT = 'post-gen-post-engagement',
+}
+
+/**
+ * A published post's numbers. Captured hourly at most on the backend, so a
+ * few minutes of staleness costs nothing.
+ */
+export const usePostEngagement = (postId: string | undefined, enabled = true) => {
+  return useQuery({
+    queryKey: [PostGeneratorQueryEnum.POST_ENGAGEMENT, postId],
+    enabled: Boolean(postId) && enabled,
+    queryFn: () => getPostEngagement(postId!),
+    staleTime: 5 * 60 * 1000,
+  })
 }
 
 export const useCurrentCalendar = (profileId: string | undefined) => {

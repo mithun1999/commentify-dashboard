@@ -22,6 +22,8 @@ export interface IProfile {
   platform?: 'linkedin' | 'twitter'
   twitterUserId?: string
   screenName?: string
+  /** X Premium, read from the account; it unlocks long posts. */
+  xPremium?: boolean
   activeAgentTypes?: string[]
   /** Agent slugs the owner switched off. Independent of `status`. */
   pausedAgentTypes?: string[]

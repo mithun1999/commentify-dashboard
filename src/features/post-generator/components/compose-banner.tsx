@@ -20,15 +20,34 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { postPlanSetting } from '@/config/plan-setting.config'
+import {
+  postPlanSetting,
+  resolvePostPlanSetting,
+} from '@/config/plan-setting.config'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
-import { getAgentPlanTier } from '@/features/agent-system/registry'
+import {
+  getAgentPlanTier,
+  getAgentType,
+} from '@/features/agent-system/registry'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import { useGetPostCreditsQuery } from '@/features/subscription/query/subscription.query'
 import { useCreateManualPost } from '../query/post-generator.query'
 import type { ComposerOutputType } from '../api/post-generator.api'
 
 const PLACEHOLDER =
   'Describe your idea — e.g. "I doubled my pricing from $9 to $19. Here\'s why I almost didn\'t..."'
+
+const X_PLACEHOLDER =
+  'Describe your idea — e.g. "Three things I check before shipping any feature..."'
+
+/** What the X composer offers, and what each locked one needs. */
+type XOption = { value: ComposerOutputType; label: string }
+const X_OUTPUT_OPTIONS: XOption[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'tweet', label: 'Single post' },
+  { value: 'thread', label: 'Thread' },
+  { value: 'long_post', label: 'Long post' },
+]
 
 const OUTPUT_OPTIONS: Array<{ value: ComposerOutputType; label: string }> = [
   { value: 'auto', label: 'Auto' },
@@ -64,6 +83,26 @@ export function ComposeBanner({
   const postPlan = getAgentPlanTier(user, 'post')
   const carouselUnlocked =
     postPlanSetting.aiCarousels[postPlan as 'starter' | 'pro'] ?? true
+
+  // X has its own formats: threads are a plan feature, long posts need the
+  // account's X Premium. Locked ones say why instead of failing on submit.
+  const isX = getAgentType(agentType)?.platform === 'twitter'
+  const { data: profiles } = useGetAllProfileQuery()
+  const xPremium = !!profiles?.find((p) => p._id === profileId)?.xPremium
+  const threadsUnlocked = resolvePostPlanSetting('xThreads', user) === true
+  const lockReason = (value: ComposerOutputType): string | null => {
+    if (isX) {
+      if (value === 'thread' && !threadsUnlocked)
+        return 'Threads are a Pro feature. Upgrade to unlock.'
+      if (value === 'long_post' && !xPremium)
+        return 'Long posts need X Premium on this account.'
+      return null
+    }
+    return value === 'carousel_deck' && !carouselUnlocked
+      ? 'AI carousels are a Pro feature. Upgrade to unlock.'
+      : null
+  }
+  const options = isX ? X_OUTPUT_OPTIONS : OUTPUT_OPTIONS
 
   const { data: credits } = useGetPostCreditsQuery()
   // Only block when enforcement is on AND both the cycle allowance and the
@@ -151,7 +190,7 @@ export function ComposeBanner({
           value={idea}
           onChange={(e) => setIdea(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={PLACEHOLDER}
+          placeholder={isX ? X_PLACEHOLDER : PLACEHOLDER}
           rows={1}
           className='placeholder:text-muted-foreground min-h-[28px] flex-1 resize-none border-0 bg-transparent p-1.5 text-sm leading-6 outline-none focus:ring-0'
         />
@@ -169,9 +208,9 @@ export function ComposeBanner({
             </SelectTrigger>
             <SelectContent>
               <TooltipProvider>
-                {OUTPUT_OPTIONS.map((o) => {
-                  const locked = o.value === 'carousel_deck' && !carouselUnlocked
-                  if (!locked) {
+                {options.map((o) => {
+                  const reason = lockReason(o.value)
+                  if (!reason) {
                     return (
                       <SelectItem
                         key={o.value}
@@ -188,7 +227,11 @@ export function ComposeBanner({
                         <div
                           role='button'
                           tabIndex={-1}
-                          onClick={() => navigate({ to: '/plans' } as any)}
+                          onClick={() =>
+                            o.value === 'long_post'
+                              ? undefined
+                              : navigate({ to: '/plans' } as any)
+                          }
                           className='text-muted-foreground relative flex w-full cursor-pointer items-center justify-between rounded-sm py-1.5 pr-2 pl-8 text-xs outline-none select-none'
                         >
                           <span>{o.label}</span>
@@ -196,7 +239,7 @@ export function ComposeBanner({
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side='right' className='max-w-[200px]'>
-                        <p>AI carousels are a Pro feature. Upgrade to unlock.</p>
+                        <p>{reason}</p>
                       </TooltipContent>
                     </Tooltip>
                   )
