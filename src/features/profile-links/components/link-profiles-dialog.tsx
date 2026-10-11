@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
+  IconArrowsLeftRight,
   IconBrandLinkedin,
   IconBrandX,
   IconBuilding,
   IconLoader2,
-  IconSearch,
   IconUser,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
@@ -19,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -44,15 +43,15 @@ import {
 type Network = 'linkedin' | 'twitter'
 
 /**
- * A new link, optionally starting from profiles on either side (one side
- * locked when the caller is about one profile), or the settings of an
- * existing link.
+ * A new link, optionally starting from a profile on either side (locked
+ * when the caller is about that profile), or the settings of an existing
+ * link.
  */
 export type LinkDialogTarget =
   | {
       kind: 'new'
-      linkedinIds?: string[]
-      xIds?: string[]
+      linkedinId?: string
+      xId?: string
       lock?: Network
     }
   | { kind: 'edit'; link: ProfileLink }
@@ -70,10 +69,11 @@ const label = (p: LinkedProfileSummary) =>
   p.platform === 'twitter' ? p.handle : p.name
 
 /**
- * The one dialog for linking LinkedIn profiles and X accounts, from every
- * entry point. LinkedIn and X sit side by side and each direction is its own
- * switch: neither network leads. Defaults are worked out so most people only
- * press Link.
+ * The one dialog for linking a LinkedIn profile with an X account, from
+ * every entry point. One profile on each side: the backend takes many, the
+ * dashboard keeps it one to one until someone needs more. LinkedIn and X
+ * sit side by side, each direction its own switch, and the defaults are
+ * worked out so most people only press Link.
  */
 export function LinkProfilesDialog({
   target,
@@ -103,129 +103,78 @@ function LinkForm({
   const linkMutation = useLinkProfiles()
   const updateMutation = useUpdateProfileLink()
   const editing = target.kind === 'edit' ? target.link : null
-  const only = <T,>(list: T[]) => (list.length === 1 ? list : [])
 
-  const [linkedinSel, setLinkedinSel] = useState<string[]>(
-    editing
-      ? [editing.linkedin._id]
-      : target.kind === 'new' && target.linkedinIds?.length
-        ? target.linkedinIds
-        : only(data.profiles.linkedin).map((p) => p._id)
+  // A profile already in a link is taken; the dashboard keeps links 1:1.
+  const partnerOf = useMemo(() => {
+    const map = new Map<string, LinkedProfileSummary>()
+    for (const l of data.links) {
+      if (l._id === editing?._id) continue
+      map.set(l.linkedin._id, l.x)
+      map.set(l.x._id, l.linkedin)
+    }
+    return map
+  }, [data.links, editing?._id])
+  const free = (list: LinkedProfileSummary[]) =>
+    list.filter((p) => !partnerOf.has(p._id))
+  const firstFree = (list: LinkedProfileSummary[]) =>
+    free(list).length === 1 ? free(list)[0]._id : ''
+
+  const [linkedinId, setLinkedinId] = useState(
+    editing?.linkedin._id ??
+      (target.kind === 'new' ? target.linkedinId : undefined) ??
+      firstFree(data.profiles.linkedin)
   )
-  const [xSel, setXSel] = useState<string[]>(
-    editing
-      ? [editing.x._id]
-      : target.kind === 'new' && target.xIds?.length
-        ? target.xIds
-        : only(data.profiles.x).map((p) => p._id)
+  const [xId, setXId] = useState(
+    editing?.x._id ??
+      (target.kind === 'new' ? target.xId : undefined) ??
+      firstFree(data.profiles.x)
   )
   const [voice, setVoice] = useState<LinkVoice | null>(editing?.voice ?? null)
   const [showVoice, setShowVoice] = useState(false)
-  const [toX, setToX] = useState<boolean | null>(
-    editing ? editing.mirror.linkedinToX === 'auto-draft' : null
+  const [toX, setToX] = useState(
+    editing ? editing.mirror.linkedinToX === 'auto-draft' : true
   )
-  const [toLinkedin, setToLinkedin] = useState<boolean | null>(
-    editing ? editing.mirror.xToLinkedin === 'auto-draft' : null
+  const [toLinkedin, setToLinkedin] = useState(
+    editing ? editing.mirror.xToLinkedin === 'auto-draft' : true
   )
   const [offsetHours, setOffsetHours] = useState(
     editing?.mirror.offsetHours ?? 2
   )
 
-  const byId = useMemo(
-    () =>
-      new Map(
-        [...data.profiles.linkedin, ...data.profiles.x].map((p) => [p._id, p])
-      ),
-    [data.profiles]
-  )
-  const chosenLinkedin = linkedinSel
-    .map((id) => byId.get(id))
-    .filter(Boolean) as LinkedProfileSummary[]
-  const chosenX = xSel
-    .map((id) => byId.get(id))
-    .filter(Boolean) as LinkedProfileSummary[]
-  const others = data.links.filter((l) => l._id !== editing?._id)
-  const linked = (li: string, x: string) =>
-    others.some((l) => l.linkedin._id === li && l.x._id === x)
-
-  const pairs = editing
-    ? [{ linkedin: editing.linkedin, x: editing.x }]
-    : chosenLinkedin.flatMap((li) =>
-        chosenX
-          .filter((x) => !linked(li._id, x._id))
-          .map((x) => ({ linkedin: li, x }))
-      )
-  const single = pairs.length === 1 ? pairs[0] : undefined
+  const linkedin = data.profiles.linkedin.find((p) => p._id === linkedinId)
+  const x = data.profiles.x.find((p) => p._id === xId)
+  const pair = linkedin && x ? { linkedin, x } : null
 
   // Whose account the X one is, worked out as the backend does.
-  const ownerOfX = (xId: string) =>
-    others.find((l) => l.x._id === xId && l.voice === 'person')
-  const ownXOf = (liId: string) =>
-    others.find((l) => l.linkedin._id === liId && l.voice === 'person')
-  const personBlock = single
-    ? ownerOfX(single.x._id) && ownerOfX(single.x._id)!.linkedin._id !== single.linkedin._id
-      ? `${single.x.handle} is already ${ownerOfX(single.x._id)!.linkedin.name}'s own account.`
-      : ownXOf(single.linkedin._id) && ownXOf(single.linkedin._id)!.x._id !== single.x._id
-        ? `${single.linkedin.name}'s own X account is ${ownXOf(single.linkedin._id)!.x.handle}.`
-        : null
-    : null
-  const personAllowed = !!single && !personBlock
-  const suggestedVoice: LinkVoice = !personAllowed
-    ? 'team'
-    : sameName(single!.linkedin, single!.x)
+  const suggestedVoice: LinkVoice = !pair
+    ? 'person'
+    : sameName(pair.linkedin, pair.x)
       ? 'person'
-      : (single!.x.speaksAs ?? 'person')
-  const effectiveVoice: LinkVoice =
-    voice === 'person' && !personAllowed ? 'team' : (voice ?? suggestedVoice)
-
-  // A second profile fed by the same one is safer by hand: both networks
-  // restrict accounts whose posts look alike.
-  const autoElsewhere = (direction: 'toX' | 'toLinkedin') =>
-    pairs.flatMap(({ linkedin, x }) =>
-      others
-        .filter((l) =>
-          direction === 'toX'
-            ? l.linkedin._id === linkedin._id &&
-              l.x._id !== x._id &&
-              l.mirror.linkedinToX === 'auto-draft'
-            : l.x._id === x._id &&
-              l.linkedin._id !== linkedin._id &&
-              l.mirror.xToLinkedin === 'auto-draft'
-        )
-        .map((l) =>
-          direction === 'toX'
-            ? `${linkedin.name}'s posts already go to ${l.x.handle}`
-            : `${x.handle}'s posts already go to ${l.linkedin.name}`
-        )
-    )
-  const elsewhereToX = editing ? [] : autoElsewhere('toX')
-  const elsewhereToLinkedin = editing ? [] : autoElsewhere('toLinkedin')
-  const effectiveToX = toX ?? elsewhereToX.length === 0
-  const effectiveToLinkedin = toLinkedin ?? elsewhereToLinkedin.length === 0
+      : (pair.x.speaksAs ?? 'person')
+  const effectiveVoice: LinkVoice = voice ?? suggestedVoice
 
   const busy = linkMutation.isPending || updateMutation.isPending
-  const canSave = pairs.length > 0 && !busy
+  const canSave = !!pair && !busy
 
   const save = () => {
+    if (!pair) return
     const settings = {
-      linkedinToX: effectiveToX ? ('auto-draft' as const) : ('suggest' as const),
-      xToLinkedin: effectiveToLinkedin
-        ? ('auto-draft' as const)
-        : ('suggest' as const),
+      voice: effectiveVoice,
+      linkedinToX: toX ? ('auto-draft' as const) : ('suggest' as const),
+      xToLinkedin: toLinkedin ? ('auto-draft' as const) : ('suggest' as const),
       offsetHours,
     }
     if (editing) {
       updateMutation.mutate(
-        { linkId: editing._id, voice: effectiveVoice, ...settings },
+        { linkId: editing._id, ...settings },
         { onSuccess: onClose }
       )
       return
     }
     linkMutation.mutate(
       {
-        linkedinProfileIds: [...new Set(pairs.map((p) => p.linkedin._id))],
-        xProfileIds: [...new Set(pairs.map((p) => p.x._id))],
-        ...(single ? { voice: effectiveVoice } : {}),
+        linkedinProfileIds: [pair.linkedin._id],
+        xProfileIds: [pair.x._id],
         ...settings,
       },
       { onSuccess: onClose }
@@ -233,87 +182,74 @@ function LinkForm({
   }
 
   const lock = editing ? 'both' : target.kind === 'new' ? target.lock : undefined
-  const xOff = chosenX.filter((x) => !x.postingActive)
-  const linkedinOff = chosenLinkedin.filter((p) => !p.postingActive)
 
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
-      <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-2xl'>
+      <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-xl'>
         <DialogHeader>
           <DialogTitle>{editing ? 'Link settings' : 'Link profiles'}</DialogTitle>
           <DialogDescription>
-            Posts on one side get a version on the other, written for that
+            A post on one side gets a version on the other, written for that
             network, for you to approve.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-5'>
-          <div className='grid gap-3 sm:grid-cols-2'>
-            <ProfileColumn
+          <div className='grid items-end gap-3 sm:grid-cols-[1fr_auto_1fr]'>
+            <ProfilePicker
               network='linkedin'
               profiles={data.profiles.linkedin}
-              selected={linkedinSel}
-              onChange={setLinkedinSel}
+              value={linkedinId}
+              onChange={setLinkedinId}
               locked={lock === 'both' || lock === 'linkedin'}
-              alreadyLinked={(id) =>
-                xSel.length === 1 && linked(id, xSel[0])
-              }
+              partnerOf={partnerOf}
             />
-            <ProfileColumn
+            <IconArrowsLeftRight className='text-muted-foreground mb-3 hidden size-4 sm:block' />
+            <ProfilePicker
               network='twitter'
               profiles={data.profiles.x}
-              selected={xSel}
-              onChange={setXSel}
+              value={xId}
+              onChange={setXId}
               locked={lock === 'both' || lock === 'twitter'}
-              alreadyLinked={(id) =>
-                linkedinSel.length === 1 && linked(linkedinSel[0], id)
-              }
+              partnerOf={partnerOf}
             />
           </div>
 
-          {pairs.length > 0 && (
+          {pair && (
             <div className='space-y-2'>
               <div className='flex items-center justify-between gap-3 rounded-lg border px-3 py-2'>
                 <p className='flex items-center gap-2 text-sm'>
-                  {single && effectiveVoice === 'person' ? (
+                  {effectiveVoice === 'person' ? (
                     <IconUser className='text-muted-foreground size-4 shrink-0' />
                   ) : (
                     <IconBuilding className='text-muted-foreground size-4 shrink-0' />
                   )}
-                  {single
-                    ? effectiveVoice === 'person'
-                      ? `${single.linkedin.name} and ${single.x.handle} are the same person`
-                      : `${single.x.handle} is a company account; ${single.linkedin.name} posts as themselves`
-                    : `${pairs.length} pairs, linked as company accounts`}
+                  {effectiveVoice === 'person'
+                    ? `${pair.linkedin.name} and ${pair.x.handle} are the same person`
+                    : `${pair.x.handle} is a company account; ${pair.linkedin.name} posts as themselves`}
                 </p>
-                {single && (
-                  <button
-                    type='button'
-                    className='text-primary shrink-0 text-xs font-medium hover:underline'
-                    onClick={() => setShowVoice((v) => !v)}
-                  >
-                    {showVoice ? 'Done' : 'Change'}
-                  </button>
-                )}
+                <button
+                  type='button'
+                  className='text-primary shrink-0 text-xs font-medium hover:underline'
+                  onClick={() => setShowVoice((v) => !v)}
+                >
+                  {showVoice ? 'Done' : 'Change'}
+                </button>
               </div>
-              {single && showVoice && (
+              {showVoice && (
                 <div className='grid gap-2 sm:grid-cols-2'>
                   <VoiceOption
                     selected={effectiveVoice === 'person'}
-                    disabled={!personAllowed}
                     icon={<IconUser className='size-4' />}
                     title='The same person'
-                    hint={
-                      personBlock ??
-                      `Both sides written as ${single.linkedin.name}: "I…"`
-                    }
+                    hint={`Both sides written as ${pair.linkedin.name}: "I…"`}
                     onClick={() => setVoice('person')}
                   />
                   <VoiceOption
                     selected={effectiveVoice === 'team'}
                     icon={<IconBuilding className='size-4' />}
-                    title={`${single.x.handle} is a company account`}
-                    hint={`On X written as the company ("we…"); on LinkedIn as ${single.linkedin.name}, about it.`}
+                    title={`${pair.x.handle} is a company account`}
+                    hint={`On X written as the company ("we…"); on LinkedIn as ${pair.linkedin.name}, about it.`}
                     onClick={() => setVoice('team')}
                   />
                 </div>
@@ -324,20 +260,15 @@ function LinkForm({
           <div className='space-y-3 rounded-lg border p-3'>
             <Direction
               id='to-x'
-              checked={effectiveToX}
+              checked={toX}
               onChange={setToX}
               from='linkedin'
               title='LinkedIn posts get an X version'
               hint='Every LinkedIn post written from now on, for you to approve.'
-              note={
-                elsewhereToX.length
-                  ? `${elsewhereToX.join('; ')} automatically. For another account we suggest drafting by hand: X restricts accounts whose posts look alike. Turned on, each still gets its own rewrite, a day apart.`
-                  : undefined
-              }
               blocked={
-                effectiveToX && xOff.length
+                toX && x && !x.postingActive
                   ? {
-                      text: `X versions need X posting on ${xOff.map(label).join(', ')}.`,
+                      text: `X versions need X posting on ${x.handle}.`,
                       agent: 'twitter-posting',
                     }
                   : undefined
@@ -345,25 +276,25 @@ function LinkForm({
             />
             <Direction
               id='to-linkedin'
-              checked={effectiveToLinkedin}
+              checked={toLinkedin}
               onChange={setToLinkedin}
               from='twitter'
               title='X posts get a LinkedIn version'
               hint='Every X post written from now on, expanded for LinkedIn. At most one LinkedIn post a day, and never more than half your LinkedIn week.'
-              note={
-                elsewhereToLinkedin.length
-                  ? `${elsewhereToLinkedin.join('; ')} automatically. For another profile we suggest drafting by hand: LinkedIn cuts posts that look alike. Turned on, each still gets its own rewrite, a day apart.`
-                  : undefined
-              }
               blocked={
-                effectiveToLinkedin && linkedinOff.length
+                toLinkedin && linkedin && !linkedin.postingActive
                   ? {
-                      text: `LinkedIn versions need LinkedIn posting for ${linkedinOff.map(label).join(', ')}.`,
+                      text: `LinkedIn versions need LinkedIn posting for ${linkedin.name}.`,
                       agent: 'linkedin-posting',
                     }
                   : undefined
               }
             />
+            {!toX && !toLinkedin && (
+              <p className='text-muted-foreground text-xs'>
+                Both off: versions are drafted only when you ask, from a post.
+              </p>
+            )}
 
             <div className='flex flex-wrap items-center justify-between gap-2 border-t pt-3'>
               <Label className='text-sm font-normal'>Post the version</Label>
@@ -397,11 +328,7 @@ function LinkForm({
           </Button>
           <Button disabled={!canSave} onClick={save}>
             {busy && <IconLoader2 className='mr-1 size-4 animate-spin' />}
-            {editing
-              ? 'Save'
-              : pairs.length > 1
-                ? `Link ${pairs.length} pairs`
-                : 'Link'}
+            {editing ? 'Save' : 'Link'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -409,102 +336,55 @@ function LinkForm({
   )
 }
 
-/** One side of the dialog: a profile, or a checklist with search when long. */
-function ProfileColumn({
+/** One side: the profile, or a dropdown with the taken ones greyed out. */
+function ProfilePicker({
   network,
   profiles,
-  selected,
+  value,
   onChange,
   locked,
-  alreadyLinked,
+  partnerOf,
 }: {
   network: Network
   profiles: LinkedProfileSummary[]
-  selected: string[]
-  onChange: (ids: string[]) => void
+  value: string
+  onChange: (id: string) => void
   locked: boolean
-  alreadyLinked: (id: string) => boolean
+  partnerOf: Map<string, LinkedProfileSummary>
 }) {
-  const [search, setSearch] = useState('')
   const title = network === 'twitter' ? 'X' : 'LinkedIn'
-  const query = flat(search)
-  const list = profiles.filter(
-    (p) => !query || flat(`${p.name} ${p.handle}`).includes(query)
-  )
-
+  const current = profiles.find((p) => p._id === value)
   return (
-    <div className='space-y-2'>
+    <div className='min-w-0 space-y-2'>
       <p className='flex items-center gap-1.5 text-sm font-medium'>
         <PlatformIcon platform={network} />
         {title}
       </p>
       {locked || profiles.length <= 1 ? (
-        <div className='space-y-2'>
-          {(locked ? profiles.filter((p) => selected.includes(p._id)) : profiles).map(
-            (p) => (
-              <ProfileRow key={p._id} profile={p} />
-            )
-          )}
-          {profiles.length === 0 && (
-            <p className='text-muted-foreground text-sm'>
-              Connect a {title} profile first.
-            </p>
-          )}
-        </div>
+        current ? (
+          <ProfileRow profile={current} />
+        ) : (
+          <p className='text-muted-foreground text-sm'>
+            Connect a {title} profile first.
+          </p>
+        )
       ) : (
-        <div className='rounded-lg border'>
-          {profiles.length > 6 && (
-            <div className='relative border-b'>
-              <IconSearch className='text-muted-foreground absolute top-2.5 left-3 size-4' />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Search ${title}`}
-                className='border-0 pl-9 shadow-none focus-visible:ring-0'
-              />
-            </div>
-          )}
-          <div className='max-h-56 divide-y overflow-y-auto'>
-            {list.map((p) => {
-              const done = alreadyLinked(p._id)
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger>
+            <SelectValue placeholder={`Choose ${title}`} />
+          </SelectTrigger>
+          <SelectContent>
+            {profiles.map((p) => {
+              const partner = partnerOf.get(p._id)
               return (
-                <label
-                  key={p._id}
-                  className={cn(
-                    'flex cursor-pointer items-center gap-3 px-3 py-2',
-                    done && 'cursor-default opacity-60'
-                  )}
-                >
-                  <Checkbox
-                    checked={done || selected.includes(p._id)}
-                    disabled={done}
-                    onCheckedChange={(v) =>
-                      onChange(
-                        v === true
-                          ? [...selected, p._id]
-                          : selected.filter((id) => id !== p._id)
-                      )
-                    }
-                  />
-                  <span className='min-w-0 flex-1 truncate text-sm'>
-                    {label(p)}
-                    <span className='text-muted-foreground ml-1.5 text-xs'>
-                      {network === 'twitter' ? p.name : p.handle}
-                    </span>
-                  </span>
-                  {done && (
-                    <span className='text-muted-foreground text-xs'>Linked</span>
-                  )}
-                </label>
+                <SelectItem key={p._id} value={p._id} disabled={!!partner}>
+                  {label(p)}
+                  {partner ? ` · linked to ${label(partner)}` : ''}
+                </SelectItem>
               )
             })}
-            {list.length === 0 && (
-              <p className='text-muted-foreground px-3 py-2 text-sm'>
-                Nothing matches.
-              </p>
-            )}
-          </div>
-        </div>
+          </SelectContent>
+        </Select>
       )}
     </div>
   )
@@ -517,7 +397,6 @@ function Direction({
   from,
   title,
   hint,
-  note,
   blocked,
 }: {
   id: string
@@ -526,7 +405,6 @@ function Direction({
   from: Network
   title: string
   hint: string
-  note?: string
   blocked?: { text: string; agent: string }
 }) {
   return (
@@ -543,7 +421,6 @@ function Direction({
           {title}
         </Label>
         <p className='text-muted-foreground text-xs'>{hint}</p>
-        {note && <p className='text-xs text-amber-600'>{note}</p>}
         {blocked && (
           <p className='text-xs text-amber-600'>
             {blocked.text}{' '}
@@ -563,14 +440,12 @@ function Direction({
 
 function VoiceOption({
   selected,
-  disabled,
   icon,
   title,
   hint,
   onClick,
 }: {
   selected: boolean
-  disabled?: boolean
   icon: React.ReactNode
   title: string
   hint: string
@@ -581,12 +456,10 @@ function VoiceOption({
       type='button'
       role='radio'
       aria-checked={selected}
-      disabled={disabled}
       onClick={onClick}
       className={cn(
         'space-y-1 rounded-lg border p-3 text-left transition-colors',
-        selected ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
-        disabled && 'cursor-not-allowed opacity-50 hover:bg-transparent'
+        selected ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
       )}
     >
       <span className='flex items-center gap-1.5 text-sm font-medium'>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { format } from 'date-fns'
-import { IconArrowRight, IconLoader2, IconPlus } from '@tabler/icons-react'
+import { IconArrowRight, IconLoader2 } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { splitThread } from '@/features/post-generator/utils/x-text'
@@ -13,6 +13,7 @@ import type {
 import {
   useCreatePostMirror,
   usePostMirror,
+  useProfileLinks,
 } from '../query/profile-links.query'
 import {
   LinkProfilesDialog,
@@ -44,10 +45,11 @@ const label = (p: LinkedProfileSummary) =>
   p.platform === 'twitter' ? p.handle : p.name
 
 /**
- * Post editor, the same on either network. On an original post: each
- * linked profile on the other network, with its version or a button to draft
- * one, and a way to share it with another profile. On a version: whose post
- * it came from.
+ * Post editor, the same on either network. On an original post: its linked
+ * profile on the other network, with its version or a button to draft one,
+ * or the way to link one. On a version: whose post it came from. (The
+ * backend allows several linked profiles; the dashboard keeps it one to
+ * one, and this still lists them all if there are.)
  */
 export function CrossPostCard({
   post,
@@ -55,6 +57,9 @@ export function CrossPostCard({
   post: { _id: string; status: string; platform?: string; profileId?: string }
 }) {
   const { data } = usePostMirror(post._id)
+  const { data: links } = useProfileLinks(
+    data?.role === 'source' && data.targets.length === 0
+  )
   const create = useCreatePostMirror(post._id)
   const [target, setTarget] = useState<LinkDialogTarget | null>(null)
   const [drafting, setDrafting] = useState<string | null>(null)
@@ -80,8 +85,8 @@ export function CrossPostCard({
   const openLink = () =>
     setTarget(
       network === 'twitter'
-        ? { kind: 'new', xIds: post.profileId ? [post.profileId] : [], lock: 'twitter' }
-        : { kind: 'new', linkedinIds: post.profileId ? [post.profileId] : [], lock: 'linkedin' }
+        ? { kind: 'new', xId: post.profileId, lock: 'twitter' }
+        : { kind: 'new', linkedinId: post.profileId, lock: 'linkedin' }
     )
   const dialog = (
     <LinkProfilesDialog
@@ -91,7 +96,9 @@ export function CrossPostCard({
   )
 
   if (data.targets.length === 0) {
-    if (!data.canLinkMore) return null
+    // One to one: offered while a profile on the other side is still free.
+    const free = other === 'twitter' ? links?.unlinked.x : links?.unlinked.linkedin
+    if (!free?.length) return null
     return (
       <Shell platform={other} title={`Also post on ${NAME[other]}`}>
         <p className='text-muted-foreground text-xs'>
@@ -128,17 +135,6 @@ export function CrossPostCard({
           )
         })}
       </div>
-      {data.canLinkMore && (
-        <button
-          type='button'
-          onClick={openLink}
-          className='text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs'
-        >
-          <IconPlus className='size-3' />
-          Share with another {NAME[other]} profile
-        </button>
-      )}
-      {dialog}
     </Shell>
   )
 }

@@ -44,30 +44,6 @@ const flat = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
 const label = (p: LinkedProfileSummary) =>
   p.platform === 'twitter' ? p.handle : p.name
 
-/**
- * Profiles that share links, so related pairs sit together: a solo founder's
- * two accounts, a company's people and its X account, an agency's clients.
- */
-function groupLinks(links: ProfileLink[]): ProfileLink[][] {
-  const parent = new Map<string, string>()
-  const find = (id: string): string => {
-    const p = parent.get(id) ?? id
-    if (p === id) return id
-    const root = find(p)
-    parent.set(id, root)
-    return root
-  }
-  for (const l of links) {
-    parent.set(find(l.linkedin._id), find(l.x._id))
-  }
-  const groups = new Map<string, ProfileLink[]>()
-  for (const l of links) {
-    const root = find(l.linkedin._id)
-    groups.set(root, [...(groups.get(root) ?? []), l])
-  }
-  return [...groups.values()]
-}
-
 function directionSummary(mirror: MirrorSettings): string {
   const toX = mirror.linkedinToX === 'auto-draft'
   const toLinkedin = mirror.xToLinkedin === 'auto-draft'
@@ -79,10 +55,11 @@ function directionSummary(mirror: MirrorSettings): string {
 }
 
 /**
- * Linked profiles: every LinkedIn and X pair whose posts are shared, with
- * both sides shown the same way. Serves a solo founder (one pair), a
- * company (several people and one X account) and an agency (many groups,
- * with search). Linking always works here, including a pair once dismissed.
+ * Linked profiles: every LinkedIn and X pair whose posts are shared, both
+ * sides shown the same way, one to one (the backend takes more; the
+ * dashboard keeps it simple until someone needs it). Search once there are
+ * many, for agencies. Linking always works here, including a pair once
+ * dismissed.
  */
 export default function LinkedProfilesPage() {
   const { data, isLoading } = useProfileLinks()
@@ -91,16 +68,16 @@ export default function LinkedProfilesPage() {
   const [unlinking, setUnlinking] = useState<ProfileLink | null>(null)
   const [search, setSearch] = useState('')
 
-  const groups = useMemo(() => {
+  const shown = useMemo(() => {
     if (!data) return []
     const q = flat(search)
-    return groupLinks(data.links).filter(
-      (group) =>
-        !q ||
-        group.some((l) =>
+    return [...data.links]
+      .filter(
+        (l) =>
+          !q ||
           flat(`${l.linkedin.name} ${l.linkedin.handle} ${l.x.name} ${l.x.handle}`).includes(q)
-        )
-    )
+      )
+      .sort((a, b) => a.linkedin.name.localeCompare(b.linkedin.name))
   }, [data, search])
 
   const unlinked = useMemo(() => {
@@ -132,9 +109,9 @@ export default function LinkedProfilesPage() {
                 Linked profiles
               </h1>
               <p className='text-muted-foreground max-w-xl text-sm'>
-                Link LinkedIn profiles and X accounts to share posts between
-                them. A post on one side gets a version on the other, written
-                for that network, for you to approve.
+                Link a LinkedIn profile with an X account to share posts
+                between them. A post on one side gets a version on the other,
+                written for that network, for you to approve.
               </p>
             </div>
             <Button
@@ -180,9 +157,9 @@ export default function LinkedProfilesPage() {
                 </p>
               )}
 
-              {groups.map((group) => (
-                <div key={group[0]._id} className='bg-card divide-y rounded-lg border'>
-                  {group.map((link) => (
+              {shown.length > 0 && (
+                <div className='bg-card divide-y rounded-lg border'>
+                  {shown.map((link) => (
                     <div
                       key={link._id}
                       className='flex flex-wrap items-center justify-between gap-3 px-4 py-3'
@@ -224,8 +201,8 @@ export default function LinkedProfilesPage() {
                     </div>
                   ))}
                 </div>
-              ))}
-              {groups.length === 0 && data.links.length > 0 && (
+              )}
+              {shown.length === 0 && data.links.length > 0 && (
                 <p className='text-muted-foreground text-sm'>
                   Nothing matches "{search}".
                 </p>
@@ -242,8 +219,8 @@ export default function LinkedProfilesPage() {
                         onClick={() =>
                           setTarget(
                             p.platform === 'twitter'
-                              ? { kind: 'new', xIds: [p._id], lock: 'twitter' }
-                              : { kind: 'new', linkedinIds: [p._id], lock: 'linkedin' }
+                              ? { kind: 'new', xId: p._id, lock: 'twitter' }
+                              : { kind: 'new', linkedinId: p._id, lock: 'linkedin' }
                           )
                         }
                         className='bg-muted/50 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-sm'

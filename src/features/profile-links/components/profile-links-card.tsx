@@ -6,7 +6,19 @@ import { cn } from '@/lib/utils'
 import type {
   ProfileLink,
   ProfileLinkSuggestion,
+  ProfileLinks,
 } from '../api/profile-links.api'
+
+/**
+ * Suggestions whose profiles are both still free: the dashboard keeps
+ * links one to one, though the backend would suggest more.
+ */
+function freeSuggestions(data: ProfileLinks): ProfileLinkSuggestion[] {
+  const linked = new Set(data.links.flatMap((l) => [l.linkedin._id, l.x._id]))
+  return data.suggestions.filter(
+    (s) => !linked.has(s.linkedin._id) && !linked.has(s.x._id)
+  )
+}
 import {
   useDismissProfileLink,
   useProfileLinks,
@@ -33,7 +45,7 @@ export function ProfileLinksCard({ className }: { className?: string }) {
   const posting = [...data.profiles.linkedin, ...data.profiles.x].some(
     (p) => p.postingActive
   )
-  const suggestion = posting ? data.suggestions[0] : undefined
+  const suggestion = posting ? freeSuggestions(data)[0] : undefined
   if (!suggestion && data.links.length === 0) return null
 
   return (
@@ -45,8 +57,8 @@ export function ProfileLinksCard({ className }: { className?: string }) {
           onLink={() =>
             setTarget({
               kind: 'new',
-              linkedinIds: [suggestion.linkedin._id],
-              xIds: [suggestion.x._id],
+              linkedinId: suggestion.linkedin._id,
+              xId: suggestion.x._id,
             })
           }
           onDismiss={() =>
@@ -176,9 +188,11 @@ export function MirrorPrompt({
   const dismiss = useDismissProfileLink()
   const [target, setTarget] = useState<LinkDialogTarget | null>(null)
 
-  const suggestion = data?.suggestions.find(
-    (s) => s.x._id === profileId || s.linkedin._id === profileId
-  )
+  const suggestion = data
+    ? freeSuggestions(data).find(
+        (s) => s.x._id === profileId || s.linkedin._id === profileId
+      )
+    : undefined
   if (!data || !suggestion) return null
   const fromX = suggestion.x._id === profileId
 
@@ -191,8 +205,8 @@ export function MirrorPrompt({
         onLink={() =>
           setTarget({
             kind: 'new',
-            linkedinIds: [suggestion.linkedin._id],
-            xIds: [suggestion.x._id],
+            linkedinId: suggestion.linkedin._id,
+            xId: suggestion.x._id,
             lock: fromX ? 'twitter' : 'linkedin',
           })
         }
