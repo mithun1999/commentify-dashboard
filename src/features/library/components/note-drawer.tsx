@@ -148,7 +148,7 @@ export function NoteDrawer({
     <Sheet open={!!noteId} onOpenChange={onOpenChange}>
       <SheetContent className='w-full overflow-y-auto sm:max-w-xl'>
         <SheetHeader>
-          <SheetTitle className='sr-only'>Library note</SheetTitle>
+          <SheetTitle className='sr-only'>Knowledge Hub note</SheetTitle>
           <SheetDescription className='sr-only'>
             The note's card, points and usage
           </SheetDescription>
@@ -264,7 +264,7 @@ export function NoteDrawer({
               </p>
               {postingProfiles.length === 0 ? (
                 <p className='text-muted-foreground text-xs'>
-                  Turn on a posting agent to write posts from your library.
+                  Turn on a posting agent to write posts from your Knowledge Hub.
                 </p>
               ) : (
                 <>

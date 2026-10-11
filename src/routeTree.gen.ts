@@ -25,7 +25,7 @@ import { Route as OnboardingAgentTypeImport } from './routes/onboarding/agent-ty
 import { Route as OnboardingActivateTrialImport } from './routes/onboarding/activate-trial'
 import { Route as OauthConsentImport } from './routes/oauth/consent'
 import { Route as AuthenticatedLinkedProfilesImport } from './routes/_authenticated/linked-profiles'
-import { Route as AuthenticatedLibraryImport } from './routes/_authenticated/library'
+import { Route as AuthenticatedKnowledgeHubImport } from './routes/_authenticated/knowledge-hub'
 import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
 import { Route as errors503Import } from './routes/(errors)/503'
 import { Route as errors500Import } from './routes/(errors)/500'
@@ -53,7 +53,7 @@ import { Route as AuthenticatedAgentsProfileIdAgentTypeRouteImport } from './rou
 import { Route as AuthenticatedAgentsProfileIdAgentTypeStatsImport } from './routes/_authenticated/agents/$profileId/$agentType/stats'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeSettingsImport } from './routes/_authenticated/agents/$profileId/$agentType/settings'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeQueueImport } from './routes/_authenticated/agents/$profileId/$agentType/queue'
-import { Route as AuthenticatedAgentsProfileIdAgentTypeLibraryImport } from './routes/_authenticated/agents/$profileId/$agentType/library'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubImport } from './routes/_authenticated/agents/$profileId/$agentType/knowledge-hub'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeHistoryImport } from './routes/_authenticated/agents/$profileId/$agentType/history'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeCalendarImport } from './routes/_authenticated/agents/$profileId/$agentType/calendar'
 import { Route as AuthenticatedAgentsProfileIdAgentTypePostPostIdImport } from './routes/_authenticated/agents/$profileId/$agentType/post/$postId'
@@ -144,9 +144,9 @@ const AuthenticatedLinkedProfilesRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
-const AuthenticatedLibraryRoute = AuthenticatedLibraryImport.update({
-  id: '/library',
-  path: '/library',
+const AuthenticatedKnowledgeHubRoute = AuthenticatedKnowledgeHubImport.update({
+  id: '/knowledge-hub',
+  path: '/knowledge-hub',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -321,10 +321,10 @@ const AuthenticatedAgentsProfileIdAgentTypeQueueRoute =
     getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
   } as any)
 
-const AuthenticatedAgentsProfileIdAgentTypeLibraryRoute =
-  AuthenticatedAgentsProfileIdAgentTypeLibraryImport.update({
-    id: '/library',
-    path: '/library',
+const AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute =
+  AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubImport.update({
+    id: '/knowledge-hub',
+    path: '/knowledge-hub',
     getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
   } as any)
 
@@ -458,11 +458,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBillingImport
       parentRoute: typeof AuthenticatedRouteImport
     }
-    '/_authenticated/library': {
-      id: '/_authenticated/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof AuthenticatedLibraryImport
+    '/_authenticated/knowledge-hub': {
+      id: '/_authenticated/knowledge-hub'
+      path: '/knowledge-hub'
+      fullPath: '/knowledge-hub'
+      preLoaderRoute: typeof AuthenticatedKnowledgeHubImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/linked-profiles': {
@@ -640,11 +640,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeHistoryImport
       parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
     }
-    '/_authenticated/agents/$profileId/$agentType/library': {
-      id: '/_authenticated/agents/$profileId/$agentType/library'
-      path: '/library'
-      fullPath: '/agents/$profileId/$agentType/library'
-      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeLibraryImport
+    '/_authenticated/agents/$profileId/$agentType/knowledge-hub': {
+      id: '/_authenticated/agents/$profileId/$agentType/knowledge-hub'
+      path: '/knowledge-hub'
+      fullPath: '/agents/$profileId/$agentType/knowledge-hub'
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubImport
       parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
     }
     '/_authenticated/agents/$profileId/$agentType/queue': {
@@ -699,7 +699,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren {
   AuthenticatedAgentsProfileIdAgentTypeCalendarRoute: typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
   AuthenticatedAgentsProfileIdAgentTypeHistoryRoute: typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
-  AuthenticatedAgentsProfileIdAgentTypeLibraryRoute: typeof AuthenticatedAgentsProfileIdAgentTypeLibraryRoute
+  AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute: typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute
   AuthenticatedAgentsProfileIdAgentTypeQueueRoute: typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   AuthenticatedAgentsProfileIdAgentTypeSettingsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
   AuthenticatedAgentsProfileIdAgentTypeStatsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
@@ -712,8 +712,8 @@ const AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren: AuthenticatedAgen
       AuthenticatedAgentsProfileIdAgentTypeCalendarRoute,
     AuthenticatedAgentsProfileIdAgentTypeHistoryRoute:
       AuthenticatedAgentsProfileIdAgentTypeHistoryRoute,
-    AuthenticatedAgentsProfileIdAgentTypeLibraryRoute:
-      AuthenticatedAgentsProfileIdAgentTypeLibraryRoute,
+    AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute:
+      AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute,
     AuthenticatedAgentsProfileIdAgentTypeQueueRoute:
       AuthenticatedAgentsProfileIdAgentTypeQueueRoute,
     AuthenticatedAgentsProfileIdAgentTypeSettingsRoute:
@@ -732,7 +732,7 @@ const AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
-  AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
+  AuthenticatedKnowledgeHubRoute: typeof AuthenticatedKnowledgeHubRoute
   AuthenticatedLinkedProfilesRoute: typeof AuthenticatedLinkedProfilesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedCopilotConversationIdRoute: typeof AuthenticatedCopilotConversationIdRoute
@@ -749,7 +749,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
-  AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
+  AuthenticatedKnowledgeHubRoute: AuthenticatedKnowledgeHubRoute,
   AuthenticatedLinkedProfilesRoute: AuthenticatedLinkedProfilesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedCopilotConversationIdRoute:
@@ -812,7 +812,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
-  '/library': typeof AuthenticatedLibraryRoute
+  '/knowledge-hub': typeof AuthenticatedKnowledgeHubRoute
   '/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
@@ -838,7 +838,7 @@ export interface FileRoutesByFullPath {
   '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
   '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
-  '/agents/$profileId/$agentType/library': typeof AuthenticatedAgentsProfileIdAgentTypeLibraryRoute
+  '/agents/$profileId/$agentType/knowledge-hub': typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute
   '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
   '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
@@ -859,7 +859,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
-  '/library': typeof AuthenticatedLibraryRoute
+  '/knowledge-hub': typeof AuthenticatedKnowledgeHubRoute
   '/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
@@ -885,7 +885,7 @@ export interface FileRoutesByTo {
   '/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
   '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
-  '/agents/$profileId/$agentType/library': typeof AuthenticatedAgentsProfileIdAgentTypeLibraryRoute
+  '/agents/$profileId/$agentType/knowledge-hub': typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute
   '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
   '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
@@ -909,7 +909,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
-  '/_authenticated/library': typeof AuthenticatedLibraryRoute
+  '/_authenticated/knowledge-hub': typeof AuthenticatedKnowledgeHubRoute
   '/_authenticated/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
@@ -935,7 +935,7 @@ export interface FileRoutesById {
   '/_authenticated/agents/$profileId/$agentType': typeof AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren
   '/_authenticated/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
   '/_authenticated/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
-  '/_authenticated/agents/$profileId/$agentType/library': typeof AuthenticatedAgentsProfileIdAgentTypeLibraryRoute
+  '/_authenticated/agents/$profileId/$agentType/knowledge-hub': typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute
   '/_authenticated/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/_authenticated/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
   '/_authenticated/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
@@ -960,7 +960,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
-    | '/library'
+    | '/knowledge-hub'
     | '/linked-profiles'
     | '/oauth/consent'
     | '/onboarding/activate-trial'
@@ -986,7 +986,7 @@ export interface FileRouteTypes {
     | '/agents/$profileId/$agentType'
     | '/agents/$profileId/$agentType/calendar'
     | '/agents/$profileId/$agentType/history'
-    | '/agents/$profileId/$agentType/library'
+    | '/agents/$profileId/$agentType/knowledge-hub'
     | '/agents/$profileId/$agentType/queue'
     | '/agents/$profileId/$agentType/settings'
     | '/agents/$profileId/$agentType/stats'
@@ -1006,7 +1006,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
-    | '/library'
+    | '/knowledge-hub'
     | '/linked-profiles'
     | '/oauth/consent'
     | '/onboarding/activate-trial'
@@ -1032,7 +1032,7 @@ export interface FileRouteTypes {
     | '/agents/$profileId/$agentType'
     | '/agents/$profileId/$agentType/calendar'
     | '/agents/$profileId/$agentType/history'
-    | '/agents/$profileId/$agentType/library'
+    | '/agents/$profileId/$agentType/knowledge-hub'
     | '/agents/$profileId/$agentType/queue'
     | '/agents/$profileId/$agentType/settings'
     | '/agents/$profileId/$agentType/stats'
@@ -1054,7 +1054,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/billing'
-    | '/_authenticated/library'
+    | '/_authenticated/knowledge-hub'
     | '/_authenticated/linked-profiles'
     | '/oauth/consent'
     | '/onboarding/activate-trial'
@@ -1080,7 +1080,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agents/$profileId/$agentType'
     | '/_authenticated/agents/$profileId/$agentType/calendar'
     | '/_authenticated/agents/$profileId/$agentType/history'
-    | '/_authenticated/agents/$profileId/$agentType/library'
+    | '/_authenticated/agents/$profileId/$agentType/knowledge-hub'
     | '/_authenticated/agents/$profileId/$agentType/queue'
     | '/_authenticated/agents/$profileId/$agentType/settings'
     | '/_authenticated/agents/$profileId/$agentType/stats'
@@ -1153,7 +1153,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated/settings",
         "/_authenticated/billing",
-        "/_authenticated/library",
+        "/_authenticated/knowledge-hub",
         "/_authenticated/linked-profiles",
         "/_authenticated/",
         "/_authenticated/copilot/$conversationId",
@@ -1226,8 +1226,8 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/billing.tsx",
       "parent": "/_authenticated"
     },
-    "/_authenticated/library": {
-      "filePath": "_authenticated/library.tsx",
+    "/_authenticated/knowledge-hub": {
+      "filePath": "_authenticated/knowledge-hub.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/linked-profiles": {
@@ -1323,7 +1323,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated/agents/$profileId/$agentType/calendar",
         "/_authenticated/agents/$profileId/$agentType/history",
-        "/_authenticated/agents/$profileId/$agentType/library",
+        "/_authenticated/agents/$profileId/$agentType/knowledge-hub",
         "/_authenticated/agents/$profileId/$agentType/queue",
         "/_authenticated/agents/$profileId/$agentType/settings",
         "/_authenticated/agents/$profileId/$agentType/stats",
@@ -1338,8 +1338,8 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/agents/$profileId/$agentType/history.tsx",
       "parent": "/_authenticated/agents/$profileId/$agentType"
     },
-    "/_authenticated/agents/$profileId/$agentType/library": {
-      "filePath": "_authenticated/agents/$profileId/$agentType/library.tsx",
+    "/_authenticated/agents/$profileId/$agentType/knowledge-hub": {
+      "filePath": "_authenticated/agents/$profileId/$agentType/knowledge-hub.tsx",
       "parent": "/_authenticated/agents/$profileId/$agentType"
     },
     "/_authenticated/agents/$profileId/$agentType/queue": {

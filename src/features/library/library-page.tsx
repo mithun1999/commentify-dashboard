@@ -23,7 +23,7 @@ export default function LibraryPage() {
       <Main>
         <div className='mx-auto max-w-3xl'>
           <div className='mb-6'>
-            <h1 className='text-2xl font-bold tracking-tight'>Library</h1>
+            <h1 className='text-2xl font-bold tracking-tight'>Knowledge Hub</h1>
             <p className='text-muted-foreground max-w-xl text-sm'>
               Material your posts can be built on: articles, case studies,
               decks, notes. The planner sees a one-line card for each and

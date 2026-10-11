@@ -32,7 +32,7 @@ export function AgentLibraryTab() {
     <div className='mx-auto max-w-3xl space-y-4'>
       <div className='flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3'>
         <div className='space-y-0.5'>
-          <Label className='text-sm font-medium'>Use the library for this profile</Label>
+          <Label className='text-sm font-medium'>Use the Knowledge Hub for this profile</Label>
           <p className='text-muted-foreground text-xs'>{USAGE_HINT[usage]}</p>
         </div>
         <Select

@@ -159,11 +159,11 @@ export function NotePicker({
           size='sm'
           variant='ghost'
           className='text-muted-foreground h-7 gap-1 px-2 text-xs'
-          title='Tag a note from your library, or type @'
+          title='Tag a note from your Knowledge Hub, or type @'
           disabled={tagged.length >= MAX_TAGGED_NOTES}
         >
           <IconBooks className='size-3.5' />
-          Library
+          Knowledge Hub
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -179,14 +179,14 @@ export function NotePicker({
           <CommandInput
             value={query}
             onValueChange={tagging.setQuery}
-            placeholder='Search your library'
+            placeholder='Search your Knowledge Hub'
           />
           <CommandList>
             <CommandEmpty>
               {recent.isLoading
                 ? 'Loading…'
                 : recent.data?.total === 0
-                  ? 'Your library is empty. Add notes on the Library page.'
+                  ? 'Your Knowledge Hub is empty. Add notes on the Knowledge Hub page.'
                   : 'Nothing matches.'}
             </CommandEmpty>
             {items.length > 0 && (

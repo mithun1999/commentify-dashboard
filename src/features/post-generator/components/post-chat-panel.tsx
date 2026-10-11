@@ -283,7 +283,7 @@ export function PostChatPanel({
             returnFocusTo={inputRef}
           />
           <span className='text-muted-foreground text-[11px]'>
-            or type @ to use a note from your library
+            or type @ to use a note from your Knowledge Hub
           </span>
         </div>
       </div>

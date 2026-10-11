@@ -24,8 +24,8 @@ export const sidebarData: SidebarData = {
           icon: LayoutGrid,
         },
         {
-          title: 'Library',
-          url: '/library',
+          title: 'Knowledge Hub',
+          url: '/knowledge-hub',
           icon: BookOpen,
           requiresPosting: true,
         },

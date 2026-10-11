@@ -89,7 +89,7 @@ export function LibraryBrowser({
         <div className='flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center'>
           <IconBooks className='text-muted-foreground size-8' />
           <div className='space-y-1'>
-            <p className='font-medium'>Your library is empty</p>
+            <p className='font-medium'>Your Knowledge Hub is empty</p>
             <p className='text-muted-foreground max-w-sm text-sm'>
               Add articles, case studies, decks or notes. Every number, quote
               and point is kept, and your posts can be built on them.

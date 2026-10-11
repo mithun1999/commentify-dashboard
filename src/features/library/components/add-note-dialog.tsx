@@ -98,7 +98,7 @@ export function AddNoteDialog({
     >
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader>
-          <DialogTitle>Add to library</DialogTitle>
+          <DialogTitle>Add to Knowledge Hub</DialogTitle>
           <DialogDescription>
             We read it once and keep every number, quote and point with where it
             came from. Posts can then be built on it.

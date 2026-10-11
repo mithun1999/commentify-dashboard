@@ -9,7 +9,7 @@ export function GroundedOn({ noteIds }: { noteIds: string[] }) {
     <div className='mt-4 space-y-1.5 rounded-lg border p-3'>
       <p className='flex items-center gap-1.5 text-xs font-semibold'>
         <IconBooks className='size-3.5' />
-        Built on your library
+        Built on your Knowledge Hub
       </p>
       {noteIds.map((id) => (
         <NoteLink key={id} id={id} />
@@ -23,11 +23,11 @@ function NoteLink({ id }: { id: string }) {
   if (isError) return null
   return (
     <Link
-      to='/library'
+      to='/knowledge-hub'
       search={{ note: id } as any}
       className='text-primary block truncate text-xs hover:underline'
     >
-      {note?.title || 'A library note'}
+      {note?.title || 'A note'}
     </Link>
   )
 }
