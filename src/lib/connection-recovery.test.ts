@@ -32,6 +32,11 @@ function axiosErrorWithStatus(status: number | undefined, data?: unknown) {
   return error
 }
 
+/** The plain object axiosInstance's interceptor rejects with (src/utils/axios.util.ts). */
+function apiRequestError(status: number | string, body?: unknown, message = 'Request failed') {
+  return { status, message, body }
+}
+
 describe('shouldSuppressGlobalErrorNotice', () => {
   it('suppresses when meta flag is explicitly true', () => {
     expect(
@@ -100,6 +105,17 @@ describe('getReadableErrorMessage', () => {
     expect(getReadableErrorMessage(new Error('plain failure'))).toBe(
       'plain failure'
     )
+  })
+
+  it('reads the backend message off the interceptor rejection', () => {
+    expect(
+      getReadableErrorMessage(
+        apiRequestError(400, { message: 'Too many accounts' }, 'Too many accounts')
+      )
+    ).toBe('Too many accounts')
+    expect(
+      getReadableErrorMessage(apiRequestError(500, { title: 'Down' }, 'Broke'))
+    ).toBe('Down')
   })
 })
 
@@ -206,6 +222,14 @@ describe('isAmbiguousMutationFailure', () => {
   it('treats a non-axios error as ambiguous by default (safer than assuming failure)', () => {
     expect(isAmbiguousMutationFailure(new Error('boom'))).toBe(true)
   })
+
+  it('reads the HTTP status off the interceptor rejection', () => {
+    expect(isAmbiguousMutationFailure(apiRequestError(400))).toBe(false)
+    expect(isAmbiguousMutationFailure(apiRequestError(409))).toBe(false)
+    expect(isAmbiguousMutationFailure(apiRequestError(502))).toBe(true)
+    // No response: the interceptor puts the axios error code in `status`.
+    expect(isAmbiguousMutationFailure(apiRequestError('ECONNABORTED'))).toBe(true)
+  })
 })
 
 describe('LinkConfirmationUncertainError', () => {
@@ -230,6 +254,16 @@ describe('getApiErrorCode / toReconnectRequiredError', () => {
     expect(converted).toBeInstanceOf(ProfileReconnectRequiredError)
     expect(converted?.profile.publicIdentifier).toBe('jane')
     expect(converted?.message).toBe('Disconnected')
+  })
+
+  it('reads the code and identity off the interceptor rejection', () => {
+    const error = apiRequestError(409, {
+      code: 'PROFILE_RECONNECT_REQUIRED',
+      message: 'Disconnected',
+      profile: { publicIdentifier: 'jane', platform: 'linkedin' },
+    })
+    expect(getApiErrorCode(error)).toBe('PROFILE_RECONNECT_REQUIRED')
+    expect(toReconnectRequiredError(error)?.profile.publicIdentifier).toBe('jane')
   })
 
   it('ignores errors without that code', () => {
