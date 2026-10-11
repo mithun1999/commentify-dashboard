@@ -1,4 +1,5 @@
 import {
+  IconArrowsLeftRight,
   IconBubbleText,
   IconCash,
   IconHome,
@@ -20,6 +21,12 @@ export const sidebarData: SidebarData = {
           title: 'Agent Hub',
           url: '/',
           icon: IconHome,
+        },
+        {
+          title: 'Linked profiles',
+          url: '/linked-profiles',
+          icon: IconArrowsLeftRight,
+          requiresLinkablePair: true,
         },
         {
           title: 'AI tools',

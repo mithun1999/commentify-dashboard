@@ -14,6 +14,8 @@ interface BaseNavItem {
   lockedHint?: string
   /** Set at render time when the account's plan does not include the item. */
   locked?: boolean
+  /** Shown only to accounts with both a LinkedIn and an X profile. */
+  requiresLinkablePair?: boolean
 }
 
 type NavLink = BaseNavItem & {

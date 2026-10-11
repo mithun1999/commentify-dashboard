@@ -165,6 +165,11 @@ export function PostCard({ post, calendarId, onClick, stage }: PostCardProps) {
         ) : (
           <p className='text-sm leading-relaxed'>{getHookPreview(post.content)}</p>
         )}
+        {(post as any).slotKind === 'mirror' && (
+          <Badge variant='outline' className='shrink-0 text-[10px]'>
+            From LinkedIn
+          </Badge>
+        )}
         <Badge
           variant={postStatusVariant(post.status)}
           className='shrink-0 gap-1.5'

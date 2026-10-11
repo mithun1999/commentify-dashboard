@@ -11,6 +11,7 @@ import { NavUser } from '@/components/layout/nav-user'
 import { useTheme } from '@/context/theme-context'
 import { canUseMcp } from '@/features/ai-tools/plan'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import { CopilotLauncher } from '@/features/copilot/components/copilot-launcher'
 import { sidebarData } from './data/sidebar-data'
 import logoWhite from '@/assets/images/logo.svg'
@@ -21,11 +22,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: user } = useGetUserQuery()
   // Only once the user is loaded, so a Pro account never sees the lock flash.
   const proLocked = Boolean(user) && !canUseMcp(user)
+  // Linking is about the same person on LinkedIn and X; an account on one
+  // platform never sees it.
+  const { data: profiles } = useGetAllProfileQuery()
+  const hasLinkablePair =
+    !!profiles?.some((p) => p.platform === 'twitter') &&
+    !!profiles?.some((p) => p.platform !== 'twitter')
   const navGroups = sidebarData.navGroups.map((group) => ({
     ...group,
-    items: group.items.map((item) =>
-      item.requiresPro && proLocked ? { ...item, locked: true } : item
-    ),
+    items: group.items
+      .filter((item) => !item.requiresLinkablePair || hasLinkablePair)
+      .map((item) =>
+        item.requiresPro && proLocked ? { ...item, locked: true } : item
+      ),
   }))
 
   const isDark =

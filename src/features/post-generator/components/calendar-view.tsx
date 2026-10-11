@@ -21,6 +21,8 @@ import {
 import { PostCard } from './post-card'
 import { GenerateCalendarDialog } from './generate-calendar-dialog'
 import { ComposeBanner } from './compose-banner'
+import { MirrorPrompt } from '@/features/profile-links/components/profile-links-card'
+import { getAgentType } from '@/features/agent-system/registry'
 import type { CalendarUserContextInput } from '../api/post-generator.api'
 
 // ISO yyyy-mm-dd Monday for "this week" — used as the empty-state composer's
@@ -95,6 +97,7 @@ export function CalendarView() {
     agentType: string
   }
   const navigate = useNavigate()
+  const isXAgent = getAgentType(agentType)?.platform === 'twitter'
   // `week` lives in the URL so navigating into a post and clicking back
   // restores the same tab. `strict: false` because this component is
   // also rendered from non-calendar contexts during onboarding loaders.
@@ -312,6 +315,9 @@ export function CalendarView() {
       />
       {calendar && (
         <>
+          {isXAgent && (
+            <MirrorPrompt xProfileId={profileId} className='mb-4' />
+          )}
           <ComposeBanner
             profileId={profileId}
             calendarId={calendar._id}
