@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { IconArrowsLeftRight, IconSettings } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -15,8 +16,9 @@ import {
 
 /**
  * Agent Hub: a "same person?" card while a LinkedIn and an X profile are
- * unlinked, and one line per link with its settings. Renders nothing for
- * an account with a single platform.
+ * unlinked, and one line per link pointing to the Linked profiles page.
+ * Renders nothing for an account with a single platform. Dismissing the
+ * card is for good; the page still links the pair.
  */
 export function ProfileLinksCard({ className }: { className?: string }) {
   const { data } = useProfileLinks()
@@ -70,14 +72,11 @@ export function ProfileLinksCard({ className }: { className?: string }) {
                 : '· X versions only when you ask'}
             </span>
           </div>
-          <Button
-            variant='ghost'
-            size='sm'
-            className='h-7'
-            onClick={() => setTarget({ kind: 'edit', link })}
-          >
-            <IconSettings className='mr-1 size-3.5' />
-            Edit
+          <Button variant='ghost' size='sm' className='h-7' asChild>
+            <Link to='/linked-profiles'>
+              <IconSettings className='mr-1 size-3.5' />
+              Manage
+            </Link>
           </Button>
         </div>
       ))}
@@ -138,7 +137,7 @@ function SuggestionBanner({
           disabled={dismissing}
           onClick={onDismiss}
         >
-          {compact ? 'Not now' : 'Not the same'}
+          {compact ? "Don't show again" : 'Not the same'}
         </Button>
         <Button size='sm' onClick={onLink}>
           Link profiles

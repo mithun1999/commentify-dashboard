@@ -30,7 +30,6 @@ import {
 } from '../api/profile-links.api'
 import {
   useLinkProfiles,
-  useUnlinkProfiles,
   useUpdateProfileLink,
 } from '../query/profile-links.query'
 
@@ -53,8 +52,9 @@ const hoursLabel = (h: number) => (h === 1 ? '1 hour' : `${h} hours`)
 
 /**
  * The one confirmation for linking a LinkedIn and an X profile as the same
- * person, reached from the hub card, the X calendar prompt and the post
- * editor. Editing a link reuses it, with Unlink.
+ * person, reached from the Linked profiles page, the hub card, the X
+ * calendar prompt and the post editor. Editing a link's settings reuses it;
+ * unlinking lives on the Linked profiles page.
  */
 export function LinkProfilesDialog({
   target,
@@ -62,7 +62,6 @@ export function LinkProfilesDialog({
 }: LinkProfilesDialogProps) {
   const linkMutation = useLinkProfiles()
   const updateMutation = useUpdateProfileLink()
-  const unlinkMutation = useUnlinkProfiles()
 
   const [linkedinId, setLinkedinId] = useState('')
   const [xId, setXId] = useState('')
@@ -90,8 +89,7 @@ export function LinkProfilesDialog({
     target.kind === 'edit' ? [target.link.linkedin] : target.linkedin
   const xOptions = target.kind === 'edit' ? [target.link.x] : target.x
   const x = xOptions.find((p) => p._id === xId)
-  const busy =
-    linkMutation.isPending || updateMutation.isPending || unlinkMutation.isPending
+  const busy = linkMutation.isPending || updateMutation.isPending
 
   const close = () => onOpenChange(false)
   const save = () => {
@@ -192,30 +190,14 @@ export function LinkProfilesDialog({
           )}
         </div>
 
-        <DialogFooter className='gap-2 sm:justify-between'>
-          {target.kind === 'edit' ? (
-            <Button
-              variant='ghost'
-              className='text-red-600 hover:text-red-600'
-              disabled={busy}
-              onClick={() =>
-                unlinkMutation.mutate(target.link._id, { onSuccess: close })
-              }
-            >
-              Unlink
-            </Button>
-          ) : (
-            <span />
-          )}
-          <div className='flex gap-2'>
-            <Button variant='outline' disabled={busy} onClick={close}>
-              Cancel
-            </Button>
-            <Button disabled={busy || !linkedinId || !xId} onClick={save}>
-              {busy && <IconLoader2 className='mr-1 size-4 animate-spin' />}
-              {target.kind === 'edit' ? 'Save' : 'Link'}
-            </Button>
-          </div>
+        <DialogFooter className='gap-2'>
+          <Button variant='outline' disabled={busy} onClick={close}>
+            Cancel
+          </Button>
+          <Button disabled={busy || !linkedinId || !xId} onClick={save}>
+            {busy && <IconLoader2 className='mr-1 size-4 animate-spin' />}
+            {target.kind === 'edit' ? 'Save' : 'Link'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -24,6 +24,7 @@ import { Route as OnboardingCommentSettingsImport } from './routes/onboarding/co
 import { Route as OnboardingAgentTypeImport } from './routes/onboarding/agent-type'
 import { Route as OnboardingActivateTrialImport } from './routes/onboarding/activate-trial'
 import { Route as OauthConsentImport } from './routes/oauth/consent'
+import { Route as AuthenticatedLinkedProfilesImport } from './routes/_authenticated/linked-profiles'
 import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
 import { Route as errors503Import } from './routes/(errors)/503'
 import { Route as errors500Import } from './routes/(errors)/500'
@@ -133,6 +134,13 @@ const OauthConsentRoute = OauthConsentImport.update({
   path: '/oauth/consent',
   getParentRoute: () => rootRoute,
 } as any)
+
+const AuthenticatedLinkedProfilesRoute =
+  AuthenticatedLinkedProfilesImport.update({
+    id: '/linked-profiles',
+    path: '/linked-profiles',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 const AuthenticatedBillingRoute = AuthenticatedBillingImport.update({
   id: '/billing',
@@ -435,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBillingImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/linked-profiles': {
+      id: '/_authenticated/linked-profiles'
+      path: '/linked-profiles'
+      fullPath: '/linked-profiles'
+      preLoaderRoute: typeof AuthenticatedLinkedProfilesImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/oauth/consent': {
       id: '/oauth/consent'
       path: '/oauth/consent'
@@ -685,6 +700,7 @@ const AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
+  AuthenticatedLinkedProfilesRoute: typeof AuthenticatedLinkedProfilesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedCopilotConversationIdRoute: typeof AuthenticatedCopilotConversationIdRoute
   AuthenticatedAiToolsIndexRoute: typeof AuthenticatedAiToolsIndexRoute
@@ -700,6 +716,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
+  AuthenticatedLinkedProfilesRoute: AuthenticatedLinkedProfilesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedCopilotConversationIdRoute:
     AuthenticatedCopilotConversationIdRoute,
@@ -761,6 +778,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
+  '/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
@@ -805,6 +823,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/billing': typeof AuthenticatedBillingRoute
+  '/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
@@ -852,6 +871,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
+  '/_authenticated/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/onboarding/activate-trial': typeof OnboardingActivateTrialRoute
   '/onboarding/agent-type': typeof OnboardingAgentTypeRoute
@@ -900,6 +920,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
+    | '/linked-profiles'
     | '/oauth/consent'
     | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
@@ -943,6 +964,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/billing'
+    | '/linked-profiles'
     | '/oauth/consent'
     | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
@@ -988,6 +1010,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/billing'
+    | '/_authenticated/linked-profiles'
     | '/oauth/consent'
     | '/onboarding/activate-trial'
     | '/onboarding/agent-type'
@@ -1084,6 +1107,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated/settings",
         "/_authenticated/billing",
+        "/_authenticated/linked-profiles",
         "/_authenticated/",
         "/_authenticated/copilot/$conversationId",
         "/_authenticated/ai-tools/",
@@ -1153,6 +1177,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/billing": {
       "filePath": "_authenticated/billing.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/linked-profiles": {
+      "filePath": "_authenticated/linked-profiles.tsx",
       "parent": "/_authenticated"
     },
     "/oauth/consent": {

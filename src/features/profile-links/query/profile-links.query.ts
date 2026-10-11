@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import {
   createPostMirror,
@@ -86,11 +87,23 @@ export const useUnlinkProfiles = () => {
   })
 }
 
+/** "Not the same person": the pair is never suggested again. */
 export const useDismissProfileLink = () => {
   const invalidate = useInvalidateLinks()
+  const navigate = useNavigate()
   return useMutation({
     mutationFn: dismissProfileLink,
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      toast("We won't suggest these again.", {
+        description: 'You can still link them from Linked profiles.',
+        action: {
+          label: 'Linked profiles',
+          onClick: () => navigate({ to: '/linked-profiles' }),
+        },
+      })
+    },
+    onError: (error) => toast.error(messageOf(error, 'Could not save that')),
   })
 }
 
