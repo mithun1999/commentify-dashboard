@@ -195,6 +195,36 @@ export function NoteDrawer({
                 placeholder='Topics, separated by commas'
                 className='text-xs'
               />
+              <div className='flex flex-wrap items-center gap-2 text-xs'>
+                <span className='text-muted-foreground'>Whose is it?</span>
+                <div className='inline-flex rounded-md border p-0.5'>
+                  {[
+                    { mine: true, label: 'Yours' },
+                    { mine: false, label: "Someone else's" },
+                  ].map((o) => (
+                    <button
+                      key={o.label}
+                      type='button'
+                      onClick={() =>
+                        o.mine !== note.mine &&
+                        save({ id: note._id, mine: o.mine })
+                      }
+                      className={
+                        o.mine === note.mine
+                          ? 'bg-primary text-primary-foreground rounded px-2 py-0.5'
+                          : 'text-muted-foreground hover:text-foreground rounded px-2 py-0.5'
+                      }
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                <span className='text-muted-foreground'>
+                  {note.mine
+                    ? 'Posts say it as you: "we", "our customers".'
+                    : 'Posts credit it by name.'}
+                </span>
+              </div>
               <div className='text-muted-foreground flex flex-wrap items-center gap-3 text-xs'>
                 {note.source.url && (
                   <a

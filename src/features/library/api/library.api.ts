@@ -20,6 +20,11 @@ export interface LibraryNote {
   chunkCount: number
   chars: number
   truncated: boolean
+  /**
+   * The owner's own material (their site, company or writing): posts say it
+   * as theirs. Otherwise posts credit it.
+   */
+  mine: boolean
   visibility: 'owner' | 'private'
   profileIds: string[]
   pinnedProfileIds: string[]
@@ -99,12 +104,15 @@ export async function createNote(input: {
   file?: File
   title?: string
   profileId?: string
+  /** Set when the author said whose it is. */
+  mine?: boolean
 }): Promise<LibraryNote> {
   if (input.file) {
     const form = new FormData()
     form.append('file', input.file)
     if (input.title) form.append('title', input.title)
     if (input.profileId) form.append('profileId', input.profileId)
+    if (input.mine !== undefined) form.append('mine', String(input.mine))
     const { data } = await axiosInstance({
       method: 'POST',
       url: '/library/notes',
@@ -130,6 +138,7 @@ export async function updateNote(
     claims: Array<{ id: string; text: string }>
     visibility: 'owner' | 'private'
     profileIds: string[]
+    mine: boolean
   }>
 ): Promise<LibraryNote> {
   const { data } = await axiosInstance({

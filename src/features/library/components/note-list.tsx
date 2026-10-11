@@ -10,9 +10,9 @@ import {
   IconSearch,
   IconEyeOff,
 } from '@tabler/icons-react'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import type { LibraryNote, NoteSourceType } from '../api/library.api'
 import { useRetryNote, useSetNoteForProfile } from '../query/library.query'
 
@@ -52,7 +52,8 @@ export function NoteList({
       {notes.map((note) => {
         const Icon = SOURCE_ICON[note.source.type] ?? IconFileText
         const pinned = !!profileId && note.pinnedProfileIds.includes(profileId)
-        const excluded = !!profileId && note.excludedProfileIds.includes(profileId)
+        const excluded =
+          !!profileId && note.excludedProfileIds.includes(profileId)
         return (
           <div
             key={note._id}
@@ -93,14 +94,24 @@ export function NoteList({
                   )}
                   <div className='flex flex-wrap items-center gap-1.5'>
                     {note.topics.slice(0, 5).map((t) => (
-                      <Badge key={t} variant='secondary' className='text-[10px]'>
+                      <Badge
+                        key={t}
+                        variant='secondary'
+                        className='text-[10px]'
+                      >
                         {t}
                       </Badge>
                     ))}
                     <span className='text-muted-foreground text-[11px]'>
-                      {SOURCE_LABEL[note.source.type]} · {note.claimCount} point
+                      {SOURCE_LABEL[note.source.type]}
+                      {note.source.type === 'url' && note.mine
+                        ? ' · yours'
+                        : ''}{' '}
+                      · {note.claimCount} point
                       {note.claimCount === 1 ? '' : 's'} ·{' '}
-                      {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(note.createdAt), {
+                        addSuffix: true,
+                      })}
                       {note.usedByProfile ? ' · used lately' : ''}
                     </span>
                   </div>
@@ -126,7 +137,9 @@ export function NoteList({
                     size='icon'
                     variant='ghost'
                     className='size-7'
-                    title={pinned ? 'Unpin' : 'Pin: the planner uses it this week'}
+                    title={
+                      pinned ? 'Unpin' : 'Pin: the planner uses it this week'
+                    }
                     onClick={() =>
                       setForProfile.mutate({
                         id: note._id,
@@ -145,7 +158,11 @@ export function NoteList({
                     size='icon'
                     variant='ghost'
                     className={cn('size-7', excluded && 'text-red-600')}
-                    title={excluded ? 'Allow for this profile' : 'Never use for this profile'}
+                    title={
+                      excluded
+                        ? 'Allow for this profile'
+                        : 'Never use for this profile'
+                    }
                     onClick={() =>
                       setForProfile.mutate({
                         id: note._id,

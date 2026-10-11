@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { IconFileUpload, IconLoader2 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,8 @@ export function AddNoteDialog({
   const [file, setFile] = useState<File | null>(null)
   const [text, setText] = useState('')
   const [title, setTitle] = useState('')
+  // A link left unticked is judged when it's read; files and text are yours.
+  const [mine, setMine] = useState(false)
   const [fileError, setFileError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -46,6 +49,7 @@ export function AddNoteDialog({
     setFile(null)
     setText('')
     setTitle('')
+    setMine(false)
     setFileError(null)
   }
   const close = () => {
@@ -77,21 +81,27 @@ export function AddNoteDialog({
   const submit = () => {
     const input =
       tab === 'link'
-        ? { url: url.trim() }
+        ? { url: url.trim(), ...(mine ? { mine: true } : {}) }
         : tab === 'file'
           ? { file: file!, ...(title.trim() ? { title: title.trim() } : {}) }
           : { text, ...(title.trim() ? { title: title.trim() } : {}) }
-    create.mutate({ ...input, ...(profileId ? { profileId } : {}) }, { onSuccess: close })
+    create.mutate(
+      { ...input, ...(profileId ? { profileId } : {}) },
+      { onSuccess: close }
+    )
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => (o ? onOpenChange(true) : close())}
+    >
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader>
           <DialogTitle>Add to library</DialogTitle>
           <DialogDescription>
-            We read it once and keep every number, quote and point with where
-            it came from. Posts can then be built on it.
+            We read it once and keep every number, quote and point with where it
+            came from. Posts can then be built on it.
           </DialogDescription>
         </DialogHeader>
 
@@ -110,6 +120,20 @@ export function AddNoteDialog({
               placeholder='https://… an article, a case study, a page of yours'
               onKeyDown={(e) => e.key === 'Enter' && ready && submit()}
             />
+            <label className='flex items-start gap-2 text-sm'>
+              <Checkbox
+                checked={mine}
+                onCheckedChange={(v) => setMine(v === true)}
+                className='mt-0.5'
+              />
+              <span>
+                It&apos;s mine: my site, my company or my writing
+                <span className='text-muted-foreground block text-xs'>
+                  Posts then say it as you (&ldquo;our customers&rdquo;) instead
+                  of quoting it as someone else&apos;s.
+                </span>
+              </span>
+            </label>
           </TabsContent>
 
           <TabsContent value='file' className='space-y-3 pt-2'>
@@ -128,8 +152,8 @@ export function AddNoteDialog({
                 <span className='font-medium'>{file.name}</span>
               ) : (
                 <span className='text-muted-foreground'>
-                  Drop a file here or click to choose. .md, .txt or .pdf, up
-                  to 10 MB.
+                  Drop a file here or click to choose. .md, .txt or .pdf, up to
+                  10 MB.
                 </span>
               )}
             </button>
@@ -171,7 +195,9 @@ export function AddNoteDialog({
             Cancel
           </Button>
           <Button onClick={submit} disabled={!ready || create.isPending}>
-            {create.isPending && <IconLoader2 className='mr-1 size-4 animate-spin' />}
+            {create.isPending && (
+              <IconLoader2 className='mr-1 size-4 animate-spin' />
+            )}
             Add
           </Button>
         </DialogFooter>
