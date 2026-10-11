@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { IconArrowsLeftRight, IconSettings } from '@tabler/icons-react'
+import { IconArrowRight, IconSettings } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { ProfileLinkSuggestion } from '../api/profile-links.api'
@@ -15,10 +15,10 @@ import {
 } from './link-profiles-dialog'
 
 /**
- * Agent Hub: a "same person?" card while a LinkedIn and an X profile are
- * unlinked, and one line per link pointing to the Linked profiles page.
- * Renders nothing for an account with a single platform. Dismissing the
- * card is for good; the page still links the pair.
+ * Agent Hub: a "same person?" card while there is a pair worth suggesting,
+ * one at a time, and a one-line summary of what is linked, pointing to the
+ * Linked profiles page. Renders nothing for an account on one platform.
+ * Dismissing a suggestion is for good; the page still links the pair.
  */
 export function ProfileLinksCard({ className }: { className?: string }) {
   const { data } = useProfileLinks()
@@ -38,12 +38,8 @@ export function ProfileLinksCard({ className }: { className?: string }) {
           onLink={() =>
             setTarget({
               kind: 'new',
-              linkedin: data.unlinked.linkedin,
-              x: data.unlinked.x,
-              preselect: {
-                linkedinId: suggestion.linkedin._id,
-                xId: suggestion.x._id,
-              },
+              xId: suggestion.x._id,
+              linkedinIds: [suggestion.linkedin._id],
             })
           }
           onDismiss={() =>
@@ -55,36 +51,58 @@ export function ProfileLinksCard({ className }: { className?: string }) {
         />
       )}
 
-      {data.links.map((link) => (
-        <div
-          key={link._id}
-          className='bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2'
-        >
-          <div className='flex min-w-0 flex-wrap items-center gap-2 text-sm'>
-            <PlatformIcon platform='linkedin' />
-            <span className='font-medium'>{link.linkedin.name}</span>
-            <IconArrowsLeftRight className='text-muted-foreground size-3.5' />
-            <PlatformIcon platform='twitter' />
-            <span className='font-medium'>{link.x.handle}</span>
-            <span className='text-muted-foreground text-xs'>
-              {link.mirror.linkedinToX === 'auto-draft'
-                ? `· Every LinkedIn post gets an X version, ${link.mirror.offsetHours}h later`
-                : '· X versions only when you ask'}
-            </span>
-          </div>
-          <Button variant='ghost' size='sm' className='h-7' asChild>
-            <Link to='/linked-profiles'>
-              <IconSettings className='mr-1 size-3.5' />
-              Manage
-            </Link>
-          </Button>
-        </div>
-      ))}
+      {data.links.length > 0 && <LinkSummary links={data.links} />}
 
       <LinkProfilesDialog
         target={target}
         onOpenChange={(open) => !open && setTarget(null)}
       />
+    </div>
+  )
+}
+
+function LinkSummary({
+  links,
+}: {
+  links: NonNullable<ReturnType<typeof useProfileLinks>['data']>['links']
+}) {
+  const xAccounts = new Set(links.map((l) => l.x._id)).size
+  const linkedin = new Set(links.map((l) => l.linkedin._id)).size
+  const only = links.length === 1 ? links[0] : null
+  return (
+    <div className='bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2'>
+      <div className='flex min-w-0 flex-wrap items-center gap-2 text-sm'>
+        {only ? (
+          <>
+            <PlatformIcon platform='linkedin' />
+            <span className='font-medium'>{only.linkedin.name}</span>
+            <IconArrowRight className='text-muted-foreground size-3.5' />
+            <PlatformIcon platform='twitter' />
+            <span className='font-medium'>{only.x.handle}</span>
+            <span className='text-muted-foreground text-xs'>
+              {only.mirror.linkedinToX === 'auto-draft'
+                ? `· Every LinkedIn post gets an X version, ${only.mirror.offsetHours}h later`
+                : '· X versions when you ask'}
+            </span>
+          </>
+        ) : (
+          <span>
+            <span className='font-medium'>
+              {linkedin} LinkedIn profile{linkedin === 1 ? '' : 's'}
+            </span>{' '}
+            feed{linkedin === 1 ? 's' : ''}{' '}
+            <span className='font-medium'>
+              {xAccounts} X account{xAccounts === 1 ? '' : 's'}
+            </span>
+          </span>
+        )}
+      </div>
+      <Button variant='ghost' size='sm' className='h-7' asChild>
+        <Link to='/linked-profiles'>
+          <IconSettings className='mr-1 size-3.5' />
+          Manage
+        </Link>
+      </Button>
     </div>
   )
 }
@@ -107,7 +125,7 @@ function SuggestionBanner({
       <div className='min-w-0 space-y-0.5'>
         {compact ? (
           <p className='text-sm font-medium'>
-            Post your LinkedIn posts here too?
+            Share {suggestion.linkedin.name}'s LinkedIn posts here too?
           </p>
         ) : (
           <p className='flex flex-wrap items-center gap-1.5 text-sm font-medium'>
@@ -125,18 +143,12 @@ function SuggestionBanner({
           </p>
         )}
         <p className='text-muted-foreground text-xs'>
-          {compact
-            ? `Link ${suggestion.linkedin.name} on LinkedIn and every LinkedIn post can get an X version for you to approve.`
-            : 'Link them and every LinkedIn post can get an X version, written for X, for you to approve.'}
+          Link them and every LinkedIn post can get an X version, written for
+          X, for you to approve.
         </p>
       </div>
       <div className='flex shrink-0 gap-2'>
-        <Button
-          variant='ghost'
-          size='sm'
-          disabled={dismissing}
-          onClick={onDismiss}
-        >
+        <Button variant='ghost' size='sm' disabled={dismissing} onClick={onDismiss}>
           {compact ? "Don't show again" : 'Not the same'}
         </Button>
         <Button size='sm' onClick={onLink}>
@@ -149,7 +161,7 @@ function SuggestionBanner({
 
 /**
  * X calendar: the same suggestion, worded for the page it sits on, shown
- * only while this X profile has an unlinked LinkedIn match.
+ * only while this X account has a LinkedIn match worth suggesting.
  */
 export function MirrorPrompt({
   xProfileId,
@@ -174,12 +186,9 @@ export function MirrorPrompt({
         onLink={() =>
           setTarget({
             kind: 'new',
-            linkedin: data.unlinked.linkedin,
-            x: data.unlinked.x,
-            preselect: {
-              linkedinId: suggestion.linkedin._id,
-              xId: suggestion.x._id,
-            },
+            xId: suggestion.x._id,
+            linkedinIds: [suggestion.linkedin._id],
+            lockX: true,
           })
         }
         onDismiss={() =>

@@ -9,6 +9,7 @@ import {
   linkProfiles,
   unlinkProfiles,
   updateProfileLink,
+  type LinkVoice,
   type MirrorSettings,
 } from '../api/profile-links.api'
 
@@ -46,12 +47,16 @@ export const useLinkProfiles = () => {
   const invalidate = useInvalidateLinks()
   return useMutation({
     mutationFn: linkProfiles,
-    onSuccess: (link) => {
+    onSuccess: ({ links }) => {
       invalidate()
+      const first = links[0]
+      if (!first) return
+      const who =
+        links.length === 1 ? first.linkedin.name : `${links.length} profiles`
       toast.success(
-        link.mirror.linkedinToX === 'auto-draft'
-          ? `Linked. Your LinkedIn posts will get an X version on ${link.x.handle}.`
-          : 'Linked.'
+        first.mirror.linkedinToX === 'auto-draft'
+          ? `Linked. New posts from ${who} will get an X version on ${first.x.handle}.`
+          : `Linked. Draft X versions on ${first.x.handle} from any LinkedIn post.`
       )
     },
     onError: (error) =>
@@ -65,7 +70,7 @@ export const useUpdateProfileLink = () => {
     mutationFn: ({
       linkId,
       ...settings
-    }: { linkId: string } & Partial<MirrorSettings>) =>
+    }: { linkId: string } & Partial<MirrorSettings> & { voice?: LinkVoice }) =>
       updateProfileLink(linkId, settings),
     onSuccess: () => {
       invalidate()
@@ -118,7 +123,8 @@ export const usePostMirror = (postId: string | undefined, enabled = true) =>
     enabled: Boolean(postId) && enabled,
     refetchInterval: (query) => {
       const data = query.state.data
-      return data?.role === 'source' && data.mirror?.status === 'generating'
+      return data?.role === 'source' &&
+        data.targets.some((t) => t.mirror?.status === 'generating')
         ? 5000
         : false
     },
@@ -127,7 +133,7 @@ export const usePostMirror = (postId: string | undefined, enabled = true) =>
 export const useCreatePostMirror = (postId: string | undefined) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => createPostMirror(postId!),
+    mutationFn: (xProfileId: string) => createPostMirror(postId!, xProfileId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [ProfileLinksQueryEnum.POST_MIRROR, postId],

@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { format } from 'date-fns'
-import { IconArrowRight, IconLoader2 } from '@tabler/icons-react'
+import { IconArrowRight, IconLoader2, IconPlus } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { splitThread } from '@/features/post-generator/utils/x-text'
-import type { MirrorPostSummary } from '../api/profile-links.api'
+import type {
+  MirrorPostSummary,
+  ProfileLink,
+} from '../api/profile-links.api'
 import {
   useCreatePostMirror,
   usePostMirror,
-  useProfileLinks,
 } from '../query/profile-links.query'
 import {
   LinkProfilesDialog,
@@ -31,8 +33,9 @@ const STATUS_LABEL: Record<string, string> = {
 const MIRRORABLE = new Set(['ready', 'approved', 'scheduled'])
 
 /**
- * Post editor: on a LinkedIn post, its X version (or the way to get one);
- * on an X version, the LinkedIn post it came from.
+ * Post editor. On a LinkedIn post: each X account it feeds, with that
+ * account's X version or a button to draft one, and a way to share it on
+ * another account. On an X version: whose LinkedIn post it came from.
  */
 export function XVersionCard({
   post,
@@ -40,19 +43,25 @@ export function XVersionCard({
   post: { _id: string; status: string; platform?: string; profileId?: string }
 }) {
   const { data } = usePostMirror(post._id)
-  const { data: links } = useProfileLinks(data?.role === 'source')
   const create = useCreatePostMirror(post._id)
   const [target, setTarget] = useState<LinkDialogTarget | null>(null)
+  const [drafting, setDrafting] = useState<string | null>(null)
 
   if (!data || data.role === 'none') return null
 
   if (data.role === 'mirror') {
     if (!data.source) return null
+    const who = data.author?.name ?? 'the author'
     return (
-      <Shell platform='linkedin' title='X version of your LinkedIn post'>
+      <Shell title={`From ${who}'s LinkedIn post`} platform='linkedin'>
         <p className='text-muted-foreground line-clamp-2 text-xs'>
           {firstLine(data.source.content)}
         </p>
+        {data.voice === 'team' && (
+          <p className='text-muted-foreground text-[11px]'>
+            Written as this account, not as {who}.
+          </p>
+        )}
         <PostLink post={data.source} agentType='linkedin-posting'>
           Open the LinkedIn post
         </PostLink>
@@ -60,99 +69,143 @@ export function XVersionCard({
     )
   }
 
-  const { link, mirror } = data
+  const openLink = () =>
+    setTarget({
+      kind: 'new',
+      linkedinIds: post.profileId ? [post.profileId] : [],
+      lockLinkedin: true,
+    })
+  const dialog = (
+    <LinkProfilesDialog
+      target={target}
+      onOpenChange={(open) => !open && setTarget(null)}
+    />
+  )
 
-  if (!link) {
-    if (!data.canLink || !links) return null
-    const suggestion = links.suggestions.find(
-      (s) => s.linkedin._id === post.profileId
-    )
+  if (data.targets.length === 0) {
+    if (!data.canLinkMore) return null
     return (
-      <Shell platform='twitter' title='Also post on X'>
+      <Shell title='Also post on X' platform='twitter'>
         <p className='text-muted-foreground text-xs'>
-          Link your X profile and this post gets an X version, written for X,
+          Link an X account and this post gets an X version, written for X,
           for you to approve.
         </p>
-        <Button
-          size='sm'
-          variant='outline'
-          className='h-7'
-          onClick={() =>
-            setTarget({
-              kind: 'new',
-              linkedin: links.unlinked.linkedin,
-              x: links.unlinked.x,
-              preselect: {
-                linkedinId: post.profileId,
-                xId: suggestion?.x._id,
-              },
-            })
-          }
-        >
-          Link X profile
+        <Button size='sm' variant='outline' className='h-7' onClick={openLink}>
+          Link an X account
         </Button>
-        <LinkProfilesDialog
-          target={target}
-          onOpenChange={(open) => !open && setTarget(null)}
-        />
+        {dialog}
       </Shell>
     )
   }
 
+  return (
+    <Shell title='On X' platform='twitter'>
+      <div className='divide-y'>
+        {data.targets.map(({ link, mirror }) => (
+          <TargetRow
+            key={link._id}
+            link={link}
+            mirror={mirror}
+            canDraft={MIRRORABLE.has(post.status)}
+            drafting={create.isPending && drafting === link.x._id}
+            onDraft={() => {
+              setDrafting(link.x._id)
+              create.mutate(link.x._id)
+            }}
+          />
+        ))}
+      </div>
+      {data.canLinkMore && (
+        <button
+          type='button'
+          onClick={openLink}
+          className='text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs'
+        >
+          <IconPlus className='size-3' />
+          Share on another X account
+        </button>
+      )}
+      {dialog}
+    </Shell>
+  )
+}
+
+function TargetRow({
+  link,
+  mirror,
+  canDraft,
+  drafting,
+  onDraft,
+}: {
+  link: ProfileLink
+  mirror: MirrorPostSummary | null
+  canDraft: boolean
+  drafting: boolean
+  onDraft: () => void
+}) {
+  const heading = (
+    <div className='flex items-center justify-between gap-2'>
+      <p className='text-xs font-medium'>
+        {link.x.handle}
+        <span className='text-muted-foreground ml-1.5 font-normal'>
+          {link.voice === 'person' ? 'own account' : 'company account'}
+        </span>
+      </p>
+      {mirror && (
+        <Badge variant='secondary' className='text-[10px]'>
+          {STATUS_LABEL[mirror.status] ?? mirror.status}
+        </Badge>
+      )}
+    </div>
+  )
+
   if (!mirror) {
     return (
-      <Shell platform='twitter' title={`Also post on X · ${link.x.handle}`}>
+      <div className='space-y-1.5 py-2 first:pt-0 last:pb-0'>
+        {heading}
         {!link.x.postingActive ? (
           <p className='text-xs text-amber-600'>
             Turn on X posting for {link.x.handle} to get an X version.
           </p>
-        ) : MIRRORABLE.has(post.status) ? (
-          <>
-            <p className='text-muted-foreground text-xs'>
-              {link.mirror.linkedinToX === 'auto-draft'
-                ? 'No X version yet.'
-                : 'X versions are drafted when you ask.'}{' '}
-              It goes out {link.mirror.offsetHours}h after this post, and you
-              approve it first.
-            </p>
+        ) : canDraft ? (
+          <div className='flex flex-wrap items-center gap-2'>
             <Button
               size='sm'
               variant='outline'
               className='h-7'
-              disabled={create.isPending}
-              onClick={() => create.mutate()}
+              disabled={drafting}
+              onClick={onDraft}
             >
-              {create.isPending && (
-                <IconLoader2 className='mr-1 size-3.5 animate-spin' />
-              )}
+              {drafting && <IconLoader2 className='mr-1 size-3.5 animate-spin' />}
               Draft X version
             </Button>
-          </>
+            <span className='text-muted-foreground text-[11px]'>
+              Goes out {link.mirror.offsetHours}h after this post, once you
+              approve it.
+            </span>
+          </div>
         ) : (
           <p className='text-muted-foreground text-xs'>
             It gets an X version once it's written.
           </p>
         )}
-      </Shell>
+      </div>
     )
   }
 
   const posts = splitThread(mirror.content)
   const isThread = mirror.outputType === 'thread' && posts.length > 1
   return (
-    <Shell
-      platform='twitter'
-      title={`X version · ${link.x.handle}`}
-      badge={STATUS_LABEL[mirror.status] ?? mirror.status}
-    >
+    <div className='space-y-1.5 py-2 first:pt-0 last:pb-0'>
+      {heading}
       {mirror.status === 'generating' ? (
         <p className='text-muted-foreground flex items-center gap-1.5 text-xs'>
           <IconLoader2 className='size-3.5 animate-spin' />
-          Writing the X version. It takes about a minute.
+          Writing it. Takes about a minute.
         </p>
       ) : (
         <>
-          <p className='line-clamp-4 text-xs whitespace-pre-line'>
+          <p className='line-clamp-3 text-xs whitespace-pre-line'>
             {posts[0] ?? mirror.content}
           </p>
           <p className='text-muted-foreground text-[11px]'>
@@ -164,36 +217,27 @@ export function XVersionCard({
         </>
       )}
       <PostLink post={mirror} agentType='twitter-posting'>
-        Open the X version
+        Open
       </PostLink>
-    </Shell>
+    </div>
   )
 }
 
 function Shell({
-  platform,
   title,
-  badge,
+  platform,
   children,
 }: {
-  platform: 'linkedin' | 'twitter'
   title: string
-  badge?: string
+  platform: 'linkedin' | 'twitter'
   children: React.ReactNode
 }) {
   return (
     <div className='mt-4 space-y-2 rounded-lg border p-3'>
-      <div className='flex items-center justify-between gap-2'>
-        <p className='flex items-center gap-1.5 text-xs font-medium'>
-          <PlatformIcon platform={platform} className='size-3.5' />
-          {title}
-        </p>
-        {badge && (
-          <Badge variant='secondary' className='text-[10px]'>
-            {badge}
-          </Badge>
-        )}
-      </div>
+      <p className='flex items-center gap-1.5 text-xs font-semibold'>
+        <PlatformIcon platform={platform} className='size-3.5' />
+        {title}
+      </p>
       {children}
     </div>
   )

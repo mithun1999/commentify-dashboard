@@ -2,6 +2,12 @@ import { axiosInstance } from '@/utils/axios.util'
 
 export type MirrorMode = 'auto-draft' | 'suggest'
 
+/**
+ * Whose X account it is: `person`, the LinkedIn author's own (written as
+ * them); `team`, a company or brand account (written as the account).
+ */
+export type LinkVoice = 'person' | 'team'
+
 export const MIRROR_OFFSET_HOURS = [1, 2, 4, 6, 12, 24] as const
 
 export interface MirrorSettings {
@@ -19,10 +25,12 @@ export interface LinkedProfileSummary {
   postingActive: boolean
 }
 
+/** One LinkedIn profile feeding one X account. */
 export interface ProfileLink {
   _id: string
   linkedin: LinkedProfileSummary
   x: LinkedProfileSummary
+  voice: LinkVoice
   mirror: MirrorSettings
 }
 
@@ -35,6 +43,8 @@ export interface ProfileLinkSuggestion {
 export interface ProfileLinks {
   links: ProfileLink[]
   suggestions: ProfileLinkSuggestion[]
+  profiles: { linkedin: LinkedProfileSummary[]; x: LinkedProfileSummary[] }
+  /** Profiles in no link at all. */
   unlinked: { linkedin: LinkedProfileSummary[]; x: LinkedProfileSummary[] }
 }
 
@@ -49,15 +59,20 @@ export interface MirrorPostSummary {
   publishedUrl?: string
 }
 
-/** A LinkedIn post's X version and link, or an X version's LinkedIn post. */
+/** A LinkedIn post's X accounts and versions, or an X version's LinkedIn post. */
 export type PostMirror =
   | {
       role: 'source'
-      link: { _id: string; x: LinkedProfileSummary; mirror: MirrorSettings } | null
-      mirror: MirrorPostSummary | null
-      canLink: boolean
+      targets: Array<{ link: ProfileLink; mirror: MirrorPostSummary | null }>
+      /** Some X account isn't linked to this LinkedIn profile yet. */
+      canLinkMore: boolean
     }
-  | { role: 'mirror'; source: MirrorPostSummary | null }
+  | {
+      role: 'mirror'
+      source: MirrorPostSummary | null
+      author: LinkedProfileSummary | null
+      voice: LinkVoice
+    }
   | { role: 'none' }
 
 export async function getProfileLinks(): Promise<ProfileLinks> {
@@ -69,11 +84,12 @@ export async function getProfileLinks(): Promise<ProfileLinks> {
 }
 
 export async function linkProfiles(payload: {
-  linkedinProfileId: string
+  linkedinProfileIds: string[]
   xProfileId: string
-  linkedinToX?: MirrorMode
-  offsetHours?: number
-}): Promise<ProfileLink> {
+  voice: LinkVoice
+  linkedinToX: MirrorMode
+  offsetHours: number
+}): Promise<{ links: ProfileLink[] }> {
   const { data } = await axiosInstance({
     method: 'POST',
     url: '/post-generator/profile-links',
@@ -84,7 +100,7 @@ export async function linkProfiles(payload: {
 
 export async function updateProfileLink(
   linkId: string,
-  payload: Partial<MirrorSettings>
+  payload: Partial<MirrorSettings> & { voice?: LinkVoice }
 ): Promise<ProfileLink> {
   const { data } = await axiosInstance({
     method: 'PATCH',
@@ -123,11 +139,13 @@ export async function getPostMirror(postId: string): Promise<PostMirror> {
 }
 
 export async function createPostMirror(
-  postId: string
+  postId: string,
+  xProfileId: string
 ): Promise<{ mirror: MirrorPostSummary | null }> {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/posts/${postId}/mirror`,
+    data: { xProfileId },
   })
   return data
 }
