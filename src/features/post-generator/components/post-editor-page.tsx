@@ -77,6 +77,7 @@ import { PostChatPanel } from './post-chat-panel'
 import { RegenerateImageDialog } from './regenerate-image-dialog'
 import { RejectPostDialog } from './reject-post-dialog'
 import { PostEngagementPanel } from './post-engagement-panel'
+import { XVersionCard } from '@/features/profile-links/components/x-version-card'
 import { XPostEditor, xLengthSummary } from './x-post-editor'
 import { isXFormat } from '../utils/x-text'
 
@@ -659,6 +660,14 @@ export function PostEditorPage() {
                 {researchClaims.length > 0 && (
                   <ResearchSources claims={researchClaims} />
                 )}
+                <XVersionCard
+                  post={{
+                    _id: post._id,
+                    status: post.status,
+                    platform: (post as any).platform,
+                    profileId: String((post as any).profileId ?? ''),
+                  }}
+                />
               </>
             )}
             {(() => {

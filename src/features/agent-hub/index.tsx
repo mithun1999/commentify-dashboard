@@ -13,6 +13,7 @@ import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface
 import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { useAgents } from '@/features/agent-system/hooks/use-agents'
 import { HubComposer } from '@/features/copilot/components/hub-composer'
+import { ProfileLinksCard } from '@/features/profile-links/components/profile-links-card'
 import { AgentCard } from './components/agent-card'
 import { AddAgentCard } from './components/add-agent-card'
 import { AddAgentDialog } from './components/add-agent-dialog'
@@ -68,6 +69,8 @@ export default function AgentHub() {
             </Button>
           </Alert>
         )}
+
+        <ProfileLinksCard className='mb-4' />
 
         {/* Room for the docked composer, which floats over the bottom of the
             viewport and would otherwise sit on top of the last row of cards. */}
