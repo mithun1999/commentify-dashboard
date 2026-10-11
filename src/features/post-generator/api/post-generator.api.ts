@@ -476,6 +476,19 @@ export async function regenerateAiImage(
   return data
 }
 
+/**
+ * A new AI image for a post that has none ("Generate one" on the image
+ * suggestion). It is made in the background and joins the post's media.
+ */
+export async function generatePostImage(postId: string, instruction: string) {
+  const { data } = await axiosInstance({
+    method: 'POST',
+    url: `/post-generator/posts/${postId}/generate-image`,
+    data: { instruction },
+  })
+  return data as { imageFit: { type?: string } | null; media: PostMedia[] }
+}
+
 export async function uploadPostMedia(
   postId: string,
   files: File[]

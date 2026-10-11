@@ -33,6 +33,8 @@ import {
   uploadPostMedia,
   deletePostMedia,
   regenerateAiImage,
+  generatePostImage,
+  convertPostToCarousel,
   getFormatSuggestions,
   getBrandSettings,
   updateBrandSettings,
@@ -787,6 +789,45 @@ export const useRegenerateAiImage = (calendarId: string) => {
     },
     onError: (error: any) => {
       toast.error(extractErrorMessage(error, 'Failed to queue image regen'))
+    },
+  })
+}
+
+export const useGeneratePostImage = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      postId,
+      instruction,
+    }: {
+      postId: string
+      instruction: string
+    }) => generatePostImage(postId, instruction),
+    onSuccess: () => {
+      invalidateCalendarQueries(queryClient, calendarId)
+      toast.success('Making the image. It shows up here in a minute or two.')
+    },
+    onError: (error: any) => {
+      toast.error(
+        extractErrorMessage(error, "Couldn't make an image for this post")
+      )
+    },
+  })
+}
+
+export const useConvertPostToCarousel = (calendarId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ postId }: { postId: string }) =>
+      convertPostToCarousel(postId),
+    onSuccess: () => {
+      invalidateCalendarQueries(queryClient, calendarId)
+      toast.success('Making the carousel. It shows up here in a few minutes.')
+    },
+    onError: (error: any) => {
+      toast.error(
+        extractErrorMessage(error, "Couldn't make a carousel for this post")
+      )
     },
   })
 }
