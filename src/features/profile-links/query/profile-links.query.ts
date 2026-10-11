@@ -29,10 +29,7 @@ export const useProfileLinks = (enabled = true) =>
     staleTime: 60 * 1000,
   })
 
-/**
- * Linking drafts X versions of the week's LinkedIn posts in the background,
- * so the calendars and any open post are refreshed too.
- */
+/** A link changes what the post editor shows, so open posts refresh too. */
 const useInvalidateLinks = () => {
   const queryClient = useQueryClient()
   return () => {
@@ -51,12 +48,19 @@ export const useLinkProfiles = () => {
       invalidate()
       const first = links[0]
       if (!first) return
-      const who =
-        links.length === 1 ? first.linkedin.name : `${links.length} profiles`
+      const { linkedinToX, xToLinkedin } = first.mirror
+      const what =
+        links.length === 1
+          ? `${first.linkedin.name} and ${first.x.handle}`
+          : `${links.length} pairs`
       toast.success(
-        first.mirror.linkedinToX === 'auto-draft'
-          ? `Linked. New posts from ${who} will get an X version on ${first.x.handle}.`
-          : `Linked. Draft X versions on ${first.x.handle} from any LinkedIn post.`
+        linkedinToX === 'auto-draft' && xToLinkedin === 'auto-draft'
+          ? `Linked ${what}. New posts on either side get a version on the other.`
+          : linkedinToX === 'auto-draft'
+            ? `Linked ${what}. New LinkedIn posts get an X version.`
+            : xToLinkedin === 'auto-draft'
+              ? `Linked ${what}. New X posts get a LinkedIn version.`
+              : `Linked ${what}. Draft versions from any post.`
       )
     },
     onError: (error) =>
@@ -86,7 +90,7 @@ export const useUnlinkProfiles = () => {
     mutationFn: unlinkProfiles,
     onSuccess: () => {
       invalidate()
-      toast.success('Unlinked. X versions already drafted stay as X posts.')
+      toast.success('Unlinked. Versions already drafted stay as ordinary posts.')
     },
     onError: (error) => toast.error(messageOf(error, 'Could not unlink')),
   })
@@ -113,7 +117,7 @@ export const useDismissProfileLink = () => {
 }
 
 /**
- * Polled while the X version is being written, which takes about a minute,
+ * Polled while a version is being written, which takes about a minute,
  * so the card turns into the draft without a refresh.
  */
 export const usePostMirror = (postId: string | undefined, enabled = true) =>
@@ -133,14 +137,15 @@ export const usePostMirror = (postId: string | undefined, enabled = true) =>
 export const useCreatePostMirror = (postId: string | undefined) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (xProfileId: string) => createPostMirror(postId!, xProfileId),
+    mutationFn: (targetProfileId: string) =>
+      createPostMirror(postId!, targetProfileId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [ProfileLinksQueryEnum.POST_MIRROR, postId],
       })
-      toast.success('Writing the X version. It takes about a minute.')
+      toast.success('Writing it now. It takes about a minute.')
     },
     onError: (error) =>
-      toast.error(messageOf(error, 'Could not draft the X version')),
+      toast.error(messageOf(error, 'Could not draft the version')),
   })
 }

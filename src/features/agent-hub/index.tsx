@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { usePostHog } from 'posthog-js/react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,16 @@ export default function AgentHub() {
     setPresetAgentSlug(slug)
     setAddDialogOpen(true)
   }
+
+  // `?addAgent=<slug>` opens the add-agent dialog on that agent, so other
+  // pages ("X versions need X posting") can send people straight to it.
+  const { addAgent } = useSearch({ strict: false }) as { addAgent?: string }
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (!addAgent) return
+    openAddDialog(addAgent)
+    navigate({ to: '/', search: {} as any, replace: true })
+  }, [addAgent, navigate])
 
   return (
     <>

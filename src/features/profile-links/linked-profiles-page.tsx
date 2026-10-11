@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
-  IconBrandX,
+  IconArrowsLeftRight,
   IconLink,
   IconLoader2,
   IconPlus,
@@ -27,6 +27,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import type {
   LinkedProfileSummary,
+  MirrorSettings,
   ProfileLink,
 } from './api/profile-links.api'
 import {
@@ -40,13 +41,25 @@ import {
 } from './components/link-profiles-dialog'
 
 const flat = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+const label = (p: LinkedProfileSummary) =>
+  p.platform === 'twitter' ? p.handle : p.name
+
+function directionSummary(mirror: MirrorSettings): string {
+  const toX = mirror.linkedinToX === 'auto-draft'
+  const toLinkedin = mirror.xToLinkedin === 'auto-draft'
+  const when = `${mirror.offsetHours}h after the original`
+  if (toX && toLinkedin) return `Both ways, automatically · ${when}`
+  if (toX) return `LinkedIn → X automatically, X → LinkedIn when you ask · ${when}`
+  if (toLinkedin) return `X → LinkedIn automatically, LinkedIn → X when you ask · ${when}`
+  return `Both ways, when you ask · ${when}`
+}
 
 /**
- * Linked profiles, one card per X account with the LinkedIn profiles that
- * feed it. The same page serves a solo founder (one card, one row), a
- * company (one account, several people) and an agency (many accounts, with
- * search). This is where linking always works, including a pair once
- * dismissed on the hub.
+ * Linked profiles: every LinkedIn and X pair whose posts are shared, both
+ * sides shown the same way, one to one (the backend takes more; the
+ * dashboard keeps it simple until someone needs it). Search once there are
+ * many, for agencies. Linking always works here, including a pair once
+ * dismissed.
  */
 export default function LinkedProfilesPage() {
   const { data, isLoading } = useProfileLinks()
@@ -55,27 +68,29 @@ export default function LinkedProfilesPage() {
   const [unlinking, setUnlinking] = useState<ProfileLink | null>(null)
   const [search, setSearch] = useState('')
 
-  const groups = useMemo(() => {
+  const shown = useMemo(() => {
     if (!data) return []
     const q = flat(search)
-    return data.profiles.x
-      .map((x) => ({
-        x,
-        links: data.links.filter((l) => l.x._id === x._id),
-      }))
+    return [...data.links]
       .filter(
-        ({ x, links }) =>
+        (l) =>
           !q ||
-          flat(`${x.name} ${x.handle}`).includes(q) ||
-          links.some((l) => flat(`${l.linkedin.name} ${l.linkedin.handle}`).includes(q))
+          flat(`${l.linkedin.name} ${l.linkedin.handle} ${l.x.name} ${l.x.handle}`).includes(q)
       )
-      .sort((a, b) => Number(b.links.length > 0) - Number(a.links.length > 0))
+      .sort((a, b) => a.linkedin.name.localeCompare(b.linkedin.name))
   }, [data, search])
+
+  const unlinked = useMemo(() => {
+    if (!data) return []
+    return [...data.unlinked.linkedin, ...data.unlinked.x].sort((a, b) =>
+      label(a).localeCompare(label(b))
+    )
+  }, [data])
 
   const hasBoth =
     !!data && data.profiles.linkedin.length > 0 && data.profiles.x.length > 0
-  const manyAccounts =
-    !!data && data.profiles.x.length + data.profiles.linkedin.length > 8
+  const many =
+    !!data && data.profiles.linkedin.length + data.profiles.x.length > 8
 
   return (
     <>
@@ -94,9 +109,9 @@ export default function LinkedProfilesPage() {
                 Linked profiles
               </h1>
               <p className='text-muted-foreground max-w-xl text-sm'>
-                Choose which LinkedIn profiles feed each X account. Their
-                LinkedIn posts get an X version there, written for X, for you
-                to approve.
+                Link a LinkedIn profile with an X account to share posts
+                between them. A post on one side gets a version on the other,
+                written for that network, for you to approve.
               </p>
             </div>
             <Button
@@ -123,57 +138,95 @@ export default function LinkedProfilesPage() {
             </div>
           ) : (
             <div className='space-y-4'>
-              {manyAccounts && (
+              {many && (
                 <div className='relative'>
                   <IconSearch className='text-muted-foreground absolute top-2.5 left-3 size-4' />
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder='Search accounts and people'
+                    placeholder='Search people and accounts'
                     className='pl-9'
                   />
                 </div>
               )}
 
-              {groups.map(({ x, links }) => (
-                <XAccountCard
-                  key={x._id}
-                  x={x}
-                  links={links}
-                  onAdd={() =>
-                    setTarget({ kind: 'new', xId: x._id, lockX: true })
-                  }
-                  onEdit={(link) => setTarget({ kind: 'edit', link })}
-                  onUnlink={setUnlinking}
-                />
-              ))}
-              {groups.length === 0 && (
+              {data.links.length === 0 && (
+                <p className='text-muted-foreground rounded-lg border border-dashed p-4 text-sm'>
+                  Nothing linked yet. Use Link profiles, or pick a profile
+                  below.
+                </p>
+              )}
+
+              {shown.length > 0 && (
+                <div className='bg-card divide-y rounded-lg border'>
+                  {shown.map((link) => (
+                    <div
+                      key={link._id}
+                      className='flex flex-wrap items-center justify-between gap-3 px-4 py-3'
+                    >
+                      <div className='min-w-0 space-y-1'>
+                        <div className='flex flex-wrap items-center gap-2'>
+                          <ProfileChip profile={link.linkedin} />
+                          <IconArrowsLeftRight className='text-muted-foreground size-4' />
+                          <ProfileChip profile={link.x} />
+                          <Badge variant='secondary' className='text-[10px]'>
+                            {link.voice === 'person'
+                              ? 'Same person'
+                              : 'Company account'}
+                          </Badge>
+                        </div>
+                        <p className='text-muted-foreground text-xs'>
+                          {directionSummary(link.mirror)}
+                        </p>
+                      </div>
+                      <div className='flex shrink-0 gap-1'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-7'
+                          onClick={() => setTarget({ kind: 'edit', link })}
+                        >
+                          <IconSettings className='mr-1 size-3.5' />
+                          Settings
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-7 text-red-600 hover:text-red-600'
+                          onClick={() => setUnlinking(link)}
+                        >
+                          Unlink
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {shown.length === 0 && data.links.length > 0 && (
                 <p className='text-muted-foreground text-sm'>
                   Nothing matches "{search}".
                 </p>
               )}
 
-              {data.unlinked.linkedin.length > 0 && !search && (
+              {unlinked.length > 0 && !search && (
                 <section className='space-y-2 pt-2'>
-                  <h2 className='text-sm font-semibold'>
-                    LinkedIn profiles not feeding any X account
-                  </h2>
+                  <h2 className='text-sm font-semibold'>Not linked yet</h2>
                   <div className='flex flex-wrap gap-2'>
-                    {data.unlinked.linkedin.map((p) => (
+                    {unlinked.map((p) => (
                       <button
                         key={p._id}
                         type='button'
                         onClick={() =>
-                          setTarget({
-                            kind: 'new',
-                            linkedinIds: [p._id],
-                            lockLinkedin: true,
-                          })
+                          setTarget(
+                            p.platform === 'twitter'
+                              ? { kind: 'new', xId: p._id, lock: 'twitter' }
+                              : { kind: 'new', linkedinId: p._id, lock: 'linkedin' }
+                          )
                         }
                         className='bg-muted/50 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-sm'
                       >
-                        <PlatformIcon platform='linkedin' className='size-3.5' />
-                        <span className='font-medium'>{p.name}</span>
+                        <PlatformIcon platform={p.platform} className='size-3.5' />
+                        <span className='font-medium'>{label(p)}</span>
                         <IconPlus className='text-muted-foreground size-3.5' />
                       </button>
                     ))}
@@ -197,14 +250,12 @@ export default function LinkedProfilesPage() {
         <AlertDialogContent>
           <AlertDialogHeader className='text-left'>
             <AlertDialogTitle>
-              Stop sharing {unlinking?.linkedin.name}'s posts on{' '}
-              {unlinking?.x.handle}?
+              Unlink {unlinking?.linkedin.name} and {unlinking?.x.handle}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              New LinkedIn posts from {unlinking?.linkedin.name} won't get an
-              X version on {unlinking?.x.handle}. X versions already drafted
-              stay there as ordinary X posts. You can link them again any
-              time.
+              New posts on either side stop getting a version on the other.
+              Versions already drafted stay as ordinary posts. You can link
+              them again any time.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -233,98 +284,14 @@ export default function LinkedProfilesPage() {
   )
 }
 
-function XAccountCard({
-  x,
-  links,
-  onAdd,
-  onEdit,
-  onUnlink,
-}: {
-  x: LinkedProfileSummary
-  links: ProfileLink[]
-  onAdd: () => void
-  onEdit: (link: ProfileLink) => void
-  onUnlink: (link: ProfileLink) => void
-}) {
-  const own = links.find((l) => l.voice === 'person')
+function ProfileChip({ profile }: { profile: LinkedProfileSummary }) {
   return (
-    <div className='bg-card rounded-lg border'>
-      <div className='flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3'>
-        <div className='flex min-w-0 items-center gap-2'>
-          <IconBrandX className='size-4 shrink-0' />
-          <span className='font-semibold'>{x.handle}</span>
-          {x.name && x.name !== x.handle.slice(1) && (
-            <span className='text-muted-foreground truncate text-sm'>
-              {x.name}
-            </span>
-          )}
-          {links.length > 0 && (
-            <Badge variant='secondary' className='text-[10px]'>
-              {own ? `${own.linkedin.name}'s own account` : 'Company account'}
-            </Badge>
-          )}
-          {!x.postingActive && (
-            <Badge variant='outline' className='text-[10px] text-amber-600'>
-              X posting off
-            </Badge>
-          )}
-        </div>
-        <Button variant='outline' size='sm' className='h-7' onClick={onAdd}>
-          <IconPlus className='mr-1 size-3.5' />
-          Add LinkedIn profile
-        </Button>
-      </div>
-
-      {links.length === 0 ? (
-        <p className='text-muted-foreground px-4 py-3 text-sm'>
-          No LinkedIn profiles feed {x.handle} yet.
-        </p>
-      ) : (
-        <div className='divide-y'>
-          {links.map((link) => (
-            <div
-              key={link._id}
-              className='flex flex-wrap items-center justify-between gap-2 px-4 py-2.5'
-            >
-              <div className='min-w-0 space-y-0.5'>
-                <div className='flex items-center gap-2 text-sm'>
-                  <PlatformIcon platform='linkedin' className='size-3.5' />
-                  <span className='font-medium'>{link.linkedin.name}</span>
-                  <span className='text-muted-foreground text-xs'>
-                    {link.voice === 'person'
-                      ? 'written as them'
-                      : 'written as the company'}
-                  </span>
-                </div>
-                <p className='text-muted-foreground text-xs'>
-                  {link.mirror.linkedinToX === 'auto-draft'
-                    ? `Automatic · ${link.mirror.offsetHours}h after the LinkedIn post`
-                    : `When you ask · ${link.mirror.offsetHours}h after the LinkedIn post`}
-                </p>
-              </div>
-              <div className='flex shrink-0 gap-1'>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='h-7'
-                  onClick={() => onEdit(link)}
-                >
-                  <IconSettings className='mr-1 size-3.5' />
-                  Settings
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='h-7 text-red-600 hover:text-red-600'
-                  onClick={() => onUnlink(link)}
-                >
-                  Unlink
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
+    <span className='inline-flex items-center gap-1.5 text-sm'>
+      <PlatformIcon platform={profile.platform} className='size-3.5' />
+      <span className='font-medium'>{label(profile)}</span>
+      {!profile.postingActive && (
+        <span className='text-xs text-amber-600'>(posting off)</span>
       )}
-    </div>
+    </span>
   )
 }

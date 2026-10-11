@@ -97,7 +97,8 @@ export function CalendarView() {
     agentType: string
   }
   const navigate = useNavigate()
-  const isXAgent = getAgentType(agentType)?.platform === 'twitter'
+  // Both networks' posting calendars offer linking; neither leads.
+  const isPostingAgent = getAgentType(agentType)?.capability === 'post'
   // `week` lives in the URL so navigating into a post and clicking back
   // restores the same tab. `strict: false` because this component is
   // also rendered from non-calendar contexts during onboarding loaders.
@@ -315,8 +316,8 @@ export function CalendarView() {
       />
       {calendar && (
         <>
-          {isXAgent && (
-            <MirrorPrompt xProfileId={profileId} className='mb-4' />
+          {isPostingAgent && (
+            <MirrorPrompt profileId={profileId} className='mb-4' />
           )}
           <ComposeBanner
             profileId={profileId}

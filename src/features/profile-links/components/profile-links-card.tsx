@@ -1,9 +1,24 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { IconArrowRight, IconSettings } from '@tabler/icons-react'
+import { IconArrowsLeftRight, IconSettings } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { ProfileLinkSuggestion } from '../api/profile-links.api'
+import type {
+  ProfileLink,
+  ProfileLinkSuggestion,
+  ProfileLinks,
+} from '../api/profile-links.api'
+
+/**
+ * Suggestions whose profiles are both still free: the dashboard keeps
+ * links one to one, though the backend would suggest more.
+ */
+function freeSuggestions(data: ProfileLinks): ProfileLinkSuggestion[] {
+  const linked = new Set(data.links.flatMap((l) => [l.linkedin._id, l.x._id]))
+  return data.suggestions.filter(
+    (s) => !linked.has(s.linkedin._id) && !linked.has(s.x._id)
+  )
+}
 import {
   useDismissProfileLink,
   useProfileLinks,
@@ -26,7 +41,11 @@ export function ProfileLinksCard({ className }: { className?: string }) {
   const [target, setTarget] = useState<LinkDialogTarget | null>(null)
 
   if (!data) return null
-  const suggestion = data.suggestions[0]
+  // Linking shares posts, so an account with no posting agent isn't asked.
+  const posting = [...data.profiles.linkedin, ...data.profiles.x].some(
+    (p) => p.postingActive
+  )
+  const suggestion = posting ? freeSuggestions(data)[0] : undefined
   if (!suggestion && data.links.length === 0) return null
 
   return (
@@ -38,8 +57,8 @@ export function ProfileLinksCard({ className }: { className?: string }) {
           onLink={() =>
             setTarget({
               kind: 'new',
+              linkedinId: suggestion.linkedin._id,
               xId: suggestion.x._id,
-              linkedinIds: [suggestion.linkedin._id],
             })
           }
           onDismiss={() =>
@@ -61,14 +80,10 @@ export function ProfileLinksCard({ className }: { className?: string }) {
   )
 }
 
-function LinkSummary({
-  links,
-}: {
-  links: NonNullable<ReturnType<typeof useProfileLinks>['data']>['links']
-}) {
-  const xAccounts = new Set(links.map((l) => l.x._id)).size
-  const linkedin = new Set(links.map((l) => l.linkedin._id)).size
+function LinkSummary({ links }: { links: ProfileLink[] }) {
   const only = links.length === 1 ? links[0] : null
+  const people = new Set(links.map((l) => l.linkedin._id)).size
+  const accounts = new Set(links.map((l) => l.x._id)).size
   return (
     <div className='bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2'>
       <div className='flex min-w-0 flex-wrap items-center gap-2 text-sm'>
@@ -76,24 +91,28 @@ function LinkSummary({
           <>
             <PlatformIcon platform='linkedin' />
             <span className='font-medium'>{only.linkedin.name}</span>
-            <IconArrowRight className='text-muted-foreground size-3.5' />
+            <IconArrowsLeftRight className='text-muted-foreground size-3.5' />
             <PlatformIcon platform='twitter' />
             <span className='font-medium'>{only.x.handle}</span>
             <span className='text-muted-foreground text-xs'>
-              {only.mirror.linkedinToX === 'auto-draft'
-                ? `· Every LinkedIn post gets an X version, ${only.mirror.offsetHours}h later`
-                : '· X versions when you ask'}
+              · posts shared{' '}
+              {only.mirror.linkedinToX === 'auto-draft' &&
+              only.mirror.xToLinkedin === 'auto-draft'
+                ? 'both ways'
+                : only.mirror.linkedinToX === 'auto-draft'
+                  ? 'LinkedIn → X'
+                  : only.mirror.xToLinkedin === 'auto-draft'
+                    ? 'X → LinkedIn'
+                    : 'when you ask'}
             </span>
           </>
         ) : (
           <span>
             <span className='font-medium'>
-              {linkedin} LinkedIn profile{linkedin === 1 ? '' : 's'}
+              {links.length} links
             </span>{' '}
-            feed{linkedin === 1 ? 's' : ''}{' '}
-            <span className='font-medium'>
-              {xAccounts} X account{xAccounts === 1 ? '' : 's'}
-            </span>
+            between {people} LinkedIn profile{people === 1 ? '' : 's'} and{' '}
+            {accounts} X account{accounts === 1 ? '' : 's'}
           </span>
         )}
       </div>
@@ -123,28 +142,23 @@ function SuggestionBanner({
   return (
     <div className='flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-500/30 bg-blue-500/5 px-4 py-3'>
       <div className='min-w-0 space-y-0.5'>
-        {compact ? (
-          <p className='text-sm font-medium'>
-            Share {suggestion.linkedin.name}'s LinkedIn posts here too?
-          </p>
-        ) : (
-          <p className='flex flex-wrap items-center gap-1.5 text-sm font-medium'>
-            Same person?
-            <PlatformIcon platform='linkedin' />
-            {suggestion.linkedin.name}
-            <span className='text-muted-foreground font-normal'>and</span>
-            <PlatformIcon platform='twitter' />
-            {suggestion.x.handle}
-            {suggestion.namesMatch && (
-              <span className='text-muted-foreground text-xs font-normal'>
-                (names match)
-              </span>
-            )}
-          </p>
-        )}
+        <p className='flex flex-wrap items-center gap-1.5 text-sm font-medium'>
+          {compact ? 'Share posts with' : 'Same person?'}
+          <PlatformIcon platform='linkedin' />
+          {suggestion.linkedin.name}
+          <span className='text-muted-foreground font-normal'>and</span>
+          <PlatformIcon platform='twitter' />
+          {suggestion.x.handle}
+          {!compact && suggestion.namesMatch && (
+            <span className='text-muted-foreground text-xs font-normal'>
+              (names match)
+            </span>
+          )}
+          {compact && '?'}
+        </p>
         <p className='text-muted-foreground text-xs'>
-          Link them and every LinkedIn post can get an X version, written for
-          X, for you to approve.
+          Link them and a post on either side gets a version on the other,
+          written for that network, for you to approve.
         </p>
       </div>
       <div className='flex shrink-0 gap-2'>
@@ -160,22 +174,27 @@ function SuggestionBanner({
 }
 
 /**
- * X calendar: the same suggestion, worded for the page it sits on, shown
- * only while this X account has a LinkedIn match worth suggesting.
+ * A posting calendar, on either network: the suggestion for this profile,
+ * worded for the page it sits on.
  */
 export function MirrorPrompt({
-  xProfileId,
+  profileId,
   className,
 }: {
-  xProfileId: string
+  profileId: string
   className?: string
 }) {
   const { data } = useProfileLinks()
   const dismiss = useDismissProfileLink()
   const [target, setTarget] = useState<LinkDialogTarget | null>(null)
 
-  const suggestion = data?.suggestions.find((s) => s.x._id === xProfileId)
+  const suggestion = data
+    ? freeSuggestions(data).find(
+        (s) => s.x._id === profileId || s.linkedin._id === profileId
+      )
+    : undefined
   if (!data || !suggestion) return null
+  const fromX = suggestion.x._id === profileId
 
   return (
     <div className={className}>
@@ -186,9 +205,9 @@ export function MirrorPrompt({
         onLink={() =>
           setTarget({
             kind: 'new',
+            linkedinId: suggestion.linkedin._id,
             xId: suggestion.x._id,
-            linkedinIds: [suggestion.linkedin._id],
-            lockX: true,
+            lock: fromX ? 'twitter' : 'linkedin',
           })
         }
         onDismiss={() =>
