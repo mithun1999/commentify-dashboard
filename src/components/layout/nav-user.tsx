@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
-import { ChevronsUpDown, LogOut, Sparkles, CreditCard, Settings } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Sparkles, CreditCard } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -181,12 +181,6 @@ export function NavUser() {
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link to='/settings/post' className='w-full'>
-                  <Settings className='mr-2 h-4 w-4' />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to='/billing' className='w-full'>
                   <CreditCard className='mr-2 h-4 w-4' />

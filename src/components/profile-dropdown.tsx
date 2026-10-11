@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
-import { LogOut, User, CreditCard, Settings } from 'lucide-react'
+import { LogOut, User, CreditCard } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -93,13 +93,6 @@ export function ProfileDropdown() {
               <CreditCard className='mr-2 h-4 w-4' />
               Billing
               <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link to='/settings/post' className='w-full'>
-              <Settings className='mr-2 h-4 w-4' />
-              Settings
-              <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
