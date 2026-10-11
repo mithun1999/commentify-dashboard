@@ -16,6 +16,19 @@ export const axiosInstanceWithoutToken = axios.create({
 
 type AuthRetryConfig = InternalAxiosRequestConfig & { authRetried?: boolean }
 
+/**
+ * What axiosInstance rejects with in place of the AxiosError. `status` is the
+ * HTTP status, or the axios error code when no response came back; `message`
+ * is the backend message, already flattened to one string. `body` is the
+ * response body as sent, so callers can read the backend's
+ * machine-readable `code` (see src/lib/connection-recovery.ts).
+ */
+export type ApiRequestError = {
+  status: number | string
+  message: string
+  body?: unknown
+}
+
 // Request Interceptor
 axiosInstance.interceptors.request.use(
   async (request) => {
@@ -47,7 +60,11 @@ axiosInstance.interceptors.response.use(
         formattedStatus = String(statusText)
       }
 
-      const formattedError = { status: statusCode, message: formattedStatus }
+      const formattedError: ApiRequestError = {
+        status: statusCode,
+        message: formattedStatus,
+        body: error.response.data,
+      }
       const config = error.config as AuthRetryConfig | undefined
 
       // A 401 usually means the token expired or was rotated while the request
@@ -77,9 +94,10 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(formattedError)
     }
 
-    return Promise.reject({
+    const networkError: ApiRequestError = {
       status: error.code || 'UNKNOWN',
       message: error.message || 'An unknown error occurred',
-    })
+    }
+    return Promise.reject(networkError)
   }
 )

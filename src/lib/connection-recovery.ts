@@ -18,6 +18,7 @@ import type {
   IProfile,
   IProfileIdentity,
 } from '@/features/users/interface/profile.interface'
+import type { ApiRequestError } from '@/utils/axios.util'
 
 // ---------------------------------------------------------------------------
 // Global query-error notice (main.tsx)
@@ -39,15 +40,55 @@ export function getAxiosStatus(error: unknown): number | undefined {
   return error instanceof AxiosError ? error.response?.status : undefined
 }
 
-/** The dashboard's existing session-expiry policy: unchanged by this workstream. */
+/**
+ * The dashboard's existing session-expiry policy: unchanged by this workstream.
+ * Deliberately AxiosError-only: axiosInstance settles its own 401s (refresh,
+ * replay, sign-out, or keep the session when Supabase is unreachable) before
+ * it rejects, so its rejections must not trigger a second sign-out here.
+ */
 export function isSessionExpiredError(error: unknown): boolean {
   return getAxiosStatus(error) === 401
+}
+
+/**
+ * axiosInstance's response interceptor rejects with this plain object, not
+ * the AxiosError, so `instanceof AxiosError` misses every API failure that
+ * comes through it.
+ */
+export function isApiRequestError(error: unknown): error is ApiRequestError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    !(error instanceof Error) &&
+    'status' in error &&
+    typeof (error as { message?: unknown }).message === 'string'
+  )
+}
+
+/** HTTP status of a failed request, from either error shape; undefined when no response came back. */
+function getHttpStatus(error: unknown): number | undefined {
+  if (error instanceof AxiosError) return error.response?.status
+  if (isApiRequestError(error) && typeof error.status === 'number') {
+    return error.status
+  }
+  return undefined
+}
+
+/** Response body of a failed request, from either error shape. */
+function getErrorBody(error: unknown): unknown {
+  if (error instanceof AxiosError) return error.response?.data
+  if (isApiRequestError(error)) return error.body
+  return undefined
 }
 
 export function getReadableErrorMessage(
   error: unknown,
   fallback = 'Something went wrong. Please try again.'
 ): string {
+  if (isApiRequestError(error)) {
+    const data = error.body as { title?: string } | null | undefined
+    return data?.title || error.message || fallback
+  }
   if (error instanceof AxiosError) {
     const data = error.response?.data as
       | { title?: string; message?: string }
@@ -75,8 +116,8 @@ export function queryHasCachedData(query: {
 
 /** The backend's stable machine-readable code, when the error body has one. */
 export function getApiErrorCode(error: unknown): string | undefined {
-  if (!(error instanceof AxiosError)) return undefined
-  const code = (error.response?.data as { code?: unknown } | undefined)?.code
+  const code = (getErrorBody(error) as { code?: unknown } | null | undefined)
+    ?.code
   return typeof code === 'string' ? code : undefined
 }
 
@@ -103,7 +144,7 @@ export function toReconnectRequiredError(
   error: unknown
 ): ProfileReconnectRequiredError | null {
   if (getApiErrorCode(error) !== PROFILE_RECONNECT_REQUIRED) return null
-  const data = (error as AxiosError).response?.data as
+  const data = getErrorBody(error) as
     | { message?: string; profile?: IProfileIdentity }
     | undefined
   return new ProfileReconnectRequiredError(data?.profile ?? {}, data?.message)
@@ -175,8 +216,7 @@ export function classifyProfileListState(args: {
  * known not to have happened and no reconciliation read is warranted.
  */
 export function isAmbiguousMutationFailure(error: unknown): boolean {
-  if (!(error instanceof AxiosError)) return true
-  const status = error.response?.status
+  const status = getHttpStatus(error)
   if (status === undefined) return true
   return status >= 500
 }
