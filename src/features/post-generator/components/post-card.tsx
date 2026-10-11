@@ -167,7 +167,7 @@ export function PostCard({ post, calendarId, onClick, stage }: PostCardProps) {
         )}
         {(post as any).slotKind === 'mirror' && (
           <Badge variant='outline' className='shrink-0 text-[10px]'>
-            From LinkedIn
+            {(post as any).platform === 'twitter' ? 'From LinkedIn' : 'From X'}
           </Badge>
         )}
         <Badge

@@ -10,9 +10,10 @@ export type LinkVoice = 'person' | 'team'
 
 export const MIRROR_OFFSET_HOURS = [1, 2, 4, 6, 12, 24] as const
 
+/** Each direction on its own: automatic, or on request. One delay for both. */
 export interface MirrorSettings {
-  /** auto-draft: every LinkedIn post gets an X version; suggest: on request. */
   linkedinToX: MirrorMode
+  xToLinkedin: MirrorMode
   offsetHours: number
 }
 
@@ -27,7 +28,7 @@ export interface LinkedProfileSummary {
   speaksAs?: LinkVoice | null
 }
 
-/** One LinkedIn profile feeding one X account. */
+/** A LinkedIn profile and an X account whose posts are shared both ways. */
 export interface ProfileLink {
   _id: string
   linkedin: LinkedProfileSummary
@@ -54,6 +55,7 @@ export interface MirrorPostSummary {
   _id: string
   calendarId: string
   profileId: string
+  platform: 'linkedin' | 'twitter'
   status: string
   content: string
   outputType?: string
@@ -61,18 +63,21 @@ export interface MirrorPostSummary {
   publishedUrl?: string
 }
 
-/** A LinkedIn post's X accounts and versions, or an X version's LinkedIn post. */
+/** A post's linked profiles on the other network, or a version's original. */
 export type PostMirror =
   | {
       role: 'source'
+      /** The post's own network. */
+      platform: 'linkedin' | 'twitter'
       targets: Array<{ link: ProfileLink; mirror: MirrorPostSummary | null }>
-      /** Some X account isn't linked to this LinkedIn profile yet. */
+      /** Some profile on the other network isn't linked to this one yet. */
       canLinkMore: boolean
     }
   | {
       role: 'mirror'
       source: MirrorPostSummary | null
-      author: LinkedProfileSummary | null
+      /** Whose post the original is. */
+      from: LinkedProfileSummary | null
       voice: LinkVoice
     }
   | { role: 'none' }
@@ -87,9 +92,11 @@ export async function getProfileLinks(): Promise<ProfileLinks> {
 
 export async function linkProfiles(payload: {
   linkedinProfileIds: string[]
-  xProfileId: string
-  voice: LinkVoice
+  xProfileIds: string[]
+  /** Left out, the backend works it out per pair. */
+  voice?: LinkVoice
   linkedinToX: MirrorMode
+  xToLinkedin: MirrorMode
   offsetHours: number
 }): Promise<{ links: ProfileLink[] }> {
   const { data } = await axiosInstance({
@@ -142,12 +149,12 @@ export async function getPostMirror(postId: string): Promise<PostMirror> {
 
 export async function createPostMirror(
   postId: string,
-  xProfileId: string
+  targetProfileId: string
 ): Promise<{ mirror: MirrorPostSummary | null }> {
   const { data } = await axiosInstance({
     method: 'POST',
     url: `/post-generator/posts/${postId}/mirror`,
-    data: { xProfileId },
+    data: { targetProfileId },
   })
   return data
 }

@@ -22,12 +22,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: user } = useGetUserQuery()
   // Only once the user is loaded, so a Pro account never sees the lock flash.
   const proLocked = Boolean(user) && !canUseMcp(user)
-  // Linking is about the same person on LinkedIn and X; an account on one
-  // platform never sees it.
+  // Linking shares posts between LinkedIn and X: shown to accounts with both
+  // and a posting agent on either.
   const { data: profiles } = useGetAllProfileQuery()
+  const posting = (p: { activeAgentTypes?: string[] }) =>
+    (p.activeAgentTypes ?? []).some((a) => a.endsWith('-posting'))
   const hasLinkablePair =
     !!profiles?.some((p) => p.platform === 'twitter') &&
-    !!profiles?.some((p) => p.platform !== 'twitter')
+    !!profiles?.some((p) => p.platform !== 'twitter') &&
+    !!profiles?.some(posting)
   const navGroups = sidebarData.navGroups.map((group) => ({
     ...group,
     items: group.items
