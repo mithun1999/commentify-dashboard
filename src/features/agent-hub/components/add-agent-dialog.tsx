@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { envConfig } from '@/config/env.config'
 import { detectExtension } from '@/lib/extension'
+import { getReadableErrorMessage } from '@/lib/connection-recovery'
 import { cn } from '@/lib/utils'
 import {
   getAgentType,
@@ -122,9 +123,27 @@ export function AddAgentDialog({
   const defaultTabForAgent = (slug?: string) =>
     isPostingAgentSlug(slug) ? 'calendar' : 'settings'
 
+  const goToPlans = () => {
+    resetAndClose()
+    navigate({ to: '/plans', search: { agent: 'post' } })
+  }
+
+  /** False when the backend refused an agent; the refusal is already shown. */
   const activateAllAndNavigate = async (profileId: string) => {
     for (const slug of selectedSlugs) {
-      await activateAgentType.mutateAsync({ profileId, agentType: slug })
+      try {
+        await activateAgentType.mutateAsync({ profileId, agentType: slug })
+      } catch (error) {
+        // The backend says why, most often the posting profile limit, which
+        // only more posting profiles from the Plans page can lift.
+        toast.error(getReadableErrorMessage(error), {
+          id: 'activate-agent',
+          action: isPostingAgentSlug(slug)
+            ? { label: 'View plans', onClick: goToPlans }
+            : undefined,
+        })
+        return false
+      }
     }
     resetAndClose()
     if (primarySlug) {
@@ -133,6 +152,7 @@ export function AddAgentDialog({
         params: { profileId, agentType: primarySlug },
       })
     }
+    return true
   }
 
   const handleConnectNew = async () => {
@@ -172,7 +192,11 @@ export function AddAgentDialog({
         const result = await linkProfile()
         profileId = result?.profile?._id
       }
-      if (profileId) await activateAllAndNavigate(profileId)
+      // A refused agent leaves the new account linked; keep it selected so
+      // Continue retries on it once the plan allows.
+      if (profileId && !(await activateAllAndNavigate(profileId))) {
+        setSelectedProfileId(profileId)
+      }
     } catch (error) {
       // API failures are already surfaced by the link mutations' onError.
       if ((error as { response?: unknown })?.response) return

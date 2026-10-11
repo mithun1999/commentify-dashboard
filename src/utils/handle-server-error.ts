@@ -1,5 +1,9 @@
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
+import {
+  getReadableErrorMessage,
+  isApiRequestError,
+} from '@/lib/connection-recovery'
 
 export function handleServerError(error: unknown) {
   let errMsg = 'Something went wrong!'
@@ -13,12 +17,11 @@ export function handleServerError(error: unknown) {
     errMsg = 'Content not found.'
   }
 
-  if (error instanceof AxiosError) {
-    errMsg =
-      error.response?.data?.title ||
-      error.response?.data?.message ||
-      error.message ||
-      errMsg
+  // axiosInstance rejects with a plain ApiRequestError, not the AxiosError, so
+  // checking for AxiosError alone replaced every backend message with the
+  // fallback.
+  if (error instanceof AxiosError || isApiRequestError(error)) {
+    errMsg = getReadableErrorMessage(error, errMsg)
   }
 
   toast.error(errMsg)
