@@ -457,14 +457,14 @@ export const useLinkTwitterProfile = (_isOnboardingStep: boolean = false) => {
   }
 }
 
-export const useGetLinkedInStats = (profileId?: string) => {
+export const useGetLinkedInStats = (profileId?: string, enabled = true) => {
   const activeProfile = useProfileStore((s) => s.activeProfile)
   const resolvedId = profileId ?? activeProfile?._id
   const ONE_HOUR_MS = 60 * 60 * 1000
 
   const { data, isLoading } = useQuery<ILinkedInStats | null>({
     queryKey: [ProfileQueryEnum.GET_LINKEDIN_STATS, resolvedId],
-    enabled: Boolean(resolvedId),
+    enabled: Boolean(resolvedId) && enabled,
     staleTime: ONE_HOUR_MS,
     gcTime: ONE_HOUR_MS,
     queryFn: async () => {

@@ -1,6 +1,11 @@
 import { type ComponentType } from 'react'
 import { IconBrandLinkedin, IconBrandX, IconPencil } from '@tabler/icons-react'
-import type { AgentType, IUser, PlanTier } from '@/features/auth/interface/user.interface'
+import {
+  UserSubscriptionStatus,
+  type AgentType,
+  type IUser,
+  type PlanTier,
+} from '@/features/auth/interface/user.interface'
 import type {
   AgentCapability,
   AgentTypeDefinition,
@@ -62,6 +67,28 @@ function hasMinTier(
 ): boolean {
   const tier = getAgentTier(user, agent)
   return !!tier && TIER_RANK[tier] >= TIER_RANK[min]
+}
+
+const LIVE_STATUSES: string[] = [
+  UserSubscriptionStatus.ACTIVE,
+  UserSubscriptionStatus.IN_TRIAL,
+  UserSubscriptionStatus.PENDING,
+]
+
+/**
+ * Whether the user's plan reaches `min` for an agent right now: active, in
+ * trial or pending, with that agent switched on. Mirrors the backend
+ * `meetsPlanTier` (what `PlanGuard` enforces), so a feature drawn unlocked
+ * here is not refused by the API.
+ */
+export function hasLivePlanTier(
+  user: IUser | null | undefined,
+  agent: AgentType,
+  min: PlanTier
+): boolean {
+  if (!user || !LIVE_STATUSES.includes(user.status)) return false
+  if (user.agents?.[agent]?.active === false) return false
+  return hasMinTier(user, agent, min)
 }
 
 export const AGENT_TYPES: Record<string, AgentTypeDefinition> = {

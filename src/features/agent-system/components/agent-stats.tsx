@@ -1,13 +1,18 @@
-import { IconFidgetSpinner } from '@tabler/icons-react'
+import { useNavigate } from '@tanstack/react-router'
+import { IconFidgetSpinner, IconLock } from '@tabler/icons-react'
+import { usePostHog } from 'posthog-js/react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCurrentAgent } from '../hooks/use-current-agent'
+import { hasLivePlanTier } from '../registry'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import {
   useGetLinkedInStats,
   useGetPostStats,
 } from '@/features/users/query/profile.query'
 import { Overview } from '@/features/dashboard/components/overview'
 import { ProfileOverview } from '@/features/dashboard/components/profile-overview'
-import type { ILinkedInStats } from '@/features/users/interface/profile.interface'
 import { AgentRunStatusCard } from './agent-run-status-card'
 
 const formatNumber = (n?: number | string | null) => {
@@ -99,14 +104,72 @@ function CommentStatsCards({
   )
 }
 
-function LinkedInStatsView({
-  linkedInStats,
-  isLoading,
-}: {
-  linkedInStats: ILinkedInStats | null | undefined
-  isLoading: boolean
-}) {
-  if (isLoading) {
+const LOCKED_GROWTH_STATS = [
+  'Followers',
+  'New Followers (This Week)',
+  'Profile Views',
+  'Profile Views (This Week)',
+]
+
+/** Follower and profile view growth, drawn locked for plans below Pro. */
+function LockedGrowthStats() {
+  const navigate = useNavigate()
+  const posthog = usePostHog()
+
+  return (
+    <>
+      <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+        {LOCKED_GROWTH_STATS.map((label) => (
+          <Card key={label}>
+            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+              <CardTitle className='text-sm font-medium'>{label}</CardTitle>
+              <IconLock className='text-muted-foreground size-4' />
+            </CardHeader>
+            <CardContent>
+              <div className='text-muted-foreground text-2xl font-bold'>--</div>
+              <p className='text-muted-foreground text-xs'>Pro plan</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <Alert className='border-primary/40 bg-primary/5'>
+        <IconLock className='size-4' />
+        <AlertTitle>
+          Follower and profile view growth is part of the Pro plan
+        </AlertTitle>
+        <AlertDescription>
+          <p>
+            Upgrade to Pro to see how your followers and profile views grow week
+            by week while Commentify comments for you.
+          </p>
+          <Button
+            size='sm'
+            className='mt-3'
+            onClick={() => {
+              posthog?.capture('upgrade_growth_stats_clicked')
+              navigate({ to: '/plans' })
+            }}
+          >
+            See plans
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </>
+  )
+}
+
+function LinkedInStatsView({ profileId }: { profileId: string }) {
+  const { data: user, isLoading: isLoadingUser } = useGetUserQuery()
+  // Follower and profile view growth is a Pro feature and the API refuses it
+  // below Pro, so it is only fetched on Pro. Comment counts come from our own
+  // database and show on every plan.
+  const growthUnlocked = hasLivePlanTier(user, 'comment', 'pro')
+  const { data: commentStats, isLoading: isLoadingComments } =
+    useGetPostStats(profileId)
+  const { data: linkedInStats, isLoading: isLoadingGrowth } =
+    useGetLinkedInStats(profileId, growthUnlocked)
+
+  if (isLoadingUser || isLoadingComments || isLoadingGrowth) {
     return (
       <div className='mt-10 flex w-full items-center justify-center'>
         <Card>
@@ -125,11 +188,11 @@ function LinkedInStatsView({
     )
   }
 
-  if (
-    !linkedInStats?.followersStats &&
-    !linkedInStats?.profileViewerStats &&
-    !linkedInStats?.postCommentStats
-  ) {
+  const hasGrowth = Boolean(
+    linkedInStats?.followersStats || linkedInStats?.profileViewerStats
+  )
+
+  if (growthUnlocked && !hasGrowth && !commentStats) {
     return (
       <Card className='mt-4 w-full'>
         <CardContent>
@@ -189,7 +252,7 @@ function LinkedInStatsView({
 
   return (
     <div className='space-y-4'>
-      {(linkedInStats?.followersStats || linkedInStats?.profileViewerStats) && (
+      {hasGrowth && (
         <div
           className={`grid gap-4 sm:grid-cols-2 ${hasProfileViewStats ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}
         >
@@ -266,21 +329,19 @@ function LinkedInStatsView({
         </div>
       )}
 
-      {linkedInStats?.postCommentStats && (
-        <CommentStatsCards stats={linkedInStats.postCommentStats} />
-      )}
+      {commentStats && <CommentStatsCards stats={commentStats} />}
 
-      {!linkedInStats?.followersStats &&
-        !linkedInStats?.profileViewerStats &&
-        linkedInStats?.postCommentStats && (
-          <Card className='w-full'>
-            <CardContent>
-              <div className='text-muted-foreground flex items-center justify-center py-3 text-center text-sm'>
-                Follower and profile view stats are temporarily unavailable.
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      {!growthUnlocked && <LockedGrowthStats />}
+
+      {growthUnlocked && !hasGrowth && (
+        <Card className='w-full'>
+          <CardContent>
+            <div className='text-muted-foreground flex items-center justify-center py-3 text-center text-sm'>
+              Follower and profile view stats are temporarily unavailable.
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {linkedInStats?.followersStats && (
         <Card className='w-full'>
@@ -375,12 +436,11 @@ export function AgentStats() {
 
 function LinkedInAgentStats({ profileId }: { profileId: string }) {
   const { profile } = useCurrentAgent()
-  const { data: linkedInStats, isLoading } = useGetLinkedInStats(profileId)
 
   return (
     <>
       <AgentRunStatusCard profileId={profileId} profile={profile} />
-      <LinkedInStatsView linkedInStats={linkedInStats} isLoading={isLoading} />
+      <LinkedInStatsView profileId={profileId} />
     </>
   )
 }
