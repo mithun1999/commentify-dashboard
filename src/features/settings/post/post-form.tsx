@@ -22,8 +22,6 @@ import { usePostHog } from 'posthog-js/react'
 import { useProfileStore } from '@/stores/profile.store'
 import {
   Hour12,
-  MinuteQuarter,
-  Period,
   toPaddedHourAndPeriod,
   toQuarterMinute,
   toUTCFromLocalSelection,
@@ -57,55 +55,22 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { SelectDropdown } from '@/components/select-dropdown'
-import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { getAgentPlanTier } from '@/features/agent-system/registry'
-import {
-  useCreateScrapeSettingQuery,
-  useUpdateScrapeSettingQuery,
-} from '@/features/settings/query/setting.query'
-import { useValidateOnboardingKeywords } from '@/features/onboarding/query/onboarding.query'
-import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
-import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
-import { TargetingChangedBanner } from '../components/targeting-changed-banner'
-import { UnlockWrapper } from '../components/UnlockWrapper'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import {
   MonitoredProfiles,
   type MonitoredProfilesHandle,
 } from '@/features/linkedin-commenting/components/monitored-profiles'
-
-const notificationsFormSchema = z.object({
-  keywords: z.array(z.string()).max(6),
-  authorTitles: z.array(z.string()).max(3),
-  geography: z.array(z.string()),
-  numberOfPostsToScrapePerDay: z.number().min(1).max(100),
-  engagementThreshold: z.enum(['strict', 'moderate', 'disabled']),
-  skipHiringPosts: z.boolean(),
-  skipJobUpdatePosts: z.boolean(),
-  skipArticlePosts: z.boolean(),
-  autoSchedule: z.boolean(),
-  rules: z
-    .string()
-    .max(100, {
-      message: 'Rules must be at most 100 characters.',
-    })
-    .optional(),
-  startHour: z.enum([
-    '01',
-    '02',
-    '03',
-    '04',
-    '05',
-    '06',
-    '07',
-    '08',
-    '09',
-    '10',
-    '11',
-    '12',
-  ]) as z.ZodType<Hour12>,
-  startMinute: z.enum(['00', '15', '30', '45']) as z.ZodType<MinuteQuarter>,
-  startPeriod: z.enum(['AM', 'PM']) as z.ZodType<Period>,
-})
+import { useValidateOnboardingKeywords } from '@/features/onboarding/query/onboarding.query'
+import {
+  useCreateScrapeSettingQuery,
+  useUpdateScrapeSettingQuery,
+} from '@/features/settings/query/setting.query'
+import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
+import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { UnlockWrapper } from '../components/UnlockWrapper'
+import { TargetingChangedBanner } from '../components/targeting-changed-banner'
+import { notificationsFormSchema } from './post-form.schema'
 
 type NotificationsFormValues = z.infer<typeof notificationsFormSchema>
 
@@ -363,7 +328,6 @@ export function PostForm() {
 
   const toggleTitle = (title: string) => {
     const isSelected = authorTitles.includes(title)
-    if (!isSelected && authorTitles.length >= 3) return
     const updated = isSelected
       ? authorTitles.filter((t) => t !== title)
       : [...authorTitles, title]
@@ -371,18 +335,13 @@ export function PostForm() {
   }
 
   const handleTitleOtherClick = () => {
-    if (authorTitles.length >= 3) return
     setShowCustomTitleInput(true)
   }
 
   const handleCustomTitleSubmit = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       const trimmedTitle = customTitle.trim()
-      if (
-        trimmedTitle &&
-        !allTitles.includes(trimmedTitle) &&
-        authorTitles.length < 3
-      ) {
+      if (trimmedTitle && !allTitles.includes(trimmedTitle)) {
         setCustomTitles([...customTitles, trimmedTitle])
         form.setValue('authorTitles', [...authorTitles, trimmedTitle])
       }
@@ -525,8 +484,8 @@ export function PostForm() {
                 <p className='flex items-start gap-2 text-amber-700 dark:text-amber-400'>
                   <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
                   <span>
-                    These keywords surface very few or no LinkedIn posts, so your
-                    agent may run out of posts to comment on:{' '}
+                    These keywords surface very few or no LinkedIn posts, so
+                    your agent may run out of posts to comment on:{' '}
                     <span className='font-medium'>
                       {lowYieldKeywords.join(', ')}
                     </span>
@@ -829,7 +788,7 @@ export function PostForm() {
                   </TooltipProvider>
                 </div>
                 <p className='text-muted-foreground text-sm'>
-                  {authorTitles.length}/3 titles selected
+                  {authorTitles.length} selected
                 </p>
               </div>
             </div>
@@ -838,7 +797,6 @@ export function PostForm() {
               <div className='flex flex-wrap gap-3'>
                 {allTitles.map((title) => {
                   const isSelected = authorTitles.includes(title)
-                  const isDisabled = !isSelected && authorTitles.length >= 3
                   return (
                     <button
                       type='button'
@@ -847,9 +805,7 @@ export function PostForm() {
                       className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
                         isSelected
                           ? 'bg-primary/10 border-primary text-primary'
-                          : isDisabled
-                            ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
-                            : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                          : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
                       }`}
                     >
                       <span className='text-sm font-normal'>{title}</span>
