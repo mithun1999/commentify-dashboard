@@ -1,9 +1,14 @@
 import { type ReactNode, useMemo } from 'react'
 import { Link, useLocation, useNavigate, useSearch } from '@tanstack/react-router'
-import { IconArrowLeft, IconClock } from '@tabler/icons-react'
+import { IconArrowLeft, IconClock, IconLock } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
@@ -11,7 +16,8 @@ import ProfileListError from '@/components/profile-list-error'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { getReadableErrorMessage } from '@/lib/connection-recovery'
 import { useCurrentAgent } from '../hooks/use-current-agent'
-import { isPostingAgentSlug } from '../registry'
+import { hasLivePlanTier, isPostingAgentSlug } from '../registry'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { AgentPauseButton } from './agent-pause-button'
 import { AgentReconnectBanner } from './agent-reconnect-banner'
@@ -94,6 +100,10 @@ function statusVariant(
 export function AgentLayout({ children }: { children: ReactNode }) {
   const { agent, profile, agentTypeDef, listState, listError, isFetching, refetch } =
     useCurrentAgent()
+  const { data: user } = useGetUserQuery()
+  // Only once the user is loaded, so a Pro account never sees the lock flash.
+  const leadsLocked =
+    Boolean(user) && !hasLivePlanTier(user, 'comment', 'pro')
   const location = useLocation()
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as {
@@ -298,13 +308,32 @@ export function AgentLayout({ children }: { children: ReactNode }) {
       <Main>
         <Tabs value={activeTab} className='mb-6'>
           <TabsList>
-            {tabs.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value} asChild>
-                <Link to={`${basePath}/${tab.value}` as string}>
-                  {tab.label}
-                </Link>
-              </TabsTrigger>
-            ))}
+            {tabs.map((tab) => {
+              const locked = tab.value === 'leads' && leadsLocked
+              const trigger = (
+                <TabsTrigger key={tab.value} value={tab.value} asChild>
+                  <Link to={`${basePath}/${tab.value}` as string}>
+                    {tab.label}
+                    {locked && (
+                      <IconLock
+                        aria-label='Pro feature'
+                        className='text-muted-foreground size-3.5'
+                      />
+                    )}
+                  </Link>
+                </TabsTrigger>
+              )
+              if (!locked) return trigger
+              // Still opens the tab, which carries the upgrade button.
+              return (
+                <Tooltip key={tab.value}>
+                  <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+                  <TooltipContent className='max-w-52'>
+                    Part of the Pro plan. Upgrade to see and export your leads.
+                  </TooltipContent>
+                </Tooltip>
+              )
+            })}
           </TabsList>
         </Tabs>
         {profile && <AgentReconnectBanner profile={profile} />}
