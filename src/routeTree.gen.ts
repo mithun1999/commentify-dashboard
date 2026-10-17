@@ -53,6 +53,7 @@ import { Route as AuthenticatedAgentsProfileIdAgentTypeRouteImport } from './rou
 import { Route as AuthenticatedAgentsProfileIdAgentTypeStatsImport } from './routes/_authenticated/agents/$profileId/$agentType/stats'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeSettingsImport } from './routes/_authenticated/agents/$profileId/$agentType/settings'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeQueueImport } from './routes/_authenticated/agents/$profileId/$agentType/queue'
+import { Route as AuthenticatedAgentsProfileIdAgentTypeLeadsImport } from './routes/_authenticated/agents/$profileId/$agentType/leads'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubImport } from './routes/_authenticated/agents/$profileId/$agentType/knowledge-hub'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeHistoryImport } from './routes/_authenticated/agents/$profileId/$agentType/history'
 import { Route as AuthenticatedAgentsProfileIdAgentTypeCalendarImport } from './routes/_authenticated/agents/$profileId/$agentType/calendar'
@@ -318,6 +319,13 @@ const AuthenticatedAgentsProfileIdAgentTypeQueueRoute =
   AuthenticatedAgentsProfileIdAgentTypeQueueImport.update({
     id: '/queue',
     path: '/queue',
+    getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
+  } as any)
+
+const AuthenticatedAgentsProfileIdAgentTypeLeadsRoute =
+  AuthenticatedAgentsProfileIdAgentTypeLeadsImport.update({
+    id: '/leads',
+    path: '/leads',
     getParentRoute: () => AuthenticatedAgentsProfileIdAgentTypeRouteRoute,
   } as any)
 
@@ -647,6 +655,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubImport
       parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
     }
+    '/_authenticated/agents/$profileId/$agentType/leads': {
+      id: '/_authenticated/agents/$profileId/$agentType/leads'
+      path: '/leads'
+      fullPath: '/agents/$profileId/$agentType/leads'
+      preLoaderRoute: typeof AuthenticatedAgentsProfileIdAgentTypeLeadsImport
+      parentRoute: typeof AuthenticatedAgentsProfileIdAgentTypeRouteImport
+    }
     '/_authenticated/agents/$profileId/$agentType/queue': {
       id: '/_authenticated/agents/$profileId/$agentType/queue'
       path: '/queue'
@@ -700,6 +715,7 @@ interface AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren {
   AuthenticatedAgentsProfileIdAgentTypeCalendarRoute: typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
   AuthenticatedAgentsProfileIdAgentTypeHistoryRoute: typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
   AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute: typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute
+  AuthenticatedAgentsProfileIdAgentTypeLeadsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeLeadsRoute
   AuthenticatedAgentsProfileIdAgentTypeQueueRoute: typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   AuthenticatedAgentsProfileIdAgentTypeSettingsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
   AuthenticatedAgentsProfileIdAgentTypeStatsRoute: typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
@@ -714,6 +730,8 @@ const AuthenticatedAgentsProfileIdAgentTypeRouteRouteChildren: AuthenticatedAgen
       AuthenticatedAgentsProfileIdAgentTypeHistoryRoute,
     AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute:
       AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute,
+    AuthenticatedAgentsProfileIdAgentTypeLeadsRoute:
+      AuthenticatedAgentsProfileIdAgentTypeLeadsRoute,
     AuthenticatedAgentsProfileIdAgentTypeQueueRoute:
       AuthenticatedAgentsProfileIdAgentTypeQueueRoute,
     AuthenticatedAgentsProfileIdAgentTypeSettingsRoute:
@@ -839,6 +857,7 @@ export interface FileRoutesByFullPath {
   '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
   '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
   '/agents/$profileId/$agentType/knowledge-hub': typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute
+  '/agents/$profileId/$agentType/leads': typeof AuthenticatedAgentsProfileIdAgentTypeLeadsRoute
   '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
   '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
@@ -886,6 +905,7 @@ export interface FileRoutesByTo {
   '/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
   '/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
   '/agents/$profileId/$agentType/knowledge-hub': typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute
+  '/agents/$profileId/$agentType/leads': typeof AuthenticatedAgentsProfileIdAgentTypeLeadsRoute
   '/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
   '/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
@@ -936,6 +956,7 @@ export interface FileRoutesById {
   '/_authenticated/agents/$profileId/$agentType/calendar': typeof AuthenticatedAgentsProfileIdAgentTypeCalendarRoute
   '/_authenticated/agents/$profileId/$agentType/history': typeof AuthenticatedAgentsProfileIdAgentTypeHistoryRoute
   '/_authenticated/agents/$profileId/$agentType/knowledge-hub': typeof AuthenticatedAgentsProfileIdAgentTypeKnowledgeHubRoute
+  '/_authenticated/agents/$profileId/$agentType/leads': typeof AuthenticatedAgentsProfileIdAgentTypeLeadsRoute
   '/_authenticated/agents/$profileId/$agentType/queue': typeof AuthenticatedAgentsProfileIdAgentTypeQueueRoute
   '/_authenticated/agents/$profileId/$agentType/settings': typeof AuthenticatedAgentsProfileIdAgentTypeSettingsRoute
   '/_authenticated/agents/$profileId/$agentType/stats': typeof AuthenticatedAgentsProfileIdAgentTypeStatsRoute
@@ -987,6 +1008,7 @@ export interface FileRouteTypes {
     | '/agents/$profileId/$agentType/calendar'
     | '/agents/$profileId/$agentType/history'
     | '/agents/$profileId/$agentType/knowledge-hub'
+    | '/agents/$profileId/$agentType/leads'
     | '/agents/$profileId/$agentType/queue'
     | '/agents/$profileId/$agentType/settings'
     | '/agents/$profileId/$agentType/stats'
@@ -1033,6 +1055,7 @@ export interface FileRouteTypes {
     | '/agents/$profileId/$agentType/calendar'
     | '/agents/$profileId/$agentType/history'
     | '/agents/$profileId/$agentType/knowledge-hub'
+    | '/agents/$profileId/$agentType/leads'
     | '/agents/$profileId/$agentType/queue'
     | '/agents/$profileId/$agentType/settings'
     | '/agents/$profileId/$agentType/stats'
@@ -1081,6 +1104,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agents/$profileId/$agentType/calendar'
     | '/_authenticated/agents/$profileId/$agentType/history'
     | '/_authenticated/agents/$profileId/$agentType/knowledge-hub'
+    | '/_authenticated/agents/$profileId/$agentType/leads'
     | '/_authenticated/agents/$profileId/$agentType/queue'
     | '/_authenticated/agents/$profileId/$agentType/settings'
     | '/_authenticated/agents/$profileId/$agentType/stats'
@@ -1324,6 +1348,7 @@ export const routeTree = rootRoute
         "/_authenticated/agents/$profileId/$agentType/calendar",
         "/_authenticated/agents/$profileId/$agentType/history",
         "/_authenticated/agents/$profileId/$agentType/knowledge-hub",
+        "/_authenticated/agents/$profileId/$agentType/leads",
         "/_authenticated/agents/$profileId/$agentType/queue",
         "/_authenticated/agents/$profileId/$agentType/settings",
         "/_authenticated/agents/$profileId/$agentType/stats",
@@ -1340,6 +1365,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/agents/$profileId/$agentType/knowledge-hub": {
       "filePath": "_authenticated/agents/$profileId/$agentType/knowledge-hub.tsx",
+      "parent": "/_authenticated/agents/$profileId/$agentType"
+    },
+    "/_authenticated/agents/$profileId/$agentType/leads": {
+      "filePath": "_authenticated/agents/$profileId/$agentType/leads.tsx",
       "parent": "/_authenticated/agents/$profileId/$agentType"
     },
     "/_authenticated/agents/$profileId/$agentType/queue": {

@@ -31,6 +31,14 @@ const COMMENTING_TABS = [
   { value: 'settings', label: 'Settings' },
 ]
 
+// A LinkedIn sales agent's comments are on prospects, so it also lists them.
+const SALES_TABS = [
+  { value: 'stats', label: 'Stats' },
+  { value: 'queue', label: 'Queue' },
+  { value: 'leads', label: 'Leads' },
+  { value: 'settings', label: 'Settings' },
+]
+
 // "Upcoming" is the week view you act on; "Calendar" is every post ever
 // generated. Naming both "Calendar" would make the split unreadable.
 const POSTING_TABS = [
@@ -144,7 +152,13 @@ export function AgentLayout({ children }: { children: ReactNode }) {
       return null
     return formatNextRunRelative(getNextRunTime(jobTiming))
   }, [agent.status, agent.isPaused, jobTiming, isPostingAgent])
-  const tabs = isPostingAgent ? POSTING_TABS : COMMENTING_TABS
+  const isSalesAgent =
+    agent.platform === 'linkedin' && agent.agentMode === 'sales'
+  const tabs = isPostingAgent
+    ? POSTING_TABS
+    : isSalesAgent
+      ? SALES_TABS
+      : COMMENTING_TABS
   const defaultTab = isPostingAgent ? 'calendar' : 'queue'
 
   const activeTab = tabs.reduce((match, tab) => {
