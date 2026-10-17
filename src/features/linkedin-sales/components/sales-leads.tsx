@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
-import { IconDownload } from '@tabler/icons-react'
+import { useNavigate } from '@tanstack/react-router'
+import { IconDownload, IconLock } from '@tabler/icons-react'
+import { usePostHog } from 'posthog-js/react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -9,6 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCurrentAgent } from '@/features/agent-system/hooks/use-current-agent'
+import { hasLivePlanTier } from '@/features/agent-system/registry'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { DataTable } from '@/features/history/components/data-table'
 import type {
   ILead,
@@ -23,10 +28,62 @@ const count = (n: number) => n.toLocaleString()
 
 /**
  * A sales agent's Leads tab: everyone it has commented on, one row each, and
- * a CSV export for following them up outside LinkedIn.
+ * a CSV export for following them up outside LinkedIn. Part of the Pro plan.
  */
 export function SalesLeads() {
   const { agent } = useCurrentAgent()
+  const { data: user, isLoading: isLoadingUser } = useGetUserQuery()
+
+  if (!agent || isLoadingUser) return null
+
+  return (
+    <div className='space-y-4'>
+      <div>
+        <h2 className='text-lg font-semibold'>Leads</h2>
+        <p className='text-muted-foreground text-sm'>
+          Everyone your agent has commented on. Export them as a CSV to import
+          into your CRM and follow up by email or phone.
+        </p>
+      </div>
+      {/* The API refuses leads below Pro, so they are only fetched on Pro. */}
+      {hasLivePlanTier(user, 'comment', 'pro') ? (
+        <LeadsList profileId={agent.profileId} />
+      ) : (
+        <LockedLeads />
+      )}
+    </div>
+  )
+}
+
+function LockedLeads() {
+  const navigate = useNavigate()
+  const posthog = usePostHog()
+
+  return (
+    <Alert className='border-primary/40 bg-primary/5'>
+      <IconLock className='size-4' />
+      <AlertTitle>Leads are part of the Pro plan</AlertTitle>
+      <AlertDescription>
+        <p>
+          Upgrade to Pro to see everyone your agent has commented on, filter for
+          buying signals, and export them as a CSV for your CRM.
+        </p>
+        <Button
+          size='sm'
+          className='mt-3'
+          onClick={() => {
+            posthog?.capture('upgrade_leads_clicked')
+            navigate({ to: '/plans' })
+          }}
+        >
+          See plans
+        </Button>
+      </AlertDescription>
+    </Alert>
+  )
+}
+
+function LeadsList({ profileId }: { profileId: string }) {
   const [filters, setFilters] = useState<ILeadFilters>({
     intent: 'all',
     status: 'all',
@@ -36,12 +93,12 @@ export function SalesLeads() {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
   const { data, isLoading } = useLeads(
-    agent?.profileId,
+    profileId,
     pageIndex + 1,
     pageSize,
     filters
   )
-  const { exportLeads, isExporting } = useExportLeads(agent?.profileId)
+  const { exportLeads, isExporting } = useExportLeads(profileId)
   const columns = useMemo(() => getSalesLeadColumns(), [])
 
   const leads: ILead[] = data?.docs ?? []
@@ -65,20 +122,10 @@ export function SalesLeads() {
     })
   }
 
-  if (!agent) return null
-
   const hasLeads = Boolean(summary?.total)
 
   return (
-    <div className='space-y-4'>
-      <div>
-        <h2 className='text-lg font-semibold'>Leads</h2>
-        <p className='text-muted-foreground text-sm'>
-          Everyone your agent has commented on. Export them as a CSV to import
-          into your CRM and follow up by email or phone.
-        </p>
-      </div>
-
+    <>
       {!isLoading && !hasLeads ? (
         <div className='text-muted-foreground rounded-md border border-dashed p-8 text-center text-sm'>
           No leads yet. Once your agent posts its first comments, the people it
@@ -157,6 +204,6 @@ export function SalesLeads() {
           </div>
         </>
       )}
-    </div>
+    </>
   )
 }
