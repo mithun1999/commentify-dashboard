@@ -1,11 +1,17 @@
 import { z } from 'zod'
 import { Hour12, MinuteQuarter, Period } from '@/lib/date.utils'
 
+// Matches MAX_AUTHOR_TITLES in linkedin-scraper-be. With more titles in the
+// filter LinkedIn returns no posts at all.
+export const MAX_AUTHOR_TITLES = 6
+export const MAX_AUTHOR_TITLES_MESSAGE =
+  'Pick up to 6 titles. LinkedIn returns no posts when the title filter has more.'
+
 export const notificationsFormSchema = z.object({
   keywords: z.array(z.string()).max(6),
-  // No cap: the backend takes any number of titles and OR-joins them in the
-  // LinkedIn search.
-  authorTitles: z.array(z.string()),
+  authorTitles: z
+    .array(z.string())
+    .max(MAX_AUTHOR_TITLES, { message: MAX_AUTHOR_TITLES_MESSAGE }),
   geography: z.array(z.string()),
   numberOfPostsToScrapePerDay: z.number().min(1).max(100),
   engagementThreshold: z.enum(['strict', 'moderate', 'disabled']),
