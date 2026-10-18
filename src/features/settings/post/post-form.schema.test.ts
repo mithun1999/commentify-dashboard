@@ -18,6 +18,12 @@ const base = {
 }
 
 describe('notificationsFormSchema', () => {
+  it('rejects a seventh author title', () => {
+    const authorTitles = ['CEO', 'CTO', 'CFO', 'COO', 'CMO', 'Founder', 'VP']
+    const result = notificationsFormSchema.safeParse({ ...base, authorTitles })
+    expect(result.success).toBe(false)
+  })
+
   it('accepts more than three author titles', () => {
     const authorTitles = [
       'CFO',

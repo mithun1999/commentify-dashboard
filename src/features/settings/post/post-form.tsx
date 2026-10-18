@@ -70,7 +70,7 @@ import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
 import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 import { TargetingChangedBanner } from '../components/targeting-changed-banner'
-import { notificationsFormSchema } from './post-form.schema'
+import { MAX_AUTHOR_TITLES, notificationsFormSchema } from './post-form.schema'
 
 type NotificationsFormValues = z.infer<typeof notificationsFormSchema>
 
@@ -326,8 +326,11 @@ export function PostForm() {
     }
   }
 
+  const titlesFull = authorTitles.length >= MAX_AUTHOR_TITLES
+
   const toggleTitle = (title: string) => {
     const isSelected = authorTitles.includes(title)
+    if (!isSelected && titlesFull) return
     const updated = isSelected
       ? authorTitles.filter((t) => t !== title)
       : [...authorTitles, title]
@@ -341,7 +344,7 @@ export function PostForm() {
   const handleCustomTitleSubmit = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       const trimmedTitle = customTitle.trim()
-      if (trimmedTitle && !allTitles.includes(trimmedTitle)) {
+      if (trimmedTitle && !allTitles.includes(trimmedTitle) && !titlesFull) {
         setCustomTitles([...customTitles, trimmedTitle])
         form.setValue('authorTitles', [...authorTitles, trimmedTitle])
       }
@@ -788,7 +791,7 @@ export function PostForm() {
                   </TooltipProvider>
                 </div>
                 <p className='text-muted-foreground text-sm'>
-                  {authorTitles.length} selected
+                  {authorTitles.length}/{MAX_AUTHOR_TITLES} selected
                 </p>
               </div>
             </div>
@@ -797,15 +800,19 @@ export function PostForm() {
               <div className='flex flex-wrap gap-3'>
                 {allTitles.map((title) => {
                   const isSelected = authorTitles.includes(title)
+                  const isDisabled = !isSelected && titlesFull
                   return (
                     <button
                       type='button'
                       key={title}
                       onClick={() => toggleTitle(title)}
+                      disabled={isDisabled}
                       className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
                         isSelected
                           ? 'bg-primary/10 border-primary text-primary'
-                          : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                          : isDisabled
+                            ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                            : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
                       }`}
                     >
                       <span className='text-sm font-normal'>{title}</span>
@@ -844,7 +851,12 @@ export function PostForm() {
                   <button
                     type='button'
                     onClick={handleTitleOtherClick}
-                    className='border-border bg-card text-card-foreground hover:border-primary/30 flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 hover:shadow-sm'
+                    disabled={titlesFull}
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                      titlesFull
+                        ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                        : 'border-border bg-card text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                    }`}
                   >
                     <span className='flex items-center gap-1 text-sm font-normal'>
                       <PlusCircle className='h-4 w-4' />

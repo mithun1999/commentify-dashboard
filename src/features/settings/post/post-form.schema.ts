@@ -1,11 +1,16 @@
 import { z } from 'zod'
 import { Hour12, MinuteQuarter, Period } from '@/lib/date.utils'
 
+// Every title is ORed into one LinkedIn search filter, and past six LinkedIn
+// returns no posts at all (a profile saved with ten got nothing for any
+// keyword). The backend refuses more than this too.
+export const MAX_AUTHOR_TITLES = 6
+
 export const notificationsFormSchema = z.object({
   keywords: z.array(z.string()).max(6),
-  // No cap: the backend takes any number of titles and OR-joins them in the
-  // LinkedIn search.
-  authorTitles: z.array(z.string()),
+  authorTitles: z.array(z.string()).max(MAX_AUTHOR_TITLES, {
+    message: `Pick at most ${MAX_AUTHOR_TITLES} titles. With more, LinkedIn finds no posts.`,
+  }),
   geography: z.array(z.string()),
   numberOfPostsToScrapePerDay: z.number().min(1).max(100),
   engagementThreshold: z.enum(['strict', 'moderate', 'disabled']),
