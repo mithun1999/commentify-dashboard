@@ -303,19 +303,36 @@ export function resolveSavedStep(
 }
 
 /**
+ * Agent Hub and the agent pages: where an account's agents are paused and the
+ * account disconnected. None of the setup steps can do either.
+ */
+export function isAgentControlPath(pathname: string): boolean {
+  const current = normalize(pathname)
+  return (
+    current === '' || current === '/agents' || current.startsWith('/agents/')
+  )
+}
+
+/**
  * Where the onboarding guard should send this account from `pathname`, or
  * undefined to leave it where it is.
+ *
+ * `hasConnectedProfile` keeps a pending account that has already connected an
+ * account on Agent Hub and the agent pages. Its agent can be running, and
+ * those pages are the only place to pause it or disconnect.
  */
 export function onboardingRedirectTarget(
   user: Pick<IUser, 'status' | 'metadata'>,
   pathname: string,
-  picked?: Parameters<typeof flowFor>[1]
+  picked?: Parameters<typeof flowFor>[1],
+  hasConnectedProfile = false
 ): string | undefined {
   const onboarding = user.metadata?.onboarding
   if (onboarding?.status === 'completed') return
   // The wizard ends in starting a trial; anyone past pending has nothing to
   // activate there.
   if (user.status !== UserSubscriptionStatus.PENDING) return
+  if (hasConnectedProfile && isAgentControlPath(pathname)) return
 
   const flow = flowFor(onboarding?.selectedAgentType, picked)
   const savedKey = resolveSavedStep(
