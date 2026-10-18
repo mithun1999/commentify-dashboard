@@ -67,10 +67,15 @@ import {
   useUpdateScrapeSettingQuery,
 } from '@/features/settings/query/setting.query'
 import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
-import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { canSaveSettings } from '@/features/settings/utils/profile-status.util'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 import { TargetingChangedBanner } from '../components/targeting-changed-banner'
-import { notificationsFormSchema } from './post-form.schema'
+import { isAuthorTitlesFull, isTitleChipDisabled } from './author-titles.util'
+import {
+  MAX_AUTHOR_TITLES,
+  MAX_AUTHOR_TITLES_MESSAGE,
+  notificationsFormSchema,
+} from './post-form.schema'
 
 type NotificationsFormValues = z.infer<typeof notificationsFormSchema>
 
@@ -107,7 +112,7 @@ export function PostForm() {
   const [customTitle, setCustomTitle] = useState('')
   const [customTitles, setCustomTitles] = useState<string[]>([])
 
-  const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
+  const canSave = canSaveSettings(activeProfile?.status)
 
   const shouldDisplayEngagementThresholdSetting = Boolean(
     resolvePlanSetting('engagementThreshold', user)
@@ -148,6 +153,13 @@ export function PostForm() {
   const allTitles = [...authorTitlesList, ...customTitles]
   const selectedKeywords = form.watch('keywords') || []
   const authorTitles = form.watch('authorTitles') || []
+  // Derived rather than read from formState: profiles saved before the cap can
+  // hold more titles, and the message should show as soon as they load and
+  // clear as soon as the user deselects down to the cap.
+  const authorTitlesError =
+    authorTitles.length > MAX_AUTHOR_TITLES
+      ? MAX_AUTHOR_TITLES_MESSAGE
+      : undefined
   const selectedGeographies = form.watch('geography') || []
   const rulesValue = form.watch('rules') || ''
 
@@ -331,6 +343,7 @@ export function PostForm() {
     const updated = isSelected
       ? authorTitles.filter((t) => t !== title)
       : [...authorTitles, title]
+    if (!isSelected && isAuthorTitlesFull(authorTitles)) return
     form.setValue('authorTitles', updated)
   }
 
@@ -341,7 +354,11 @@ export function PostForm() {
   const handleCustomTitleSubmit = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       const trimmedTitle = customTitle.trim()
-      if (trimmedTitle && !allTitles.includes(trimmedTitle)) {
+      if (
+        trimmedTitle &&
+        !allTitles.includes(trimmedTitle) &&
+        !isAuthorTitlesFull(authorTitles)
+      ) {
         setCustomTitles([...customTitles, trimmedTitle])
         form.setValue('authorTitles', [...authorTitles, trimmedTitle])
       }
@@ -788,7 +805,7 @@ export function PostForm() {
                   </TooltipProvider>
                 </div>
                 <p className='text-muted-foreground text-sm'>
-                  {authorTitles.length} selected
+                  {authorTitles.length} of {MAX_AUTHOR_TITLES} selected
                 </p>
               </div>
             </div>
@@ -797,15 +814,19 @@ export function PostForm() {
               <div className='flex flex-wrap gap-3'>
                 {allTitles.map((title) => {
                   const isSelected = authorTitles.includes(title)
+                  const isDisabled = isTitleChipDisabled(title, authorTitles)
                   return (
                     <button
                       type='button'
                       key={title}
                       onClick={() => toggleTitle(title)}
+                      disabled={isDisabled}
                       className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
                         isSelected
                           ? 'bg-primary/10 border-primary text-primary'
-                          : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                          : isDisabled
+                            ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                            : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
                       }`}
                     >
                       <span className='text-sm font-normal'>{title}</span>
@@ -844,7 +865,12 @@ export function PostForm() {
                   <button
                     type='button'
                     onClick={handleTitleOtherClick}
-                    className='border-border bg-card text-card-foreground hover:border-primary/30 flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 hover:shadow-sm'
+                    disabled={isAuthorTitlesFull(authorTitles)}
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 transition-all duration-200 ${
+                      isAuthorTitlesFull(authorTitles)
+                        ? 'bg-muted border-border text-muted-foreground cursor-not-allowed opacity-50'
+                        : 'bg-card border-border text-card-foreground hover:border-primary/30 hover:shadow-sm'
+                    }`}
                   >
                     <span className='flex items-center gap-1 text-sm font-normal'>
                       <PlusCircle className='h-4 w-4' />
@@ -863,10 +889,10 @@ export function PostForm() {
                   />
                 )}
               </div>
-              {form.formState.errors.authorTitles?.message && (
+              {authorTitlesError && (
                 <p className='text-destructive flex items-center gap-1 text-sm'>
                   <AlertCircle className='h-3.5 w-3.5' />
-                  {form.formState.errors.authorTitles.message as string}
+                  {authorTitlesError}
                 </p>
               )}
             </div>
@@ -1073,9 +1099,7 @@ export function PostForm() {
         <Button
           type='submit'
           disabled={
-            isCreatingScrapeSetting ||
-            isUpdatingScrapeSetting ||
-            !isProfileActive
+            isCreatingScrapeSetting || isUpdatingScrapeSetting || !canSave
           }
         >
           {isCreatingScrapeSetting || isUpdatingScrapeSetting

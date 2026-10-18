@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { notificationsFormSchema } from './post-form.schema'
+import {
+  MAX_AUTHOR_TITLES_MESSAGE,
+  notificationsFormSchema,
+} from './post-form.schema'
 
 const base = {
   keywords: ['AI'],
@@ -18,7 +21,7 @@ const base = {
 }
 
 describe('notificationsFormSchema', () => {
-  it('accepts more than three author titles', () => {
+  it('accepts 6 author titles', () => {
     const authorTitles = [
       'CFO',
       'Head of Finance',
@@ -29,5 +32,21 @@ describe('notificationsFormSchema', () => {
     ]
     const result = notificationsFormSchema.safeParse({ ...base, authorTitles })
     expect(result.success).toBe(true)
+  })
+
+  it('rejects 7 author titles with the cap message', () => {
+    const authorTitles = [
+      'CFO',
+      'HR',
+      'Founder',
+      'CEO',
+      'CTO',
+      'VP',
+      'Director',
+    ]
+    const result = notificationsFormSchema.safeParse({ ...base, authorTitles })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0].path).toEqual(['authorTitles'])
+    expect(result.error?.issues[0].message).toBe(MAX_AUTHOR_TITLES_MESSAGE)
   })
 })
