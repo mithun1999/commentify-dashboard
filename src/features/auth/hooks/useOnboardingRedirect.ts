@@ -1,13 +1,24 @@
 import { useEffect } from 'react'
 import { useNavigate, useLocation } from '@tanstack/react-router'
 import { useOnboardingStore } from '@/stores/onboarding.store'
-import { onboardingRedirectTarget } from '@/features/onboarding/onboarding-flow'
+import {
+  isAgentControlPath,
+  onboardingRedirectTarget,
+} from '@/features/onboarding/onboarding-flow'
+import { useGetAllProfileQuery } from '@/features/users/query/profile.query'
 import { useGetUserQuery } from '../query/user.query'
 
 export const useOnboardingRedirect = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { data: user, isFetched, isLoading } = useGetUserQuery()
+  const {
+    data: profiles,
+    isFetched: profilesFetched,
+    isError: profilesError,
+  } = useGetAllProfileQuery()
+  const profilesSettled = profilesFetched || profilesError
+  const hasConnectedProfile = (profiles?.length ?? 0) > 0
   const pickedPlatform = useOnboardingStore((s) => s.data.selectedPlatform)
   const pickedCapabilities = useOnboardingStore(
     (s) => s.data.selectedCapabilities
@@ -15,11 +26,19 @@ export const useOnboardingRedirect = () => {
 
   useEffect(() => {
     if (!isFetched || isLoading || !user) return
+    // Whether to leave them on Agent Hub depends on the account list; deciding
+    // before it arrives would bounce someone with a running agent to setup.
+    if (!profilesSettled && isAgentControlPath(location.pathname)) return
 
-    const target = onboardingRedirectTarget(user, location.pathname, {
-      platform: pickedPlatform,
-      capabilities: pickedCapabilities,
-    })
+    const target = onboardingRedirectTarget(
+      user,
+      location.pathname,
+      {
+        platform: pickedPlatform,
+        capabilities: pickedCapabilities,
+      },
+      hasConnectedProfile
+    )
     if (target) navigate({ to: target })
   }, [
     user,
@@ -29,6 +48,8 @@ export const useOnboardingRedirect = () => {
     location.pathname,
     pickedPlatform,
     pickedCapabilities,
+    profilesSettled,
+    hasConnectedProfile,
   ])
 
   return { user, isFetched }

@@ -58,6 +58,29 @@ describe('onboardingRedirectTarget', () => {
       )
     })
 
+    it('leaves an account with a connected profile on Agent Hub and its agent pages', () => {
+      // A connected agent can be running; these are the only pages that can
+      // pause it or disconnect the account.
+      const u = user(UserSubscriptionStatus.PENDING, {
+        status: 'in-progress',
+        stepKey: 'preview',
+      })
+      for (const path of [
+        '/',
+        '/agents/p1/linkedin-commenting',
+        '/agents/p1/linkedin-commenting/settings',
+      ]) {
+        expect(onboardingRedirectTarget(u, path, undefined, true)).toBe(
+          undefined
+        )
+      }
+      // Elsewhere, and without a connected profile, setup still resumes.
+      expect(onboardingRedirectTarget(u, '/plans', undefined, true)).toBe(
+        '/onboarding/preview'
+      )
+      expect(onboardingRedirectTarget(u, '/')).toBe('/onboarding/preview')
+    })
+
     it('leaves a pending account that finished onboarding alone', () => {
       const u = user(UserSubscriptionStatus.PENDING, { status: 'completed' })
       expect(onboardingRedirectTarget(u, '/')).toBe(undefined)
