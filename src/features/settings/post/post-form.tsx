@@ -67,7 +67,7 @@ import {
   useUpdateScrapeSettingQuery,
 } from '@/features/settings/query/setting.query'
 import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
-import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { canSaveProfileSettings } from '@/features/users/utils/profile-status'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 import { TargetingChangedBanner } from '../components/targeting-changed-banner'
 import { MAX_AUTHOR_TITLES, notificationsFormSchema } from './post-form.schema'
@@ -107,7 +107,7 @@ export function PostForm() {
   const [customTitle, setCustomTitle] = useState('')
   const [customTitles, setCustomTitles] = useState<string[]>([])
 
-  const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
+  const canSaveSettings = canSaveProfileSettings(activeProfile?.status)
 
   const shouldDisplayEngagementThresholdSetting = Boolean(
     resolvePlanSetting('engagementThreshold', user)
@@ -1087,7 +1087,7 @@ export function PostForm() {
           disabled={
             isCreatingScrapeSetting ||
             isUpdatingScrapeSetting ||
-            !isProfileActive
+            !canSaveSettings
           }
         >
           {isCreatingScrapeSetting || isUpdatingScrapeSetting
