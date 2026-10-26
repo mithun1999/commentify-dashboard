@@ -16,9 +16,17 @@ export const useOnboardingRedirect = () => {
     data: profiles,
     isFetched: profilesFetched,
     isError: profilesError,
+    isFetching: profilesFetching,
   } = useGetAllProfileQuery()
   const profilesSettled = profilesFetched || profilesError
-  const hasConnectedProfile = (profiles?.length ?? 0) > 0
+  // Only a loaded, current list can say "no account connected"; a failed or
+  // in-flight one stays unknown so nobody is pulled back to connect on a guess.
+  const hasConnectedProfile =
+    (profiles?.length ?? 0) > 0
+      ? true
+      : profilesFetched && !profilesError && !profilesFetching
+        ? false
+        : undefined
   const pickedPlatform = useOnboardingStore((s) => s.data.selectedPlatform)
   const pickedCapabilities = useOnboardingStore(
     (s) => s.data.selectedCapabilities

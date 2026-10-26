@@ -81,7 +81,8 @@ export function flowFor(
   const platform = platformFor(savedAgentType, picked?.platform)
   if (platform !== 'twitter') return 'linkedin'
 
-  const pickedX = picked?.platform === 'twitter' ? picked.capabilities ?? [] : []
+  const pickedX =
+    picked?.platform === 'twitter' ? (picked.capabilities ?? []) : []
   const comment = savedAgentType
     ? !savedAgentType.includes('posting')
     : pickedX.includes('comment') || !pickedX.includes('post')
@@ -218,7 +219,9 @@ export function stepDefFor(
  * reply-agent user who lands on the preview is somewhere real that needs
  * redirecting - reporting it as unknown would leave them there.
  */
-export function stepKeyForPath(pathname: string): OnboardingStepKey | undefined {
+export function stepKeyForPath(
+  pathname: string
+): OnboardingStepKey | undefined {
   const current = normalize(pathname)
   const match = ALL_FLOWS.flatMap((flow) => buildOnboardingFlow(flow)).find(
     (s) => normalize(s.path) === current
@@ -320,12 +323,18 @@ export function isAgentControlPath(pathname: string): boolean {
  * `hasConnectedProfile` keeps a pending account that has already connected an
  * account on Agent Hub and the agent pages. Its agent can be running, and
  * those pages are the only place to pause it or disconnect.
+ *
+ * `false` means the account list has loaded and is empty, which is different
+ * from not knowing yet (`undefined`). An account that disconnected its only
+ * profile part way through - which those same pages allow - is sent back to
+ * connect one, instead of being walked on to a preview and a trial with
+ * nothing for the agent to run on.
  */
 export function onboardingRedirectTarget(
   user: Pick<IUser, 'status' | 'metadata'>,
   pathname: string,
   picked?: Parameters<typeof flowFor>[1],
-  hasConnectedProfile = false
+  hasConnectedProfile?: boolean
 ): string | undefined {
   const onboarding = user.metadata?.onboarding
   if (onboarding?.status === 'completed') return
@@ -335,13 +344,19 @@ export function onboardingRedirectTarget(
   if (hasConnectedProfile && isAgentControlPath(pathname)) return
 
   const flow = flowFor(onboarding?.selectedAgentType, picked)
-  const savedKey = resolveSavedStep(
+  let savedKey = resolveSavedStep(
     {
       stepKey: onboarding?.stepKey,
       step: onboarding?.step,
     },
     flow
   )
+  if (
+    hasConnectedProfile === false &&
+    stepIndexOf(savedKey, flow) > stepIndexOf('connect-account', flow)
+  ) {
+    savedKey = 'connect-account'
+  }
   const currentKey = stepKeyForPath(pathname)
 
   // On a step we recognise, only intervene when they are ahead of their saved

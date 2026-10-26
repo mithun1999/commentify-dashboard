@@ -81,6 +81,42 @@ describe('onboardingRedirectTarget', () => {
       expect(onboardingRedirectTarget(u, '/')).toBe('/onboarding/preview')
     })
 
+    it('sends an account that disconnected its only profile back to connect one', () => {
+      // jswicks3, 2026-10-19: disconnected from Agent Hub while on the preview,
+      // then went on to the trial screen with nothing connected.
+      const u = user(UserSubscriptionStatus.PENDING, {
+        status: 'in-progress',
+        stepKey: 'activate-trial',
+      })
+      for (const path of [
+        '/',
+        '/onboarding/preview',
+        '/onboarding/identity',
+        '/onboarding/activate-trial',
+      ]) {
+        expect(onboardingRedirectTarget(u, path, undefined, false)).toBe(
+          '/onboarding/connect-account'
+        )
+      }
+      // Earlier steps and the connect step itself are left alone.
+      expect(
+        onboardingRedirectTarget(
+          u,
+          '/onboarding/connect-account',
+          undefined,
+          false
+        )
+      ).toBe(undefined)
+      expect(
+        onboardingRedirectTarget(u, '/onboarding/extension', undefined, false)
+      ).toBe(undefined)
+      // Not knowing yet is not the same as having none.
+      expect(onboardingRedirectTarget(u, '/onboarding/preview')).toBe(undefined)
+      expect(
+        onboardingRedirectTarget(u, '/onboarding/preview', undefined, true)
+      ).toBe(undefined)
+    })
+
     it('leaves a pending account that finished onboarding alone', () => {
       const u = user(UserSubscriptionStatus.PENDING, { status: 'completed' })
       expect(onboardingRedirectTarget(u, '/')).toBe(undefined)
@@ -135,9 +171,9 @@ describe('X onboarding flows', () => {
     buildOnboardingFlow(flow).map((s) => s.key)
 
   it('picks the flow from what was chosen on X', () => {
-    expect(flowFor(null, { platform: 'twitter', capabilities: ['comment'] })).toBe(
-      'twitter'
-    )
+    expect(
+      flowFor(null, { platform: 'twitter', capabilities: ['comment'] })
+    ).toBe('twitter')
     expect(flowFor(null, { platform: 'twitter', capabilities: ['post'] })).toBe(
       'twitter-posting'
     )
