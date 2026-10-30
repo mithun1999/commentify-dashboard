@@ -5,7 +5,10 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
-import { resolvePlanSetting } from '@/config/plan-setting.config'
+import {
+  isPlanSettingHidden,
+  resolvePlanSetting,
+} from '@/config/plan-setting.config'
 import {
   AlertCircle,
   ChevronDown,
@@ -116,6 +119,7 @@ export function PostForm() {
   const shouldDisplayGeographySetting = Boolean(
     resolvePlanSetting('geography', user)
   )
+  const isGeographyHidden = isPlanSettingHidden('geography', user)
   const shouldDisplayAuthorTitlesSetting = Boolean(
     resolvePlanSetting('authorTitles', user)
   )
@@ -252,7 +256,7 @@ export function PostForm() {
         tz: 'UTC',
       },
       engagementThreshold: values.engagementThreshold,
-      regionsToTarget: values.geography,
+      regionsToTarget: isGeographyHidden ? undefined : values.geography,
       authorTitlesToTarget: values.authorTitles,
       rules: values.rules,
     }
@@ -886,91 +890,94 @@ export function PostForm() {
         </UnlockWrapper>
 
         {/* Geography Section (multi-select) moved below Author Titles */}
-        <UnlockWrapper isUnlocked={shouldDisplayGeographySetting}>
-          <div>
-            <div className='flex items-center gap-2'>
-              <Globe className='text-muted-foreground h-4 w-4' />
-              <Label className='text-foreground cursor-pointer font-medium'>
-                Geography
-              </Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
-                      <Info className='text-muted-foreground h-3 w-3' />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side='right' className='max-w-xs'>
-                    <p>Select up to 6 geographic regions.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+        {!isGeographyHidden && (
+          <UnlockWrapper isUnlocked={shouldDisplayGeographySetting}>
+            <div>
+              <div className='flex items-center gap-2'>
+                <Globe className='text-muted-foreground h-4 w-4' />
+                <Label className='text-foreground cursor-pointer font-medium'>
+                  Geography
+                </Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className='border-border flex h-4 w-4 cursor-help items-center justify-center rounded-full border'>
+                        <Info className='text-muted-foreground h-3 w-3' />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side='right' className='max-w-xs'>
+                      <p>Select up to 6 geographic regions.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
-            <div className='mt-4'>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild className='has-[>svg]:px-5'>
-                  <Button variant='outline' size='sm' className='group h-9'>
-                    Select regions
-                    {selectedGeographies.length > 0 && (
-                      <span className='text-muted-foreground ml-2 max-w-[320px] truncate text-xs'>
-                        {selectedGeographies.join(', ')}
-                      </span>
-                    )}
-                    <ChevronDown className='ml-2 size-4 group-data-[state=open]:hidden' />
-                    <ChevronUp className='ml-2 hidden size-4 group-data-[state=open]:block' />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align='start' className='w-56'>
-                  <DropdownMenuLabel>Regions</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {['Global', 'Europe', 'Asia', 'US', 'India', 'MENA'].map(
-                    (region) => (
-                      <DropdownMenuCheckboxItem
-                        key={region}
-                        checked={selectedGeographies.includes(region)}
-                        onCheckedChange={(checked) => {
-                          const isChecked = !!checked
-                          let updated: string[]
+              <div className='mt-4'>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild className='has-[>svg]:px-5'>
+                    <Button variant='outline' size='sm' className='group h-9'>
+                      Select regions
+                      {selectedGeographies.length > 0 && (
+                        <span className='text-muted-foreground ml-2 max-w-[320px] truncate text-xs'>
+                          {selectedGeographies.join(', ')}
+                        </span>
+                      )}
+                      <ChevronDown className='ml-2 size-4 group-data-[state=open]:hidden' />
+                      <ChevronUp className='ml-2 hidden size-4 group-data-[state=open]:block' />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='start' className='w-56'>
+                    <DropdownMenuLabel>Regions</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {['Global', 'Europe', 'Asia', 'US', 'India', 'MENA'].map(
+                      (region) => (
+                        <DropdownMenuCheckboxItem
+                          key={region}
+                          checked={selectedGeographies.includes(region)}
+                          onCheckedChange={(checked) => {
+                            const isChecked = !!checked
+                            let updated: string[]
 
-                          if (isChecked) {
-                            if (region === 'Global') {
-                              updated = ['Global']
+                            if (isChecked) {
+                              if (region === 'Global') {
+                                updated = ['Global']
+                              } else {
+                                // Remove Global if present and add the selected region
+                                const withoutGlobal =
+                                  selectedGeographies.filter(
+                                    (g) => g !== 'Global'
+                                  )
+                                updated = withoutGlobal.includes(region)
+                                  ? withoutGlobal
+                                  : [...withoutGlobal, region]
+                              }
                             } else {
-                              // Remove Global if present and add the selected region
-                              const withoutGlobal = selectedGeographies.filter(
-                                (g) => g !== 'Global'
+                              // Unchecking removes the region
+                              updated = selectedGeographies.filter(
+                                (g) => g !== region
                               )
-                              updated = withoutGlobal.includes(region)
-                                ? withoutGlobal
-                                : [...withoutGlobal, region]
                             }
-                          } else {
-                            // Unchecking removes the region
-                            updated = selectedGeographies.filter(
-                              (g) => g !== region
-                            )
-                          }
 
-                          form.setValue('geography', updated)
-                        }}
-                      >
-                        {region}
-                      </DropdownMenuCheckboxItem>
-                    )
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                            form.setValue('geography', updated)
+                          }}
+                        >
+                          {region}
+                        </DropdownMenuCheckboxItem>
+                      )
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <p className='text-muted-foreground mt-2 flex gap-2 text-sm'>
+                <span className='border-border mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border'>
+                  <Info className='text-muted-foreground h-3 w-3' />
+                </span>
+                This filter currently provides around 30-40% accuracy.
+                We&apos;re actively improving it to deliver even better results.
+              </p>
             </div>
-            <p className='text-muted-foreground mt-2 flex gap-2 text-sm'>
-              <span className='border-border mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border'>
-                <Info className='text-muted-foreground h-3 w-3' />
-              </span>
-              This filter currently provides around 30-40% accuracy. We&apos;re
-              actively improving it to deliver even better results.
-            </p>
-          </div>
-        </UnlockWrapper>
+          </UnlockWrapper>
+        )}
 
         {/* Skip Options */}
         <div className='mb-8 space-y-4'>

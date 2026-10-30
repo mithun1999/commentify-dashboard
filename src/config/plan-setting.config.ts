@@ -100,6 +100,20 @@ export function resolvePlanSetting(
   return newPlanSetting[feature]?.[newTier]
 }
 
+/**
+ * Settings an AppSumo license leaves out entirely. Hidden rather than shown
+ * locked: no upgrade adds them, so there is nothing to sell.
+ */
+const APPSUMO_HIDDEN_SETTINGS = new Set(['geography'])
+
+/** True when `feature` is not to be shown to this user at all. */
+export function isPlanSettingHidden(
+  feature: string,
+  user: IUser | undefined
+): boolean {
+  return Boolean(user?.appsumoTier) && APPSUMO_HIDDEN_SETTINGS.has(feature)
+}
+
 // Posting-agent limits (Starter/Pro only). Values marked CONFIRM are placeholders
 // pending product sign-off; keep in sync with backend `postPlanMapper`.
 export const postPlanSetting: Record<
