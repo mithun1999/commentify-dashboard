@@ -1,6 +1,9 @@
 import type { IProduct } from '../interfaces/price.interface'
 
-const NEW_CATALOG_PLAN_SKU = /^(comment|post)_(starter|pro)_(monthly|yearly)$/
+// AppSumo lifetime plans (`appsumo_pro_t2`) carry the new catalog's features.
+// Mirrors backend agent-tier.util.
+const NEW_CATALOG_PLAN_SKU =
+  /^(?:(comment|post)_(starter|pro)_(monthly|yearly)|appsumo_(starter|pro)_t[1-9])$/
 
 /**
  * A subscription is "legacy" when its base product predates the two-agent catalog.

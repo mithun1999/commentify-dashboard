@@ -34,6 +34,8 @@ export interface IUser {
   status: UserSubscriptionStatus
   subscription?: ISubscription | null
   agents?: Partial<Record<AgentType, IAgentEntitlement>>
+  /** AppSumo tier (1-4) while an AppSumo license is the plan; unset otherwise. */
+  appsumoTier?: number | null
   trialEndsAt?: string | null
   metadata: {
     onboarding: {
