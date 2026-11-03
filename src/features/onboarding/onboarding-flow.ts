@@ -331,16 +331,19 @@ export function isAgentControlPath(pathname: string): boolean {
  * nothing for the agent to run on.
  */
 export function onboardingRedirectTarget(
-  user: Pick<IUser, 'status' | 'metadata'>,
+  user: Pick<IUser, 'status' | 'metadata' | 'appsumoTier'>,
   pathname: string,
   picked?: Parameters<typeof flowFor>[1],
   hasConnectedProfile?: boolean
 ): string | undefined {
   const onboarding = user.metadata?.onboarding
   if (onboarding?.status === 'completed') return
-  // The wizard ends in starting a trial; anyone past pending has nothing to
-  // activate there.
-  if (user.status !== UserSubscriptionStatus.PENDING) return
+  // An AppSumo license is a plan from the moment it is linked, so those
+  // accounts are active yet still have their agents to set up.
+  const appsumo = Boolean(user.appsumoTier)
+  // The wizard ends in starting a trial; anyone else past pending has nothing
+  // to activate there.
+  if (user.status !== UserSubscriptionStatus.PENDING && !appsumo) return
   if (hasConnectedProfile && isAgentControlPath(pathname)) return
 
   const flow = flowFor(onboarding?.selectedAgentType, picked)
@@ -351,6 +354,8 @@ export function onboardingRedirectTarget(
     },
     flow
   )
+  // Their setup ends on identity: there is no trial to start.
+  if (appsumo && savedKey === 'activate-trial') savedKey = 'identity'
   if (
     hasConnectedProfile === false &&
     stepIndexOf(savedKey, flow) > stepIndexOf('connect-account', flow)

@@ -36,6 +36,8 @@ export interface IUser {
   agents?: Partial<Record<AgentType, IAgentEntitlement>>
   /** AppSumo tier (1-4) while an AppSumo license is the plan; unset otherwise. */
   appsumoTier?: number | null
+  /** Every AI call runs on the account's own keys (AppSumo licenses). */
+  aiKeyRequired?: boolean
   trialEndsAt?: string | null
   metadata: {
     onboarding: {

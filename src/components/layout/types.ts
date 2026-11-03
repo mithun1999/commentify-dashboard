@@ -18,6 +18,8 @@ interface BaseNavItem {
   requiresLinkablePair?: boolean
   /** Shown only to accounts with a posting agent on. */
   requiresPosting?: boolean
+  /** Shown only to accounts that run on their own AI keys (AppSumo). */
+  requiresOwnAiKey?: boolean
 }
 
 type NavLink = BaseNavItem & {

@@ -1,11 +1,15 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import commentifyPreview from '@/assets/images/auth-preview.svg'
 import commentifyLogo from '@/assets/images/logo.svg'
 import { testimonialPeoples } from '@/components/layout/data/auth-page-data'
+import { readPendingClaim } from '@/features/appsumo/claim'
 import AuthWrapper from '../auth-wrapper'
 import { SignUpForm } from './components/sign-up-form'
 
 export default function SignUp() {
+  // A buyer sent here from the AppSumo redeem page has a license waiting.
+  const [appsumoClaim] = useState(readPendingClaim)
   return (
     <AuthWrapper>
       <div className='relative container grid h-svh flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0'>
@@ -60,9 +64,14 @@ export default function SignUp() {
                 Create an account
               </h1>
               {/* One message for every flag state: the trial needs a card, and
-                  the flag reads as off while PostHog loads or is blocked. */}
+                  the flag reads as off while PostHog loads or is blocked.
+                  AppSumo buyers already have a lifetime license, no trial. */}
               <p className='text-muted-foreground text-sm'>
-                Create your account to start your 5-day free trial.
+                {appsumoClaim
+                  ? appsumoClaim.tier
+                    ? `Create your account to activate your AppSumo Tier ${appsumoClaim.tier} license.`
+                    : 'Create your account to activate your AppSumo license.'
+                  : 'Create your account to start your 5-day free trial.'}
               </p>
               <p className='text-muted-foreground text-sm'>
                 Already have an account?{' '}

@@ -27,6 +27,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
+  appsumoAccounts,
+  StartWithOneNote,
+} from '@/features/appsumo/components/start-with-one'
+import {
   useGetUserQuery,
   useUpdateOnboardingStatus,
 } from '@/features/auth/query/user.query'
@@ -498,6 +502,9 @@ export function LinkedInStep() {
         }
         description={description}
       >
+        <div className='mb-6 empty:hidden'>
+          <StartWithOneNote accounts={appsumoAccounts(user)} />
+        </div>
         <div className='flex flex-col items-center space-y-6 py-4'>
           <div className='w-full max-w-md space-y-6'>
             {hasProfileInfo && (

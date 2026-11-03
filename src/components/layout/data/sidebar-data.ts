@@ -1,6 +1,7 @@
 import {
   BookOpen,
   CreditCard,
+  KeyRound,
   LayoutGrid,
   Link2,
   Sparkles,
@@ -53,6 +54,12 @@ export const sidebarData: SidebarData = {
           title: 'Join Community',
           url: 'https://chat.whatsapp.com/HZ65AMvN24YEtBSvswLlcT',
           icon: Users,
+        },
+        {
+          title: 'AI keys',
+          url: '/ai-keys',
+          icon: KeyRound,
+          requiresOwnAiKey: true,
         },
         {
           title: 'Billing',

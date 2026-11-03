@@ -164,6 +164,40 @@ describe('onboardingRedirectTarget', () => {
       expect(onboardingRedirectTarget(u, '/')).toBe(undefined)
     })
   })
+
+  describe('AppSumo accounts', () => {
+    // Active from the moment the license is linked, with setup still to do.
+    const appsumo = (onboarding?: Partial<Onboarding>) =>
+      ({
+        status: UserSubscriptionStatus.ACTIVE,
+        appsumoTier: 2,
+        metadata: { onboarding },
+      }) as Pick<IUser, 'status' | 'metadata' | 'appsumoTier'>
+
+    it('walks a just-linked account through setup from anywhere', () => {
+      expect(onboardingRedirectTarget(appsumo(), '/')).toBe(
+        '/onboarding/agent-type'
+      )
+      expect(
+        onboardingRedirectTarget(appsumo(connectInProgress), '/billing')
+      ).toBe('/onboarding/connect-account')
+    })
+
+    it('never sends them to the trial step', () => {
+      const u = appsumo({
+        status: 'in-progress',
+        step: 6,
+        stepKey: 'activate-trial',
+      })
+      expect(onboardingRedirectTarget(u, '/')).toBe('/onboarding/identity')
+    })
+
+    it('leaves them alone once setup is finished', () => {
+      expect(
+        onboardingRedirectTarget(appsumo({ status: 'completed' }), '/')
+      ).toBe(undefined)
+    })
+  })
 })
 
 describe('X onboarding flows', () => {

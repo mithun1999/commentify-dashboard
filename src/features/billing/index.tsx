@@ -52,6 +52,10 @@ export default function Billing() {
   const navigate = useNavigate()
   const [cancelOpen, setCancelOpen] = useState(false)
   const isLegacy = isLegacyProduct(user?.subscribedProduct)
+  // A lifetime license bought on AppSumo: nothing here to bill, change or
+  // cancel; AppSumo handles all of that.
+  // AppSumo tiers are numbered, not Starter/Pro, so no plan badge is shown.
+  const appsumoTier = user?.appsumoTier ?? null
   const isCancelled = Boolean(user?.subscription?.isCancelled)
   const canCancel =
     Boolean(user?.subscription) &&
@@ -81,7 +85,7 @@ export default function Billing() {
     agentRows.push({
       key: 'comment',
       label: 'Commenting',
-      tier: user?.agents?.comment?.tier,
+      tier: appsumoTier ? undefined : user?.agents?.comment?.tier,
       used: commentingUsed,
       max: commentMax,
     })
@@ -90,7 +94,7 @@ export default function Billing() {
     agentRows.push({
       key: 'post',
       label: 'Posting',
-      tier: user?.agents?.post?.tier,
+      tier: appsumoTier ? undefined : user?.agents?.post?.tier,
       used: postingUsed,
       max: postMax,
     })
@@ -103,7 +107,7 @@ export default function Billing() {
     Boolean(user?.agents?.comment?.active) || commentingUsed > 0
   const postPresent = Boolean(user?.agents?.post?.active) || postingUsed > 0
   const upsells: { key: string; title: string; desc: string; cta: string }[] = []
-  if (!isLegacy) {
+  if (!isLegacy && !appsumoTier) {
     if (commentPresent && getAgentPlanTier(user, 'comment') === 'starter') {
       upsells.push({
         key: 'comment-pro',
@@ -149,7 +153,7 @@ export default function Billing() {
   const { data: portal, isLoading } = useGetCustomerPortalUrlQuery({
     // @ts-expect-error shared hook expects a user, placeholder handled inside
     user,
-    enabled: !paymentConfirming,
+    enabled: !paymentConfirming && !appsumoTier,
   })
 
   const { data: paymentRecovery } = useGetPaymentRecoveryQuery({ user })
@@ -300,8 +304,10 @@ export default function Billing() {
                 {row.max != null && row.used >= row.max && (
                   <p className='mt-2 text-sm text-amber-600'>
                     You&apos;ve used all your {row.label.toLowerCase()} profile
-                    slots. Upgrade your plan or add more slots to run another
-                    profile.
+                    slots.{' '}
+                    {appsumoTier
+                      ? 'Upgrade your license on AppSumo to add accounts.'
+                      : 'Upgrade your plan or add more slots to run another profile.'}
                   </p>
                 )}
               </div>
@@ -341,10 +347,10 @@ export default function Billing() {
           </Card>
         )}
 
-        <div className='mt-6 grid gap-6 md:grid-cols-2'>
-          <Card>
+        {appsumoTier ? (
+          <Card className='mt-6 max-w-xl'>
             <CardHeader>
-              <CardTitle>Manage Subscription</CardTitle>
+              <CardTitle>AppSumo lifetime license</CardTitle>
             </CardHeader>
             <CardContent className='flex flex-col gap-4'>
               <div className='flex items-center justify-between'>
@@ -352,138 +358,193 @@ export default function Billing() {
                   <div className='text-muted-foreground text-sm'>
                     Current plan
                   </div>
-                  <div className='flex items-center gap-2'>
-                    <span className='text-base font-medium'>
-                      {user?.subscribedProduct?.name || '—'}
+                  <span className='text-base font-medium'>
+                    Tier {appsumoTier}
+                    {commentMax
+                      ? ` · ${commentMax} ${commentMax === 1 ? 'account' : 'accounts'}`
+                      : ''}
+                  </span>
+                </div>
+                {user?.status === 'active' ? (
+                  <div className='flex items-center gap-1 text-sm'>
+                    <CheckCircle2 className='h-4 w-4 text-green-500' />
+                    <span className='text-green-600 dark:text-green-400'>
+                      Active
                     </span>
-                    {isLegacy && (
-                      <Badge
-                        variant='secondary'
-                        className='border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400'
-                      >
-                        Legacy
-                      </Badge>
+                  </div>
+                ) : (
+                  <div className='flex items-center gap-1 text-sm'>
+                    <XCircle className='h-4 w-4 text-amber-500' />
+                    <span className='text-amber-600 capitalize dark:text-amber-400'>
+                      {user?.status || 'inactive'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className='text-muted-foreground text-sm'>
+                You paid once on AppSumo, so there is nothing to renew. To move
+                to another tier or ask for a refund, use your AppSumo account.
+              </p>
+              <Button variant='outline' className='self-start' asChild>
+                <a
+                  href='https://appsumo.com/account/products/'
+                  target='_blank'
+                  rel='noreferrer'
+                >
+                  Open AppSumo
+                  <ExternalLink className='ml-2 h-4 w-4' />
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className='mt-6 grid gap-6 md:grid-cols-2'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Manage Subscription</CardTitle>
+              </CardHeader>
+              <CardContent className='flex flex-col gap-4'>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <div className='text-muted-foreground text-sm'>
+                      Current plan
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <span className='text-base font-medium'>
+                        {user?.subscribedProduct?.name || '—'}
+                      </span>
+                      {isLegacy && (
+                        <Badge
+                          variant='secondary'
+                          className='border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                        >
+                          Legacy
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className='flex items-center gap-1 text-sm'>
+                    {checkout.state === 'pending' ? (
+                      <>
+                        <Loader2 className='h-4 w-4 animate-spin text-amber-500' />
+                        <span className='text-amber-600 dark:text-amber-400'>
+                          Processing
+                        </span>
+                      </>
+                    ) : isCancelled ? (
+                      <>
+                        <XCircle className='h-4 w-4 text-amber-500' />
+                        <span className='text-amber-600 dark:text-amber-400'>
+                          Canceling
+                        </span>
+                      </>
+                    ) : user?.status === 'active' ? (
+                      <>
+                        <CheckCircle2 className='h-4 w-4 text-green-500' />
+                        <span className='text-green-600 dark:text-green-400'>
+                          Active
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className='h-4 w-4 text-amber-500' />
+                        <span className='text-amber-600 capitalize dark:text-amber-400'>
+                          {user?.status || 'inactive'}
+                        </span>
+                      </>
                     )}
                   </div>
                 </div>
-                <div className='flex items-center gap-1 text-sm'>
-                  {checkout.state === 'pending' ? (
-                    <>
-                      <Loader2 className='h-4 w-4 animate-spin text-amber-500' />
-                      <span className='text-amber-600 dark:text-amber-400'>
-                        Processing
-                      </span>
-                    </>
-                  ) : isCancelled ? (
-                    <>
-                      <XCircle className='h-4 w-4 text-amber-500' />
-                      <span className='text-amber-600 dark:text-amber-400'>
-                        Canceling
-                      </span>
-                    </>
-                  ) : user?.status === 'active' ? (
-                    <>
-                      <CheckCircle2 className='h-4 w-4 text-green-500' />
-                      <span className='text-green-600 dark:text-green-400'>
-                        Active
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className='h-4 w-4 text-amber-500' />
-                      <span className='text-amber-600 capitalize dark:text-amber-400'>
-                        {user?.status || 'inactive'}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
 
-              {isCancelled && (
-                <Alert className='border-amber-500/40 bg-amber-500/5'>
-                  <AlertCircle className='h-4 w-4 text-amber-500' />
-                  <AlertTitle>Scheduled to cancel</AlertTitle>
-                  <AlertDescription className='text-sm'>
-                    {cancelDate
-                      ? `Your subscription is scheduled to cancel on ${cancelDate}. You'll keep full access until then.`
-                      : `Your subscription is scheduled to cancel at the end of your current billing period. You'll keep full access until then.`}
-                  </AlertDescription>
-                </Alert>
-              )}
+                {isCancelled && (
+                  <Alert className='border-amber-500/40 bg-amber-500/5'>
+                    <AlertCircle className='h-4 w-4 text-amber-500' />
+                    <AlertTitle>Scheduled to cancel</AlertTitle>
+                    <AlertDescription className='text-sm'>
+                      {cancelDate
+                        ? `Your subscription is scheduled to cancel on ${cancelDate}. You'll keep full access until then.`
+                        : `Your subscription is scheduled to cancel at the end of your current billing period. You'll keep full access until then.`}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-              {isLegacy && (
-                <p className='text-muted-foreground text-xs'>
-                  You&apos;re on a legacy plan. You can keep it as-is, or switch
-                  to the new two-agent plans anytime.
-                </p>
-              )}
+                {isLegacy && (
+                  <p className='text-muted-foreground text-xs'>
+                    You&apos;re on a legacy plan. You can keep it as-is, or
+                    switch to the new two-agent plans anytime.
+                  </p>
+                )}
 
-              {isLoading ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
-              ) : (
-                <div className='flex flex-wrap gap-3'>
-                  <Button
-                    disabled={!portal?.customerPortal}
-                    onClick={() =>
-                      portal?.customerPortal &&
-                      window.open(portal.customerPortal, '_blank')
-                    }
+                {isLoading ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  <div className='flex flex-wrap gap-3'>
+                    <Button
+                      disabled={!portal?.customerPortal}
+                      onClick={() =>
+                        portal?.customerPortal &&
+                        window.open(portal.customerPortal, '_blank')
+                      }
+                    >
+                      Open Customer Portal
+                      <ExternalLink className='ml-2 h-4 w-4' />
+                    </Button>
+
+                    <Button
+                      variant='outline'
+                      onClick={() => {
+                        navigate({ to: '/plans' })
+                      }}
+                    >
+                      Change Plan
+                    </Button>
+                  </div>
+                )}
+
+                {canCancel && (
+                  <button
+                    type='button'
+                    onClick={() => setCancelOpen(true)}
+                    className='text-muted-foreground/60 hover:text-muted-foreground mt-1 self-start text-xs underline underline-offset-2 transition-colors'
                   >
-                    Open Customer Portal
-                    <ExternalLink className='ml-2 h-4 w-4' />
-                  </Button>
+                    Cancel subscription
+                  </button>
+                )}
+              </CardContent>
+            </Card>
 
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Method</CardTitle>
+              </CardHeader>
+              <CardContent className='flex items-center gap-3'>
+                {isLoading ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
                   <Button
                     variant='outline'
-                    onClick={() => {
-                      navigate({ to: '/plans' })
-                    }}
+                    disabled={!portal?.updatePaymentMethod}
+                    onClick={() =>
+                      portal?.updatePaymentMethod &&
+                      window.open(portal.updatePaymentMethod, '_blank')
+                    }
                   >
-                    Change Plan
+                    Update Card
+                    <ExternalLink className='ml-2 h-4 w-4' />
                   </Button>
-                </div>
-              )}
-
-              {canCancel && (
-                <button
-                  type='button'
-                  onClick={() => setCancelOpen(true)}
-                  className='text-muted-foreground/60 hover:text-muted-foreground mt-1 self-start text-xs underline underline-offset-2 transition-colors'
-                >
-                  Cancel subscription
-                </button>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Method</CardTitle>
-            </CardHeader>
-            <CardContent className='flex items-center gap-3'>
-              {isLoading ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
-              ) : (
-                <Button
-                  variant='outline'
-                  disabled={!portal?.updatePaymentMethod}
-                  onClick={() =>
-                    portal?.updatePaymentMethod &&
-                    window.open(portal.updatePaymentMethod, '_blank')
-                  }
-                >
-                  Update Card
-                  <ExternalLink className='ml-2 h-4 w-4' />
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <PostCreditsCard />
       </Main>
 
-      <CancelSubscriptionDialog open={cancelOpen} onOpenChange={setCancelOpen} />
+      <CancelSubscriptionDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+      />
     </>
   )
 }

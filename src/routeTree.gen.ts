@@ -11,6 +11,7 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as AppsumoImport } from './routes/appsumo'
 import { Route as OnboardingRouteImport } from './routes/onboarding/route'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated/route'
 import { Route as OnboardingIndexImport } from './routes/onboarding/index'
@@ -27,6 +28,7 @@ import { Route as OauthConsentImport } from './routes/oauth/consent'
 import { Route as AuthenticatedLinkedProfilesImport } from './routes/_authenticated/linked-profiles'
 import { Route as AuthenticatedKnowledgeHubImport } from './routes/_authenticated/knowledge-hub'
 import { Route as AuthenticatedBillingImport } from './routes/_authenticated/billing'
+import { Route as AuthenticatedAiKeysImport } from './routes/_authenticated/ai-keys'
 import { Route as errors503Import } from './routes/(errors)/503'
 import { Route as errors500Import } from './routes/(errors)/500'
 import { Route as errors404Import } from './routes/(errors)/404'
@@ -60,6 +62,12 @@ import { Route as AuthenticatedAgentsProfileIdAgentTypeCalendarImport } from './
 import { Route as AuthenticatedAgentsProfileIdAgentTypePostPostIdImport } from './routes/_authenticated/agents/$profileId/$agentType/post/$postId'
 
 // Create/Update Routes
+
+const AppsumoRoute = AppsumoImport.update({
+  id: '/appsumo',
+  path: '/appsumo',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const OnboardingRouteRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -154,6 +162,12 @@ const AuthenticatedKnowledgeHubRoute = AuthenticatedKnowledgeHubImport.update({
 const AuthenticatedBillingRoute = AuthenticatedBillingImport.update({
   id: '/billing',
   path: '/billing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
+const AuthenticatedAiKeysRoute = AuthenticatedAiKeysImport.update({
+  id: '/ai-keys',
+  path: '/ai-keys',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -375,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRoute
     }
+    '/appsumo': {
+      id: '/appsumo'
+      path: '/appsumo'
+      fullPath: '/appsumo'
+      preLoaderRoute: typeof AppsumoImport
+      parentRoute: typeof rootRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -458,6 +479,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/503'
       preLoaderRoute: typeof errors503Import
       parentRoute: typeof rootRoute
+    }
+    '/_authenticated/ai-keys': {
+      id: '/_authenticated/ai-keys'
+      path: '/ai-keys'
+      fullPath: '/ai-keys'
+      preLoaderRoute: typeof AuthenticatedAiKeysImport
+      parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/billing': {
       id: '/_authenticated/billing'
@@ -749,6 +777,7 @@ const AuthenticatedAgentsProfileIdAgentTypeRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedAiKeysRoute: typeof AuthenticatedAiKeysRoute
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedKnowledgeHubRoute: typeof AuthenticatedKnowledgeHubRoute
   AuthenticatedLinkedProfilesRoute: typeof AuthenticatedLinkedProfilesRoute
@@ -766,6 +795,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedAiKeysRoute: AuthenticatedAiKeysRoute,
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedKnowledgeHubRoute: AuthenticatedKnowledgeHubRoute,
   AuthenticatedLinkedProfilesRoute: AuthenticatedLinkedProfilesRoute,
@@ -817,6 +847,7 @@ const OnboardingRouteRouteWithChildren = OnboardingRouteRoute._addFileChildren(
 export interface FileRoutesByFullPath {
   '': typeof AuthenticatedRouteRouteWithChildren
   '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/appsumo': typeof AppsumoRoute
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
@@ -829,6 +860,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/ai-keys': typeof AuthenticatedAiKeysRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/knowledge-hub': typeof AuthenticatedKnowledgeHubRoute
   '/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
@@ -865,6 +897,7 @@ export interface FileRoutesByFullPath {
 }
 
 export interface FileRoutesByTo {
+  '/appsumo': typeof AppsumoRoute
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
@@ -877,6 +910,7 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/ai-keys': typeof AuthenticatedAiKeysRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/knowledge-hub': typeof AuthenticatedKnowledgeHubRoute
   '/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
@@ -916,6 +950,7 @@ export interface FileRoutesById {
   __root__: typeof rootRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/onboarding': typeof OnboardingRouteRouteWithChildren
+  '/appsumo': typeof AppsumoRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/otp': typeof authOtpRoute
@@ -928,6 +963,7 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/_authenticated/ai-keys': typeof AuthenticatedAiKeysRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/_authenticated/knowledge-hub': typeof AuthenticatedKnowledgeHubRoute
   '/_authenticated/linked-profiles': typeof AuthenticatedLinkedProfilesRoute
@@ -968,6 +1004,7 @@ export interface FileRouteTypes {
   fullPaths:
     | ''
     | '/onboarding'
+    | '/appsumo'
     | '/settings'
     | '/forgot-password'
     | '/otp'
@@ -980,6 +1017,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/ai-keys'
     | '/billing'
     | '/knowledge-hub'
     | '/linked-profiles'
@@ -1015,6 +1053,7 @@ export interface FileRouteTypes {
     | '/agents/$profileId/$agentType/post/$postId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/appsumo'
     | '/settings'
     | '/forgot-password'
     | '/otp'
@@ -1027,6 +1066,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/ai-keys'
     | '/billing'
     | '/knowledge-hub'
     | '/linked-profiles'
@@ -1064,6 +1104,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/onboarding'
+    | '/appsumo'
     | '/_authenticated/settings'
     | '/(auth)/forgot-password'
     | '/(auth)/otp'
@@ -1076,6 +1117,7 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/ai-keys'
     | '/_authenticated/billing'
     | '/_authenticated/knowledge-hub'
     | '/_authenticated/linked-profiles'
@@ -1115,6 +1157,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   OnboardingRouteRoute: typeof OnboardingRouteRouteWithChildren
+  AppsumoRoute: typeof AppsumoRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authOtpRoute: typeof authOtpRoute
   authSignInRoute: typeof authSignInRoute
@@ -1132,6 +1175,7 @@ export interface RootRouteChildren {
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   OnboardingRouteRoute: OnboardingRouteRouteWithChildren,
+  AppsumoRoute: AppsumoRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authOtpRoute: authOtpRoute,
   authSignInRoute: authSignInRoute,
@@ -1158,6 +1202,7 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated",
         "/onboarding",
+        "/appsumo",
         "/(auth)/forgot-password",
         "/(auth)/otp",
         "/(auth)/sign-in",
@@ -1176,6 +1221,7 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/route.tsx",
       "children": [
         "/_authenticated/settings",
+        "/_authenticated/ai-keys",
         "/_authenticated/billing",
         "/_authenticated/knowledge-hub",
         "/_authenticated/linked-profiles",
@@ -1204,6 +1250,9 @@ export const routeTree = rootRoute
         "/onboarding/preview",
         "/onboarding/"
       ]
+    },
+    "/appsumo": {
+      "filePath": "appsumo.tsx"
     },
     "/_authenticated/settings": {
       "filePath": "_authenticated/settings/route.tsx",
@@ -1245,6 +1294,10 @@ export const routeTree = rootRoute
     },
     "/(errors)/503": {
       "filePath": "(errors)/503.tsx"
+    },
+    "/_authenticated/ai-keys": {
+      "filePath": "_authenticated/ai-keys.tsx",
+      "parent": "/_authenticated"
     },
     "/_authenticated/billing": {
       "filePath": "_authenticated/billing.tsx",
