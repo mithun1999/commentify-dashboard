@@ -18,3 +18,7 @@ export function takePostLoginRedirect(): string | null {
   sessionStorage.removeItem(KEY)
   return path && isLocalPath(path) ? path : null
 }
+
+/** A setup step, the only kind of page the onboarding layout sends back to. */
+export const isOnboardingPath = (pathname: string) =>
+  pathname === '/onboarding' || pathname.startsWith('/onboarding/')
