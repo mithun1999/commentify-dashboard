@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  isOnboardingPath,
   rememberPostLoginRedirect,
   takePostLoginRedirect,
 } from './post-login-redirect'
@@ -39,5 +40,12 @@ describe('post-login redirect', () => {
     rememberPostLoginRedirect('//evil.example/onboarding/preview')
     rememberPostLoginRedirect('https://evil.example/')
     expect(takePostLoginRedirect()).toBeNull()
+  })
+  // The onboarding layout's redirect effect runs again once the URL is
+  // /sign-in; storing that would send the customer back to sign-in.
+  it('treats only setup steps as onboarding paths', () => {
+    expect(isOnboardingPath('/onboarding/preview')).toBe(true)
+    expect(isOnboardingPath('/sign-in')).toBe(false)
+    expect(isOnboardingPath('/onboardingx')).toBe(false)
   })
 })
