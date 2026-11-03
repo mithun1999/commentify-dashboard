@@ -1,6 +1,12 @@
 import { useEffect } from 'react'
-import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth.store'
+import { rememberPostLoginRedirect } from '@/lib/post-login-redirect'
 import MainLoader from '@/components/main-loader'
 import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedirect'
 import { useGetUserQuery } from '@/features/auth/query/user.query'
@@ -14,6 +20,7 @@ export const Route = createFileRoute('/onboarding')({
 
 function RouteComponent() {
   const navigate = useNavigate()
+  const location = useLocation()
 
   const isSignedIn = useAuthStore((state) => state?.session?.user?.id)
   const isSessionLoaded = useAuthStore((state) => state?.isSessionLoaded)
@@ -22,11 +29,14 @@ function RouteComponent() {
   // Ensure users land on the correct onboarding step
   useOnboardingRedirect()
 
+  // A signed-out visit to a setup step (the preview link in our emails) comes
+  // back to that step after sign-in, instead of landing on Agent Hub.
   useEffect(() => {
     if (isSessionLoaded && !isSignedIn) {
+      rememberPostLoginRedirect(location.href)
       navigate({ to: '/sign-in' })
     }
-  }, [isSessionLoaded, isSignedIn, navigate])
+  }, [isSessionLoaded, isSignedIn, location.href, navigate])
 
   // Avoid rendering or redirecting until auth and user are settled
   if (!isSessionLoaded || (!isFetched && isLoading)) return <MainLoader />
