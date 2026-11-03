@@ -48,7 +48,7 @@ import {
   useCreateCommentSettingQuery,
   useUpdateCommentSettingQuery,
 } from '@/features/settings/query/setting.query'
-import { ProfileStatusEnum } from '@/features/users/enum/profile.enum'
+import { canSaveProfileSettings } from '@/features/users/utils/profile-status'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 
 const commentSettingsSchema = z.object({
@@ -88,7 +88,7 @@ const defaultValues: Partial<CommentSettingsValues> = {
 export function CommentsForm({ prev }: { prev?: () => void }) {
   const posthog = usePostHog()
   const activeProfile = useProfileStore((s) => s.activeProfile)
-  const isProfileActive = activeProfile?.status === ProfileStatusEnum.OK
+  const canSaveSettings = canSaveProfileSettings(activeProfile?.status)
   const { data: user } = useGetUserQuery()
   const userPlan = getAgentPlanTier(user, 'comment')
   const { createCommentSetting, isCreatingCommentSetting } =
@@ -513,7 +513,7 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
             disabled={
               isCreatingCommentSetting ||
               isUpdatingCommentSetting ||
-              !isProfileActive
+              !canSaveSettings
             }
           >
             {isCreatingCommentSetting || isUpdatingCommentSetting
