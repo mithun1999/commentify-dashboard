@@ -35,6 +35,8 @@ type UpgradeInfo = { label: string; to: '/plans' }
  */
 function getUpgradeInfo(user?: IUser): UpgradeInfo | null {
   if (!user) return null
+  // An AppSumo license has numbered tiers, upgraded on AppSumo, not our plans.
+  if (user.appsumoTier) return null
 
   const agents = user.agents
   if (!agents || Object.keys(agents).length === 0) {

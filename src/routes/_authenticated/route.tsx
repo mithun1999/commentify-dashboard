@@ -20,6 +20,7 @@ import MainLoader from '@/components/main-loader'
 import ProfileListError from '@/components/profile-list-error'
 import SkipToMain from '@/components/skip-to-main'
 import { TrialBanner } from '@/components/trial-banner'
+import { AiKeyBanner } from '@/features/ai-keys/components/ai-key-banner'
 import useInitiatePosthog from '@/features/auth/hooks/useInitiatePosthog'
 import { useOnboardingRedirect } from '@/features/auth/hooks/useOnboardingRedirect'
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
@@ -143,6 +144,7 @@ function RouteComponent() {
                 }
               />
             )}
+          {user && <AiKeyBanner user={user} />}
           {/*
             Only a successful, empty response means "no accounts connected".
             A failed initial read gets a retry, never the connect card; a

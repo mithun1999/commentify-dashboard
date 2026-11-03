@@ -41,6 +41,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       ),
   }))
 
+  const bottomGroups = sidebarData.bottomGroups.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) => !item.requiresOwnAiKey || Boolean(user?.aiKeyRequired)
+    ),
+  }))
+
   const isDark =
     theme === 'dark' ||
     (theme === 'system' &&
@@ -63,7 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavAgents />
       </SidebarContent>
 
-      {sidebarData.bottomGroups.map((props, index) => (
+      {bottomGroups.map((props, index) => (
         <NavGroup key={index} {...props} />
       ))}
       <SidebarFooter>

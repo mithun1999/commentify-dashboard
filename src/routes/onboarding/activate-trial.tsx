@@ -1,5 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { z } from 'zod'
+import { useGetUserQuery } from '@/features/auth/query/user.query'
 import { ActivateTrialStep } from '@/features/onboarding/steps/activate-trial-step'
 
 const searchSchema = z.object({
@@ -11,5 +12,12 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute('/onboarding/activate-trial')({
   validateSearch: searchSchema,
-  component: () => <ActivateTrialStep />,
+  component: ActivateTrialRoute,
 })
+
+function ActivateTrialRoute() {
+  const { data: user } = useGetUserQuery()
+  // An AppSumo license is already the plan: there is no trial to start.
+  if (user?.appsumoTier) return <Navigate to='/onboarding/identity' replace />
+  return <ActivateTrialStep />
+}

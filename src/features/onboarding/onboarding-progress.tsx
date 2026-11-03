@@ -59,8 +59,11 @@ export function OnboardingProgress() {
   const progress =
     currentFlowIndex < 0 ? 0 : Math.min(100, (passed / (steps.length - 1)) * 100)
 
+  // AppSumo setup ends on the AI key, shown where identity sits.
   const currentMessage =
-    (currentKey && stepDefFor(currentKey, flow)?.message) ??
+    (user?.appsumoTier && currentKey === 'identity'
+      ? 'Add your AI key to finish'
+      : currentKey && stepDefFor(currentKey, flow)?.message) ??
     'Complete your agent setup'
 
   const canVisit = (step: OnboardingStepDef, index: number) =>
