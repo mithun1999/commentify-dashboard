@@ -6,6 +6,7 @@ import {
 import {
   buildOnboardingFlow,
   flowFor,
+  getProgressSteps,
   onboardingRedirectTarget,
 } from './onboarding-flow'
 
@@ -268,5 +269,34 @@ describe('X onboarding flows', () => {
     expect(onboardingRedirectTarget(reply, '/')).toBe(
       '/onboarding/connect-account'
     )
+  })
+})
+
+describe('getProgressSteps', () => {
+  const keys = (
+    flow?: Parameters<typeof getProgressSteps>[0],
+    appsumo = false
+  ) => getProgressSteps(flow, { appsumo }).map((step) => step.key)
+
+  it('ends on the preview for everyone else', () => {
+    expect(keys('linkedin')).toEqual([
+      'agent-type',
+      'extension',
+      'connect-account',
+      'preview',
+    ])
+  })
+
+  it('ends AppSumo setup on the AI key, on every flow', () => {
+    expect(keys('linkedin', true).at(-1)).toBe('identity')
+    expect(keys('twitter', true).at(-1)).toBe('identity')
+    expect(keys('twitter-both', true).at(-1)).toBe('identity')
+    expect(getProgressSteps('linkedin', { appsumo: true }).at(-1)?.label).toBe(
+      'Add AI Key'
+    )
+  })
+
+  it('never shows AppSumo buyers the trial', () => {
+    expect(keys('linkedin', true)).not.toContain('activate-trial')
   })
 })

@@ -200,11 +200,13 @@ export default function AppsumoRedeem({ code }: { code?: string }) {
           }
           savePendingClaim(saved)
           setClaim(readPendingClaim() ?? { ...saved, expiresAt: Date.now() })
-        } else {
-          setOutcome({
-            kind: result.state === 'linked' ? 'already-linked' : 'deactivated',
-          })
+        } else if (result.state === 'deactivated') {
+          setOutcome({ kind: 'deactivated' })
+        } else if (!result.yours) {
+          setOutcome({ kind: 'already-linked' })
         }
+        // Their own license, from AppSumo's Launch button: nothing to report,
+        // the page shows it once the code leaves the address bar.
       })
       .catch((error) =>
         setOutcome({
@@ -297,15 +299,27 @@ export default function AppsumoRedeem({ code }: { code?: string }) {
   // ----- Outcomes -----
 
   if (outcome?.kind === 'already-linked') {
+    if (!isSessionLoaded) return <Waiting label='Loading…' />
+    if (signedIn) {
+      return (
+        <Problem title='This license is on another account'>
+          <p className='text-muted-foreground text-sm'>
+            You are signed in as {session?.user?.email}. Sign in to the account
+            that activated this license to use it.
+          </p>
+          <Button variant='outline' onClick={switchAccount}>
+            Use a different account
+          </Button>
+        </Problem>
+      )
+    }
     return (
       <Problem title='This license is already active'>
         <p className='text-muted-foreground text-sm'>
           It is linked to a Commentify account. Sign in to that account to use
           it.
         </p>
-        <Button onClick={() => navigate({ to: signedIn ? '/' : '/sign-in' })}>
-          {signedIn ? 'Go to your dashboard' : 'Sign in'}
-        </Button>
+        <Button onClick={() => navigate({ to: '/sign-in' })}>Sign in</Button>
       </Problem>
     )
   }
@@ -495,6 +509,7 @@ export default function AppsumoRedeem({ code }: { code?: string }) {
   const stacked =
     Boolean(license.totalAccounts) &&
     (license.totalAccounts ?? 0) > (license.accounts ?? 0)
+  const justAdded = stacked && Boolean(justLinked)
   const onboarded = user?.metadata?.onboarding?.status === 'completed'
   // Setup asks for the key after the first account's preview. Someone already
   // set up (redeeming on an existing account) skips setup, so they add it here.
@@ -508,15 +523,17 @@ export default function AppsumoRedeem({ code }: { code?: string }) {
         <CheckCircle2 className='mt-0.5 size-5 shrink-0 text-green-600' />
         <div className='space-y-1'>
           <h1 className='text-lg font-semibold'>
-            {stacked
+            {justAdded
               ? `License added: ${license.accounts} more ${license.accounts === 1 ? 'account' : 'accounts'}`
-              : license.tier
-                ? `Your Tier ${license.tier} license is active`
-                : 'Your license is active'}
+              : stacked
+                ? 'Your licenses are active'
+                : license.tier
+                  ? `Your Tier ${license.tier} license is active`
+                  : 'Your license is active'}
           </h1>
           <p className='text-muted-foreground text-sm'>
             {stacked
-              ? `You now have ${license.totalAccounts} accounts across your licenses, with Tier ${license.totalTier} limits on all of them.`
+              ? `You ${justAdded ? 'now have' : 'have'} ${license.totalAccounts} accounts across your licenses, with Tier ${license.totalTier} limits on all of them.`
               : // The heading already names the tier.
                 `${planLine(license.tier, license.accounts, false)}.`}
           </p>

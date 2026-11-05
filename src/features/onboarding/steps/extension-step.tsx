@@ -96,11 +96,14 @@ export function ExtensionStep() {
 
   const [lastCheckFailed, setLastCheckFailed] = useState(false)
 
-  const checkExtensionInstallation = async () => {
+  // `requested`: the user asked for this check. The ones on arrival and on
+  // coming back to the tab find nothing for anyone who has not installed yet,
+  // which is not worth telling them.
+  const checkExtensionInstallation = async ({ requested = false } = {}) => {
     try {
       setIsChecking(true)
       const { installed } = await detectExtension()
-      setLastCheckFailed(!installed)
+      if (requested) setLastCheckFailed(!installed)
 
       if (installed) {
         posthog?.capture('onboarding_extension_installed')
@@ -226,7 +229,7 @@ export function ExtensionStep() {
                 disabled={isChecking}
                 onClick={() => {
                   posthog?.capture('onboarding_extension_check_again_clicked')
-                  checkExtensionInstallation()
+                  checkExtensionInstallation({ requested: true })
                 }}
               >
                 {isChecking ? (
@@ -322,7 +325,7 @@ export function ExtensionStep() {
             <button
               className='text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 text-sm underline transition-colors'
               disabled={isChecking}
-              onClick={checkExtensionInstallation}
+              onClick={() => checkExtensionInstallation({ requested: true })}
             >
               {isChecking ? (
                 <Loader2 className='h-3.5 w-3.5 animate-spin' />

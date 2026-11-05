@@ -1,4 +1,5 @@
 import { axiosInstance, axiosInstanceWithoutToken } from '@/utils/axios.util'
+import { getAuthToken } from '@/features/auth/utils/auth.util'
 
 export type RedeemResult =
   | {
@@ -8,7 +9,7 @@ export type RedeemResult =
       accounts?: number
       planTier?: string
     }
-  | { state: 'linked' }
+  | { state: 'linked'; yours: boolean }
   | { state: 'deactivated' }
 
 export interface AppsumoLicense {
@@ -35,13 +36,16 @@ export interface BilledPlan {
 
 /**
  * Trades the one-time code AppSumo put on our redirect URL for a claim token.
- * Public: the buyer usually has no Commentify account yet.
+ * Public: the buyer usually has no Commentify account yet. The session goes
+ * along when there is one, so a returning buyer's own license reads as theirs.
  */
 export async function redeemAppsumoCode(code: string): Promise<RedeemResult> {
+  const token = await getAuthToken()
   const { data } = await axiosInstanceWithoutToken({
     method: 'POST',
     url: '/appsumo/redeem',
     data: { code },
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   })
   return data
 }

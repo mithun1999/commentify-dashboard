@@ -36,7 +36,7 @@ export function OnboardingProgress() {
     flow
   )
 
-  const steps = getProgressSteps(flow)
+  const steps = getProgressSteps(flow, { appsumo: Boolean(user?.appsumoTier) })
   // Steps outside the bar still count as progress, so compare on the full flow.
   const furthestUnlocked = steps.filter(
     (step) => stepIndexOf(step.key, flow) <= stepIndexOf(savedStep, flow)
