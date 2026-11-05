@@ -23,7 +23,7 @@ const ALL_DAYS = [
 ]
 const DEFAULT_DAYS = ALL_DAYS.slice(0, 5)
 /** Same defaults the backend fills in: morning, early afternoon, late afternoon. */
-const DEFAULT_TIMES = ['09:00', '13:00', '17:00']
+const DEFAULT_TIMES = ['09:00', '13:00', '17:00', '11:00', '15:00']
 /** Original posts closer than this read as automation on X (backend X_MIN_GAP_MINUTES). */
 const MIN_GAP_MINUTES = 20
 
@@ -52,7 +52,7 @@ function timeLabel(hhmm: string): string {
  * after the first.
  */
 function defaultTimes(count: number, existing: string[] = []): string[] {
-  if (!existing.length) return DEFAULT_TIMES.slice(0, count)
+  if (!existing.length) return DEFAULT_TIMES.slice(0, count).sort()
   const out = [...existing].slice(0, count)
   const daytime = TIME_OPTIONS.filter((t) => {
     const m = toMinutes(t)
@@ -86,6 +86,8 @@ export function XPostingSchedule({ profileId }: { profileId: string }) {
   const updatePrefs = useUpdatePostingPreferences()
 
   const cap = Number(resolvePostPlanSetting('xPostsPerDay', user) ?? 1)
+  // Plans below 3 still see 3, locked, to show what Pro adds.
+  const perDayOptions = Array.from({ length: Math.max(3, cap) }, (_, i) => i + 1)
   const threadsOnPlan = resolvePostPlanSetting('xThreads', user) === true
   const browserTimezone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -194,7 +196,7 @@ export function XPostingSchedule({ profileId }: { profileId: string }) {
               Posts Per Day
             </p>
             <div className='flex items-center gap-2'>
-              {[1, 2, 3].map((n) => {
+              {perDayOptions.map((n) => {
                 const locked = n > cap
                 return (
                   <button

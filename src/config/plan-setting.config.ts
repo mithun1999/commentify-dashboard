@@ -82,6 +82,19 @@ export const newPlanSetting: Record<
 }
 
 /**
+ * AppSumo limits that go past retail Pro: Tiers 1 and 2 match Starter and Pro,
+ * Tiers 3 and 4 do not. Mirrors the backend `APPSUMO_TIERS`, the signed deal
+ * table. Stacked licenses read as the highest tier held (`user.appsumoTier`).
+ */
+const appsumoPlanSetting: Record<number, Record<string, PlanSettingValue>> = {
+  3: { monitoredProfiles: 50, trackedCreators: 25, xPostsPerDay: 4 },
+  4: { monitoredProfiles: 100, trackedCreators: 40, xPostsPerDay: 5 },
+}
+
+const appsumoSetting = (feature: string, user: IUser | undefined) =>
+  appsumoPlanSetting[user?.appsumoTier ?? 0]?.[feature]
+
+/**
  * Resolve a plan-gated setting value for a user, accounting for which catalog
  * they subscribed under. Legacy subscribers use the 3-tier `planSetting`;
  * new two-agent catalog subscribers use `newPlanSetting`. Catalog is detected
@@ -92,6 +105,8 @@ export function resolvePlanSetting(
   feature: string,
   user: IUser | undefined
 ): PlanSettingValue | undefined {
+  const appsumo = appsumoSetting(feature, user)
+  if (appsumo !== undefined) return appsumo
   const tier = getAgentPlanTier(user, 'comment')
   if (isLegacyProduct(user?.subscribedProduct)) {
     return planSetting[feature]?.[tier]
@@ -160,6 +175,8 @@ export function resolvePostPlanSetting(
   feature: string,
   user: IUser | undefined
 ): PlanSettingValue | undefined {
+  const appsumo = appsumoSetting(feature, user)
+  if (appsumo !== undefined) return appsumo
   const tier = getAgentPlanTier(user, 'post')
   const postTier = tier === 'premium' ? 'pro' : tier
   return postPlanSetting[feature]?.[postTier]
