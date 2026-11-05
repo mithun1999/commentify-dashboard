@@ -75,6 +75,8 @@ export function AgentTypeStep() {
           onChange={handleSelectionChange}
           user={user}
           showCommentGoal
+          // Every AppSumo license comes with both.
+          defaultCapabilities={user?.appsumoTier ? ['comment', 'post'] : []}
           onUpgrade={() => navigate({ to: '/billing' })}
         />
 

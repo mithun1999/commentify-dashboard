@@ -1,11 +1,15 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import commentifyPreview from '@/assets/images/auth-preview.svg'
 import commentifyLogo from '@/assets/images/logo.svg'
 import { testimonialPeoples } from '@/components/layout/data/auth-page-data'
+import { readPendingClaim } from '@/features/appsumo/claim'
 import AuthWrapper from '../auth-wrapper'
 import { UserAuthForm } from './components/user-auth-form'
 
 export default function SignIn2() {
+  // A buyer sent here from the AppSumo redeem page has a license waiting.
+  const [appsumoClaim] = useState(readPendingClaim)
   return (
     <AuthWrapper>
       <div className='relative container grid h-svh flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0'>
@@ -57,6 +61,13 @@ export default function SignIn2() {
           <div className='mx-auto flex w-full flex-col justify-center space-y-2 sm:w-[350px]'>
             <div className='mb-5 flex flex-col space-y-2 text-left'>
               <h1 className='text-2xl font-semibold tracking-tight'>Login</h1>
+              {appsumoClaim && (
+                <p className='text-muted-foreground text-sm'>
+                  {appsumoClaim.tier
+                    ? `Sign in to add your AppSumo Tier ${appsumoClaim.tier} license to your account.`
+                    : 'Sign in to add your AppSumo license to your account.'}
+                </p>
+              )}
               <p className='text-muted-foreground text-sm'>
                 Not registered?{' '}
                 <Link

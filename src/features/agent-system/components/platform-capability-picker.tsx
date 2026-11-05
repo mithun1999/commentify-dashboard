@@ -26,6 +26,8 @@ interface PlatformCapabilityPickerProps {
   user?: IUser
   /** Show the branding/sales goal selector when commenting is chosen. */
   showCommentGoal?: boolean
+  /** Ticked on picking a platform, where that platform can run them. */
+  defaultCapabilities?: AgentCapability[]
   onUpgrade?: () => void
 }
 
@@ -49,6 +51,7 @@ export function PlatformCapabilityPicker({
   onChange,
   user,
   showCommentGoal = false,
+  defaultCapabilities = [],
   onUpgrade,
 }: PlatformCapabilityPickerProps) {
   const platforms = getPlatforms()
@@ -66,7 +69,14 @@ export function PlatformCapabilityPicker({
 
   const selectPlatform = (platform: Platform) => {
     if (value.platform === platform) return
-    onChange({ ...value, platform, capabilities: [] })
+    const offered = platforms.find((p) => p.id === platform)?.capabilities ?? []
+    const capabilities = defaultCapabilities.filter(
+      (capability) =>
+        offered.some(
+          (c) => c.capability === capability && c.status === 'available'
+        ) && isCapabilityEligible(platform, capability)
+    )
+    onChange({ ...value, platform, capabilities })
   }
 
   const toggleCapability = (capability: AgentCapability) => {

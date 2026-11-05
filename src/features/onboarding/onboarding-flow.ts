@@ -188,11 +188,21 @@ export function buildOnboardingFlow(
   return steps
 }
 
-/** Steps shown in the progress bar. */
+/**
+ * Steps shown in the progress bar. AppSumo setup ends on the AI key, which
+ * sits where identity does, and it gets a circle: the buyer's agents cannot
+ * run until it is done.
+ */
 export function getProgressSteps(
-  flow?: OnboardingFlowKind
+  flow?: OnboardingFlowKind,
+  options: { appsumo?: boolean } = {}
 ): OnboardingStepDef[] {
-  return buildOnboardingFlow(flow).filter((s) => s.bar)
+  return buildOnboardingFlow(flow).flatMap((step) => {
+    if (options.appsumo && step.key === 'identity') {
+      return [{ ...step, label: 'Add AI Key', bar: true }]
+    }
+    return step.bar ? [step] : []
+  })
 }
 
 const normalize = (pathname: string) => pathname.replace(/\/+$/, '')
