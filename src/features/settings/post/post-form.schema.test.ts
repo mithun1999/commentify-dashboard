@@ -36,4 +36,12 @@ describe('notificationsFormSchema', () => {
     const result = notificationsFormSchema.safeParse({ ...base, authorTitles })
     expect(result.success).toBe(true)
   })
+
+  it('tells the owner to remove keywords past the sixth', () => {
+    const result = notificationsFormSchema.shape.keywords.safeParse([
+      'a', 'b', 'c', 'd', 'e', 'f', 'g',
+    ])
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0].message).toMatch(/Keep to 6 keywords/)
+  })
 })
