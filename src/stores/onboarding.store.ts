@@ -17,7 +17,6 @@ export interface OnboardingSalesSetting {
 }
 
 export interface OnboardingData {
-  isExtensionInstalled: boolean
   isLinkedInConnected: boolean
   /** Platform chosen in the platform-first picker. */
   selectedPlatform: OnboardingPlatform | null
@@ -53,7 +52,6 @@ export interface OnboardingData {
 }
 
 const defaultOnboardingData: OnboardingData = {
-  isExtensionInstalled: false,
   isLinkedInConnected: false,
   selectedPlatform: null,
   selectedCapabilities: [],
@@ -90,8 +88,11 @@ const defaultOnboardingData: OnboardingData = {
 interface OnboardingStoreState {
   data: OnboardingData
   completedSteps: string[]
+  /** The account these answers belong to; one browser can sign in to several. */
+  ownerId: string | null
   updateData: (newData: Partial<OnboardingData>) => void
   resetData: () => void
+  claimFor: (userId: string) => void
   markStepCompleted: (step: string) => void
   removeCompletedStep: (step: string) => void
   isStepCompleted: (step: string) => boolean
@@ -102,6 +103,7 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
     (set, get) => ({
       data: defaultOnboardingData,
       completedSteps: [],
+      ownerId: null,
       updateData: (newData) =>
         set((state) => ({
           data: {
@@ -110,6 +112,16 @@ export const useOnboardingStore = create<OnboardingStoreState>()(
           },
         })),
       resetData: () => set({ data: defaultOnboardingData, completedSteps: [] }),
+      // Keyed on who signs in, not on signing out: the server keeps only the
+      // agent slug, so someone who leaves mid-setup and comes back still needs
+      // the rest of their picks. No owner means saved before this was tracked,
+      // and nothing says that was someone else.
+      claimFor: (userId) => {
+        const { ownerId, resetData } = get()
+        if (ownerId === userId) return
+        if (ownerId) resetData()
+        set({ ownerId: userId })
+      },
       markStepCompleted: (step: string) => {
         const { completedSteps } = get()
         if (!completedSteps.includes(step)) {

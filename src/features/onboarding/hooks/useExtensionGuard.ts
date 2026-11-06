@@ -6,7 +6,7 @@ import { useUpdateOnboardingStatus } from '@/features/auth/query/user.query'
 
 export function useExtensionGuard() {
   const navigate = useNavigate()
-  const { updateData, removeCompletedStep } = useOnboarding()
+  const { removeCompletedStep } = useOnboarding()
   const { updateOnboardingStatusAsync } = useUpdateOnboardingStatus()
   const [isChecking, setIsChecking] = useState(true)
   const hasCheckedRef = useRef(false)
@@ -23,7 +23,6 @@ export function useExtensionGuard() {
         // user back a step. An unsupported browser is not something the
         // extension step can fix, and a probe failure proves nothing.
         if (state.status === 'not-detected') {
-          updateData({ isExtensionInstalled: false })
           removeCompletedStep('extension')
           await updateOnboardingStatusAsync({
             status: 'in-progress',
