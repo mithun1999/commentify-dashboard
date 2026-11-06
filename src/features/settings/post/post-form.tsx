@@ -73,6 +73,7 @@ import { buildSearchUrl } from '@/features/settings/utils/linkedin.util'
 import { canSaveProfileSettings } from '@/features/users/utils/profile-status'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 import { TargetingChangedBanner } from '../components/targeting-changed-banner'
+import { toastFormError } from '@/lib/form-errors'
 import { MAX_AUTHOR_TITLES, notificationsFormSchema } from './post-form.schema'
 
 type NotificationsFormValues = z.infer<typeof notificationsFormSchema>
@@ -360,7 +361,7 @@ export function PostForm() {
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(handleSubmitForm)}
+        onSubmit={form.handleSubmit(handleSubmitForm, toastFormError)}
         className='space-y-8'
       >
         <TargetingChangedBanner profileId={activeProfile?._id} />

@@ -49,6 +49,7 @@ import {
   useUpdateCommentSettingQuery,
 } from '@/features/settings/query/setting.query'
 import { canSaveProfileSettings } from '@/features/users/utils/profile-status'
+import { toastFormError } from '@/lib/form-errors'
 import { UnlockWrapper } from '../components/UnlockWrapper'
 
 const commentSettingsSchema = z.object({
@@ -179,7 +180,10 @@ export function CommentsForm({ prev }: { prev?: () => void }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+      <form
+        onSubmit={form.handleSubmit(onSubmit, toastFormError)}
+        className='space-y-8'
+      >
         {/* Profile Info */}
 
         {/* About Profile Section */}

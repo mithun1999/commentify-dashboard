@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { toastFormError } from '@/lib/form-errors'
 import {
   Globe,
   Loader2,
@@ -114,7 +115,7 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
   }, [profileId, profile, setActiveProfile])
 
   const [urlInput, setUrlInput] = useState(existingSalesSetting?.websiteUrl ?? '')
-  const extractedKeywordsRef = useRef<string[]>([])
+  const [extractedKeywords, setExtractedKeywords] = useState<string[]>([])
   const [painPointInput, setPainPointInput] = useState('')
   const [valuePropInput, setValuePropInput] = useState('')
   const [jobTitleInput, setJobTitleInput] = useState('')
@@ -128,7 +129,12 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
       painPoints: existingSalesSetting?.painPoints ?? [],
       valuePropositions: existingSalesSetting?.valuePropositions ?? [],
       pitchIntensity: existingSalesSetting?.pitchIntensity ?? 'moderate',
-      numberOfPostsToScrapePerDay: profile?.setting?.scrapeSetting?.numberOfPostsToScrapePerDay ?? 20,
+      // Commenting allows more per day than sales does, so a profile switching
+      // over can start above this cap and fail validation on every save.
+      numberOfPostsToScrapePerDay: Math.min(
+        profile?.setting?.scrapeSetting?.numberOfPostsToScrapePerDay ?? 20,
+        maxMentionsPerDay
+      ),
       matchMode: existingSalesSetting?.matchMode ?? 'flexible',
       suggestedJobTitles:
         (profile?.setting?.scrapeSetting?.authorTitlesToTarget as string[]) ?? [],
@@ -154,7 +160,7 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
         if (result.painPoints?.length) setValue('painPoints', result.painPoints.slice(0, 6))
         if (result.valuePropositions?.length) setValue('valuePropositions', result.valuePropositions.slice(0, 5))
         if (result.suggestedJobTitles?.length) setValue('suggestedJobTitles', result.suggestedJobTitles.slice(0, 6))
-        extractedKeywordsRef.current = result.keywords ?? []
+        setExtractedKeywords(result.keywords ?? [])
         if (result.invalidKeywords?.length) {
           toast.warning(
             `Some keywords couldn't be validated: ${result.invalidKeywords.join(', ')}. Your pain points may need refinement.`
@@ -181,13 +187,13 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
           competitorNames: data.competitorNames,
           suggestedJobTitles: data.suggestedJobTitles,
           numberOfPostsToScrapePerDay: data.numberOfPostsToScrapePerDay,
-          ...(extractedKeywordsRef.current.length && {
-            keywordsToTarget: extractedKeywordsRef.current,
+          ...(extractedKeywords.length && {
+            keywordsToTarget: extractedKeywords,
           }),
         },
       })
 
-      extractedKeywordsRef.current = []
+      setExtractedKeywords([])
       monitoredRef.current?.save()
     } catch {
       // handled by hook
@@ -218,7 +224,11 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+      <form
+        onSubmit={form.handleSubmit(onSubmit, toastFormError)}
+        noValidate
+        className='space-y-8'
+      >
         {/* Website URL */}
         <div className='space-y-2'>
           <div className='flex items-center gap-2'>
@@ -241,6 +251,12 @@ export function SalesSettingsForm({ profileId }: { profileId: string }) {
               )}
             </Button>
           </div>
+          {extractedKeywords.length > 0 && (
+            <p className='text-muted-foreground text-sm'>
+              Saving will replace your search keywords with:{' '}
+              {extractedKeywords.join(', ')}
+            </p>
+          )}
         </div>
 
         {/* Product Description */}

@@ -7,7 +7,9 @@ import { Hour12, MinuteQuarter, Period } from '@/lib/date.utils'
 export const MAX_AUTHOR_TITLES = 6
 
 export const notificationsFormSchema = z.object({
-  keywords: z.array(z.string()).max(6),
+  keywords: z.array(z.string()).max(6, {
+    message: 'Keep to 6 keywords. Remove some, then save.',
+  }),
   authorTitles: z.array(z.string()).max(MAX_AUTHOR_TITLES, {
     message: `Pick at most ${MAX_AUTHOR_TITLES} titles. With more, LinkedIn finds no posts.`,
   }),
