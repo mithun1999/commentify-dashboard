@@ -363,6 +363,8 @@ export interface PostingPreview {
   phase: 'voice' | 'drafting' | 'ready' | 'failed' | 'none'
   /** Absent on a preview started before this shipped, or once the TTL lapses. */
   progress?: PostingProgress | null
+  /** The draft is done and an image is still on its way to it. */
+  imagePending: boolean
   voiceReady: boolean
   failureReason?: string | null
   postsAnalyzed: number | null

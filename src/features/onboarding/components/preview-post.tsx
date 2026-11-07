@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Image as ImageIcon,
@@ -17,6 +17,7 @@ import {
 import { useIsClamped } from '../hooks/useIsClamped'
 import { useTypewriter } from '../hooks/useTypewriter'
 import { PostingProgressList } from './posting-progress'
+import { msUntilSlow, nextPoll, showsFailure } from './preview-post-state'
 import { QuickSampleNote, QuickSampleTag } from './quick-sample'
 
 interface PreviewPostProps {
@@ -46,41 +47,22 @@ const CALENDAR_POSTS_GO_FURTHER: Record<'linkedin' | 'twitter', string> = {
 }
 
 /**
- * Fast enough that a stage change is on screen within a couple of seconds of
- * the worker announcing it. The endpoint is two indexed reads and a Redis get,
- * and this only runs while an onboarding preview is in flight.
+ * Whether this wait has gone past what a healthy preview takes. Timed from the
+ * run's own start, so a reload picks up where the clock really is.
  */
-const POLL_MS = 2500
+function useTakingLong(startedAt: string | undefined) {
+  const [slow, setSlow] = useState(false)
 
-/**
- * Measured end to end this is around ten minutes: roughly 1.5 reading the
- * author's posts, 1.5 waiting for the draft queue, 2.5 writing, and 4 on the
- * image. The old three-minute limit expired while the draft was still being
- * written, so the screen called a working pipeline dead. This is that ten with
- * room for a slow queue - past it the job really is gone, and an honest dead
- * end beats a spinner that never stops.
- */
-const STALL_AFTER_MS = 12 * 60 * 1000
+  useEffect(() => {
+    const started = startedAt ? new Date(startedAt).getTime() : Date.now()
+    const remaining = msUntilSlow(started, Date.now())
+    setSlow(remaining === 0)
+    if (remaining === 0) return
+    const timer = setTimeout(() => setSlow(true), remaining)
+    return () => clearTimeout(timer)
+  }, [startedAt])
 
-/**
- * Every format the preview can roll ships with an illustration, so a post that
- * has gone `ready` with nothing in `media` is still mid-pipeline: the text and
- * the image are written by different queues and the image lands minutes later.
- */
-const ILLUSTRATED_OUTPUT_TYPES = new Set([
-  'concept_illustration',
-  'chat_screenshot',
-  'dashboard_screenshot',
-  'trending_meme',
-  'handwritten_note',
-  'carousel_deck',
-])
-
-function awaitingImage(preview: PostingPreview | undefined): boolean {
-  const post = preview?.post
-  if (!post) return false
-  if (!ILLUSTRATED_OUTPUT_TYPES.has(post.outputType ?? '')) return false
-  return !post.media?.some((m) => m.type === 'image')
+  return slow
 }
 
 /**
@@ -96,43 +78,31 @@ export function PreviewPost({
   const isX = platform === 'twitter'
   const [optedIn, setOptedIn] = useState(wantsPost)
   const [requesting, setRequesting] = useState(false)
-  const [stalled, setStalled] = useState(false)
-  const startedAt = useRef<number | null>(null)
+  const [startFailed, setStartFailed] = useState(false)
 
   const { data, refetch } = useQuery({
     queryKey: ['onboarding-posting-preview', profileId],
     queryFn: () => getPostingPreview(profileId as string),
-    enabled: !!profileId && optedIn && !stalled,
-    refetchInterval: (query) => {
-      const preview = query.state.data as PostingPreview | undefined
-      if (preview?.phase === 'failed') return false
-      // Stopping the moment the text is written is what left an illustrated
-      // format showing no illustration until the user reloaded the page.
-      if (preview?.phase === 'ready')
-        return awaitingImage(preview) ? POLL_MS : false
-      return POLL_MS
-    },
+    enabled: !!profileId && optedIn,
+    refetchInterval: (query) =>
+      nextPoll(query.state.data as PostingPreview | undefined),
   })
 
   // The pre-warm is fire-and-forget at connect, but a user who lands here
   // straight after a reload may have missed it - asking again is a no-op when
   // a draft already exists.
+  //
+  // Read again once it lands: the first read races this request, and can pick
+  // up a failed job from an earlier visit just before it is cleared.
   useEffect(() => {
     if (!profileId || !optedIn) return
-    prewarmPostingPreview({ profileId }).catch(() => {})
-  }, [profileId, optedIn])
+    prewarmPostingPreview({ profileId })
+      .then(() => refetch())
+      .catch(() => setStartFailed(true))
+  }, [profileId, optedIn, refetch])
 
-  const pendingImage = awaitingImage(data)
-  const settled =
-    data?.phase === 'failed' || (data?.phase === 'ready' && !pendingImage)
-
-  useEffect(() => {
-    if (!optedIn || stalled || settled) return
-    startedAt.current ??= Date.now()
-    const remaining = STALL_AFTER_MS - (Date.now() - startedAt.current)
-    const timer = setTimeout(() => setStalled(true), Math.max(0, remaining))
-    return () => clearTimeout(timer)
-  }, [optedIn, stalled, settled])
+  const pendingImage = !!data?.imagePending
+  const takingLong = useTakingLong(data?.progress?.startedAt)
 
   const handleOptIn = async () => {
     if (!profileId) return
@@ -146,17 +116,17 @@ export function PreviewPost({
     }
   }
 
-  // Without `regenerate` this reads the abandoned attempt straight back and
-  // resumes polling a draft nobody is writing, which is the same dead end the
-  // button is meant to escape.
+  // Without `regenerate` this reads the abandoned attempt straight back, which
+  // is the same dead end the button is meant to escape.
   const handleRetry = async () => {
     if (!profileId) return
     setRequesting(true)
     try {
       await prewarmPostingPreview({ profileId, regenerate: true })
-      startedAt.current = Date.now()
-      setStalled(false)
-      void refetch()
+      setStartFailed(false)
+      await refetch()
+    } catch {
+      setStartFailed(true)
     } finally {
       setRequesting(false)
     }
@@ -187,9 +157,8 @@ export function PreviewPost({
   // Measured against what is on screen rather than the full draft: offering
   // "See more" while the text is still arriving cuts off writing the user can
   // see is still going.
-  const { ref: draftRef, clamped } = useIsClamped<HTMLParagraphElement>(
-    typedDraft
-  )
+  const { ref: draftRef, clamped } =
+    useIsClamped<HTMLParagraphElement>(typedDraft)
 
   // Once the text overflows the clamp the caret is below the fold, so the rest
   // of the typing is invisible - it only holds back "See more" for the seconds
@@ -238,10 +207,7 @@ export function PreviewPost({
   const noOwnPosts = postsAnalyzed === 0
   const hasDraft = !!data?.post?.content
 
-  // A written draft outranks both failure states. Running out of patience on
-  // an image is not the same as the draft not finishing, and telling someone
-  // their post "did not finish" above the post itself reads as a bug.
-  if ((phase === 'failed' || stalled) && !hasDraft) {
+  if (showsFailure(data, startFailed)) {
     return (
       <div className='space-y-3 rounded-lg border p-4'>
         <p className='text-sm font-medium'>
@@ -289,6 +255,12 @@ export function PreviewPost({
                 : 'Writing a post in your voice\u2026'
           }
         />
+        {takingLong && (
+          <p className='text-muted-foreground mt-3 text-sm'>
+            Taking longer than usual. You can carry on, and this post will be
+            waiting in your calendar.
+          </p>
+        )}
         {data?.toneDescription &&
           data.toneDescription !== 'Not enough posts to analyze' && (
             <p className='text-muted-foreground mt-3 text-xs'>
@@ -325,7 +297,9 @@ export function PreviewPost({
       <div className='flex items-center gap-2'>
         <Sparkles className='h-4 w-4 text-violet-500' />
         <span className='text-sm font-medium'>
-          {isX ? 'An X post written in your voice' : 'A post written in your voice'}
+          {isX
+            ? 'An X post written in your voice'
+            : 'A post written in your voice'}
         </span>
         <QuickSampleTag />
         {isX && draftTyped && !segments && (
@@ -409,7 +383,9 @@ export function PreviewPost({
             ? 'Your account has no posts yet, so it is not in your voice yet. '
             : 'Your profile has no posts yet, so it is based on your About section. '
           : `It was written on the spot from ${
-              postsAnalyzed ? `${postsAnalyzed} of your posts` : 'a few of your posts'
+              postsAnalyzed
+                ? `${postsAnalyzed} of your posts`
+                : 'a few of your posts'
             }, so you could see your agent work. `}
         {CALENDAR_POSTS_GO_FURTHER[platform]}
       </QuickSampleNote>
