@@ -4,6 +4,7 @@ import {
   detectExtension,
   invalidateExtensionId,
   probeExtensionOnce,
+  sendExtensionMessage,
   type ChromeRuntimeLike,
 } from './extension'
 
@@ -147,6 +148,47 @@ describe('detectExtension', () => {
   it('reports an unsupported browser when there is no messaging runtime', async () => {
     const result = await detectExtension({ ...opts, runtime: {} })
     expect(result.state).toEqual({ status: 'unsupported-browser' })
+  })
+
+  describe('with no runtime on a Chromium browser', () => {
+    const DESKTOP =
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/156.0.0.0 Safari/537.36'
+    const PHONE =
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/156.0.0.0 Mobile Safari/537.36'
+
+    const onChromium = (userAgent: string) => {
+      vi.stubGlobal('window', { chrome: { loadTimes: () => undefined } })
+      vi.stubGlobal('navigator', { userAgent })
+    }
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    // Chrome hides the runtime until an extension lists the page, so this is
+    // what a desktop browser without ours looks like.
+    it('reports the extension as not detected on desktop', async () => {
+      onChromium(DESKTOP)
+      const result = await detectExtension({ ...opts, runtime: {} })
+      expect(result.installed).toBe(false)
+      expect(result.state).toEqual({
+        status: 'not-detected',
+        reason: 'unreachable',
+      })
+    })
+
+    it('keeps a phone unsupported, since installing cannot help there', async () => {
+      onChromium(PHONE)
+      const result = await detectExtension({ ...opts, runtime: {} })
+      expect(result.state).toEqual({ status: 'unsupported-browser' })
+    })
+
+    it('fails account operations with the same answer', async () => {
+      onChromium(DESKTOP)
+      await expect(sendExtensionMessage({ type: 'x' })).rejects.toMatchObject({
+        state: { status: 'not-detected', reason: 'unreachable' },
+      })
+    })
   })
 
   it('deduplicates concurrent checks into one probe per candidate', async () => {

@@ -98,6 +98,21 @@ export function getChromeRuntime(): ChromeRuntimeLike | undefined {
 }
 
 /**
+ * What a page with no `chrome.runtime` can conclude. Chromium hands a page the
+ * runtime only when an installed extension lists that page in
+ * `externally_connectable`, so desktop Chrome without ours has none, the same
+ * as Firefox. `window.chrome` tells the two apart: on Chrome, installing the
+ * extension is the fix. Phones have the global but cannot run extensions.
+ */
+function stateWithoutRuntime(): ExtensionState {
+  const isChromium = typeof window !== 'undefined' && 'chrome' in window
+  const isPhone = /Android|Mobi/i.test(globalThis.navigator?.userAgent ?? '')
+  return isChromium && !isPhone
+    ? { status: 'not-detected', reason: 'unreachable' }
+    : { status: 'unsupported-browser' }
+}
+
+/**
  * A recognised handshake is the object our handler builds. An older package
  * answers any unknown type with `{ errorCode: 'unknown-message-type' }`,
  * which is a narrow, verified legacy presence signal. Anything else - an
@@ -240,7 +255,7 @@ export function detectExtension(
     let activeId: string | null = null
 
     if (!runtime || typeof runtime.sendMessage !== 'function') {
-      state = { status: 'unsupported-browser' }
+      state = stateWithoutRuntime()
     } else {
       const outcomes = await Promise.all(
         ids.map((id) => probeWithRetry(id, runtime, timeoutMs, retries))
@@ -312,7 +327,7 @@ async function requireExtensionId(): Promise<{
 }> {
   const runtime = getChromeRuntime()
   if (!runtime || typeof runtime.sendMessage !== 'function') {
-    throw new ExtensionUnavailableError({ status: 'unsupported-browser' })
+    throw new ExtensionUnavailableError(stateWithoutRuntime())
   }
   let extensionId = cachedExtensionId
   if (!extensionId) {

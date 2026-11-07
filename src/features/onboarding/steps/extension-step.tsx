@@ -87,10 +87,13 @@ export function ExtensionStep() {
   const [isChecking, setIsChecking] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const { data: user } = useGetUserQuery()
-  const { data, updateData, markStepCompleted } = useOnboarding()
+  const { markStepCompleted, removeCompletedStep, isStepCompleted } =
+    useOnboarding()
   const { updateOnboardingStatus, updateOnboardingStatusAsync, isUpdatingOnboardingStatus } =
     useUpdateOnboardingStatus()
-  const isInstalled = data.isExtensionInstalled
+  // null until the first check answers. Asked of the browser on every visit,
+  // never read from saved state: a saved answer outlives the extension.
+  const [isInstalled, setIsInstalled] = useState<boolean | null>(null)
   const hasCheckedOnMount = useRef(false)
   const [copiedAction, setCopiedAction] = useState<string | null>(null)
 
@@ -103,47 +106,52 @@ export function ExtensionStep() {
     try {
       setIsChecking(true)
       const { installed } = await detectExtension()
+      setIsInstalled(installed)
       if (requested) setLastCheckFailed(!installed)
 
-      if (installed) {
-        posthog?.capture('onboarding_extension_installed')
-        updateData({ isExtensionInstalled: true })
-        markStepCompleted('extension')
-        setShowGuide(false)
+      if (!installed) {
+        removeCompletedStep('extension')
+        return
+      }
+      setShowGuide(false)
 
-        if (
-          user?.metadata?.onboarding?.status === 'not-started' ||
-          !user?.metadata?.onboarding
-        ) {
-          updateOnboardingStatus({
-            status: 'in-progress',
-            stepKey: 'extension',
-          })
-        }
+      // This runs on every visit; only the first sighting is an install.
+      if (isStepCompleted('extension')) return
+      posthog?.capture('onboarding_extension_installed')
+      markStepCompleted('extension')
+
+      if (
+        user?.metadata?.onboarding?.status === 'not-started' ||
+        !user?.metadata?.onboarding
+      ) {
+        updateOnboardingStatus({
+          status: 'in-progress',
+          stepKey: 'extension',
+        })
       }
     } catch (error) {
       console.error('Error checking extension:', error)
+      setIsInstalled((current) => current ?? false)
     } finally {
       setIsChecking(false)
     }
   }
 
   useEffect(() => {
-    if (hasCheckedOnMount.current || isInstalled) return
+    if (hasCheckedOnMount.current) return
     hasCheckedOnMount.current = true
     checkExtensionInstallation()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The user installs in another tab and comes back: detect it without
-  // making them find the button.
+  // The user installs or removes it in another tab and comes back: pick that
+  // up without making them find the button.
   useEffect(() => {
-    if (isInstalled) return
     const onVisible = () => {
       if (document.visibilityState === 'visible') checkExtensionInstallation()
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [isInstalled]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDownload = () => {
     posthog?.capture('onboarding_extension_download_clicked')
@@ -193,7 +201,15 @@ export function ExtensionStep() {
             />
           </div>
 
-          {!isInstalled ? (
+          {isInstalled === null ? (
+            <div
+              className='text-muted-foreground flex items-center gap-2 text-sm'
+              role='status'
+            >
+              <Loader2 className='h-4 w-4 animate-spin' />
+              Checking for the extension...
+            </div>
+          ) : !isInstalled ? (
             <div className='w-full max-w-xs space-y-3 text-center'>
               {lastCheckFailed && !isChecking && (
                 <p className='text-muted-foreground text-sm' role='status'>
