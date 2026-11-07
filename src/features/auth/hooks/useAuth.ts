@@ -1,12 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Cookies from 'js-cookie'
+import { useQueryClient } from '@tanstack/react-query'
 import { SupabaseInstance } from '@/services/supabase.service'
 import { Session } from '@supabase/supabase-js'
 import { useAuthStore } from '@/stores/auth.store'
 import { AuthEnum } from '../enum/auth.enum'
+import { forgetAccount, watchAccountSwitch } from '../utils/account-switch'
 
 function useAuth() {
   const setSession = useAuthStore((state) => state.setSession)
+  const queryClient = useQueryClient()
+  const [noteAccount] = useState(() =>
+    watchAccountSwitch(() => forgetAccount(queryClient))
+  )
 
   const getSessionDataForCookie = (session: Session | null) => {
     if (session) {
@@ -35,6 +41,7 @@ function useAuth() {
 
     supabase.auth.getSession().then(({ data }) => {
       const { session } = data
+      noteAccount(session)
       setSession(session)
       const sessionDataForCookie = getSessionDataForCookie(session)
       if (sessionDataForCookie) {
@@ -46,6 +53,7 @@ function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      noteAccount(session)
       setSession(session)
       const sessionDataForCookie = getSessionDataForCookie(session)
       if (sessionDataForCookie) {

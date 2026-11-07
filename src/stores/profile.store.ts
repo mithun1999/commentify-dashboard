@@ -16,12 +16,14 @@ interface ProfileStoreState {
   recentlyDisconnected: Record<string, number>
   markDisconnected: (profileId: string) => void
   isRecentlyDisconnected: (profileId: string) => boolean
+  reset: () => void
 }
 
 export const useProfileStore = create<ProfileStoreState>((set, get) => ({
   activeProfile: null,
   setActiveProfile: (profile: IProfile | null) => set({ activeProfile: profile }),
   recentlyDisconnected: {},
+  reset: () => set({ activeProfile: null, recentlyDisconnected: {} }),
   markDisconnected: (profileId) =>
     set((state) => ({
       recentlyDisconnected: {
