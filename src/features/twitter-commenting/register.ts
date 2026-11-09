@@ -8,7 +8,7 @@ const PlaceholderQueueItem = () => null
 
 AGENT_TYPES['twitter-commenting'] = {
   slug: 'twitter-commenting',
-  name: 'Twitter Commenting',
+  name: 'X Commenting',
   description:
     'Automatically find and reply to relevant tweets to build your presence on X.',
   icon: IconBrandX,
