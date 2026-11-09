@@ -565,9 +565,20 @@ export default function AppsumoRedeem({ code }: { code?: string }) {
       >
         {onboarded ? 'Go to your dashboard' : 'Set up your first account'}
       </Button>
+      {/* Same as the setup step: the key can wait, and the dashboard banner
+          keeps asking for it until it is saved. */}
       {askKeyHere && !keyReady && (
         <p className='text-muted-foreground text-center text-xs'>
-          Save your OpenRouter key to continue.
+          Save your OpenRouter key to continue, or{' '}
+          <Button
+            type='button'
+            variant='link'
+            className='text-muted-foreground h-auto p-0 text-xs underline'
+            onClick={continueSetup}
+          >
+            add it later
+          </Button>
+          .
         </p>
       )}
     </Shell>
