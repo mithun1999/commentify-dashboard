@@ -16,6 +16,10 @@ import { envConfig } from './config/env.config'
 import { FontProvider } from './context/font-context'
 import { ThemeProvider } from './context/theme-context'
 import { signOut } from './features/auth/utils/auth.util'
+import './features/linkedin-commenting/register'
+import './features/twitter-commenting/register'
+// Add this import
+import './index.css'
 import {
   buildQueryErrorToastId,
   getReadableErrorMessage,
@@ -23,10 +27,7 @@ import {
   queryHasCachedData,
   shouldSuppressGlobalErrorNotice,
 } from './lib/connection-recovery'
-// Add this import
-import './index.css'
-import './features/linkedin-commenting/register'
-import './features/twitter-commenting/register'
+import { buildPosthogOptions } from './lib/posthog-sanitize'
 import { routeTree } from './routeTree.gen'
 
 Sentry.init({
@@ -152,13 +153,13 @@ if (!rootElement.innerHTML) {
       <QueryClientProvider client={queryClient}>
         <PostHogProvider
           apiKey={envConfig.postHogKey}
-          options={{
+          options={buildPosthogOptions({
             api_host: envConfig.postHogHost,
             ui_host: 'https://us.posthog.com',
             defaults: '2025-05-24',
             debug: import.meta.env.DEV,
             ...posthogBootstrapOptions,
-          }}
+          })}
         >
           <ThemeProvider defaultTheme='light' storageKey='vite-ui-theme'>
             <FontProvider>
