@@ -15,10 +15,7 @@ import {
 } from '@/lib/extension'
 import { getAgentType, getAgentTypeFor } from '@/features/agent-system/registry'
 import { updateAgentTypes } from '@/features/post-generator/api/post-generator.api'
-import {
-  getTwitterProfileDetailsFromExtension,
-  type ITwitterProfileFromExtension,
-} from '@/features/twitter-commenting/utils/extension'
+import { getTwitterProfileDetailsFromExtension } from '@/features/twitter-commenting/utils/extension'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -47,7 +44,10 @@ import { useDeriveOnboardingSettings } from '@/features/onboarding/hooks/useDeri
 import { useExtensionGuard } from '@/features/onboarding/hooks/useExtensionGuard'
 import { useOnboardingFlow } from '@/features/onboarding/hooks/useOnboardingPlatform'
 import { useTrackStepView } from '@/features/onboarding/hooks/useTrackStepView'
-import { IProfileResponseFromExtension } from '@/features/users/interface/profile.interface'
+import {
+  describeFoundAccount,
+  type FoundAccount,
+} from '@/features/onboarding/utils/found-account'
 import {
   ProfileQueryEnum,
   useGetAllProfileQuery,
@@ -55,9 +55,7 @@ import {
   useLinkTwitterProfile,
 } from '@/features/users/query/profile.query'
 
-type ProfileData =
-  | (IProfileResponseFromExtension & { _platform: 'linkedin' })
-  | (ITwitterProfileFromExtension & { _platform: 'twitter' })
+type ProfileData = FoundAccount
 
 const PLATFORM_CONFIG = {
   linkedin: {
@@ -107,6 +105,7 @@ export function LinkedInStep() {
   const isExtensionChecking = extensionState.status === 'checking'
   const [isLinking, setIsLinking] = useState(false)
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
+  const [foundAccount, setFoundAccount] = useState<ProfileData | null>(null)
   const hasLinkedRef = useRef(false)
   const hasCollectedRef = useRef(false)
 
@@ -186,6 +185,44 @@ export function LinkedInStep() {
     }
   }, [])
 
+  // Links the account the user confirmed. Only a completed backend link
+  // (including a confirmed reconnect) counts as connected; a cancelled
+  // reconnect prompt or a failed write leaves the step where it is.
+  const completeLink = async (details: ProfileData) => {
+    const linked =
+      details._platform === 'linkedin'
+        ? await linkProfile(details)
+        : await linkTwitterProfile(details)
+    if (!linked?.profile) return false
+
+    hasCollectedRef.current = true
+    setProfileData(details)
+    setFoundAccount(null)
+    markStepCompleted('connect-account')
+    const view = describeFoundAccount(details)
+    updateData({
+      isLinkedInConnected: true,
+      userProfile:
+        details._platform === 'twitter'
+          ? { name: view.name, title: view.handle }
+          : { name: view.name, title: `${details.publicIdentifier}` },
+    })
+    if (details._platform === 'twitter') {
+      posthog?.capture('onboarding_twitter_profile_fetched', {
+        screenName: details.screenName,
+      })
+    } else {
+      posthog?.capture('onboarding_linkedin_profile_fetched', {
+        publicIdentifier: details.publicIdentifier,
+      })
+    }
+    return true
+  }
+
+  // Reads whichever account this browser is signed in to and shows it for the
+  // user to confirm. It used to link it straight away, and the browser's
+  // session is often someone else's (a boss, a client, a colleague): three
+  // signups in a row had their targeting built from the wrong person's profile.
   const collectUserInformation = useCallback(async ({ silent = false } = {}) => {
     if (hasCollectedRef.current || isConnectStepCompleted) return
 
@@ -193,82 +230,28 @@ export function LinkedInStep() {
       const isInstalled = await checkIfExtensionIsInstalled()
       if (!isInstalled) return
 
-      if (platform === 'twitter') {
-        const details = await collectTwitterInfo()
-        if (!details) {
-          if (!silent) {
-            toast.error('Please log in to X.com first, then come back here.', { id: 'twitter-login-needed' })
-          }
-          return
+      const details =
+        platform === 'twitter'
+          ? await collectTwitterInfo()
+          : await collectLinkedInInfo()
+      if (!details) {
+        if (!silent) {
+          toast.error(
+            platform === 'twitter'
+              ? 'Please log in to X.com first, then come back here.'
+              : 'Please log in to LinkedIn first, then come back here.',
+            { id: `${platform}-login-needed` }
+          )
         }
-
-        if (hasLinkedRef.current) return
-        hasLinkedRef.current = true
-
-        try {
-          // Only a completed backend link (including a confirmed reconnect)
-          // counts as connected; a cancelled reconnect prompt or a failed
-          // write leaves the step where it is.
-          const linked = await linkTwitterProfile(details)
-          if (!linked?.profile) {
-            hasLinkedRef.current = false
-            return
-          }
-
-          hasCollectedRef.current = true
-          setProfileData({ ...details, _platform: 'twitter' })
-          markStepCompleted('connect-account')
-          updateData({
-            isLinkedInConnected: true,
-            userProfile: {
-              name: details.displayName || `${details.firstName} ${details.lastName}` || 'X User',
-              title: details.screenName ? `@${details.screenName}` : '',
-            },
-          })
-
-          posthog?.capture('onboarding_twitter_profile_fetched', {
-            screenName: details.screenName,
-          })
-        } catch {
-          hasLinkedRef.current = false
-        }
-      } else {
-        const details = await collectLinkedInInfo()
-        if (!details) {
-          if (!silent) {
-            toast.error('Please log in to LinkedIn first, then come back here.', { id: 'linkedin-login-needed' })
-          }
-          return
-        }
-
-        if (hasLinkedRef.current) return
-        hasLinkedRef.current = true
-
-        try {
-          const linked = await linkProfile(details)
-          if (!linked?.profile) {
-            hasLinkedRef.current = false
-            return
-          }
-
-          hasCollectedRef.current = true
-          setProfileData({ ...details, _platform: 'linkedin' })
-          markStepCompleted('connect-account')
-          updateData({
-            isLinkedInConnected: true,
-            userProfile: {
-              name: `${details.firstName} ${details.lastName}`,
-              title: `${details.publicIdentifier}`,
-            },
-          })
-
-          posthog?.capture('onboarding_linkedin_profile_fetched', {
-            publicIdentifier: details.publicIdentifier,
-          })
-        } catch {
-          hasLinkedRef.current = false
-        }
+        return
       }
+      if (hasLinkedRef.current || hasCollectedRef.current) return
+
+      const found = { ...details, _platform: platform } as ProfileData
+      setFoundAccount(found)
+      posthog?.capture(`onboarding_${platform}_account_found`, {
+        handle: describeFoundAccount(found).handle,
+      })
     } catch (error) {
       if (silent) return
       const msg = error instanceof Error ? error.message : ''
@@ -291,69 +274,34 @@ export function LinkedInStep() {
     setIsLinking(true)
     try {
       posthog?.capture(`onboarding_${platform}_connect_clicked`, {
-        hasProfileData: Boolean(profileData),
+        hasProfileData: Boolean(foundAccount),
       })
 
       if (hasLinkedRef.current) return
       hasLinkedRef.current = true
 
-      if (profileData) {
-        const linked =
-          profileData._platform === 'linkedin'
-            ? await linkProfile(profileData)
-            : await linkTwitterProfile(profileData)
-        if (!linked?.profile) {
-          hasLinkedRef.current = false
-          return
-        }
-      } else if (platform === 'linkedin') {
-        const details = await collectLinkedInInfo()
+      if (!foundAccount) {
+        // Nothing found yet: look now, and show what we find. Linking still
+        // waits for the user to say it is the right account.
+        const details =
+          platform === 'twitter'
+            ? await collectTwitterInfo()
+            : await collectLinkedInInfo()
+        hasLinkedRef.current = false
         if (!details) {
           toast.error(config.loginPrompt)
           window.open(config.loginUrl, '_blank')
-          hasLinkedRef.current = false
           return
         }
-        const linked = await linkProfile(details)
-        if (!linked?.profile) {
-          hasLinkedRef.current = false
-          return
-        }
-        hasCollectedRef.current = true
-        setProfileData({ ...details, _platform: 'linkedin' })
-        markStepCompleted('connect-account')
-        updateData({
-          isLinkedInConnected: true,
-          userProfile: {
-            name: `${details.firstName} ${details.lastName}`,
-            title: `${details.publicIdentifier}`,
-          },
-        })
-      } else {
-        const details = await getTwitterProfileDetailsFromExtension()
-        if (!details?.authToken) {
-          toast.error(config.loginPrompt)
-          window.open(config.loginUrl, '_blank')
-          hasLinkedRef.current = false
-          return
-        }
-        const linked = await linkTwitterProfile(details)
-        if (!linked?.profile) {
-          hasLinkedRef.current = false
-          return
-        }
-        hasCollectedRef.current = true
-        setProfileData({ ...details, _platform: 'twitter' })
-        markStepCompleted('connect-account')
-        updateData({
-          isLinkedInConnected: true,
-          userProfile: {
-            name: details.displayName || `${details.firstName} ${details.lastName}` || 'X User',
-            title: details.screenName ? `@${details.screenName}` : '',
-          },
-        })
+        setFoundAccount({ ...details, _platform: platform } as ProfileData)
+        return
       }
 
+      const ok = await completeLink(foundAccount)
+      if (!ok) {
+        hasLinkedRef.current = false
+        return
+      }
       posthog?.capture(`onboarding_${platform}_link_success`)
     } catch (error) {
       hasLinkedRef.current = false
@@ -370,6 +318,23 @@ export function LinkedInStep() {
     } finally {
       setIsLinking(false)
     }
+  }
+
+  // The browser is signed in to someone else. We cannot switch the session
+  // for them; send them to sign in as the right person, and read the account
+  // again when they come back to this tab.
+  const handleWrongAccount = () => {
+    if (foundAccount) {
+      posthog?.capture(`onboarding_${platform}_wrong_account`, {
+        handle: describeFoundAccount(foundAccount).handle,
+      })
+    }
+    setFoundAccount(null)
+    toast.info(
+      `Sign out of ${platform === 'twitter' ? 'X' : 'LinkedIn'} in the tab we opened, sign in as the account you want, then come back here.`,
+      { id: 'wrong-account', duration: 15000 }
+    )
+    window.open(config.loginUrl, '_blank')
   }
 
   useEffect(() => {
@@ -403,6 +368,7 @@ export function LinkedInStep() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasProfileInfo = profileData || (isConnectStepCompleted && onboardingData.userProfile)
+  const foundView = foundAccount ? describeFoundAccount(foundAccount) : null
 
   const resolvedProfileId =
     onboardingData.linkedProfileId ??
@@ -543,7 +509,76 @@ export function LinkedInStep() {
               </div>
             )}
 
-            {!hasProfileInfo && (
+            {!hasProfileInfo && foundView && (
+              <div
+                className='flex w-full flex-col gap-4'
+                data-testid='found-account'
+              >
+                <p className='text-center font-medium'>
+                  Is this the right account?
+                </p>
+                <div className='flex items-center gap-4 rounded border p-3'>
+                  <div className='relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800'>
+                    <span className='text-muted-foreground'>
+                      {foundView.initials}
+                    </span>
+                  </div>
+                  <div className='min-w-0'>
+                    <h3 className='truncate font-medium'>{foundView.name}</h3>
+                    {foundView.url ? (
+                      <a
+                        href={foundView.url}
+                        target='_blank'
+                        rel='noreferrer'
+                        className='text-muted-foreground block truncate text-sm font-medium hover:underline'
+                      >
+                        {foundView.handle}
+                      </a>
+                    ) : (
+                      <p className='text-muted-foreground truncate text-sm font-medium'>
+                        {foundView.handle}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <p className='text-muted-foreground text-sm'>
+                  This is the {platform === 'twitter' ? 'X' : 'LinkedIn'}{' '}
+                  account signed in on this browser. Your agent will find posts
+                  and write {platform === 'twitter' ? 'replies' : 'comments'} as{' '}
+                  {foundView.name}. If that is not who you want, sign in as the
+                  right account first.
+                </p>
+                <div className='flex flex-col gap-2 sm:flex-row'>
+                  <Button
+                    className='flex-1'
+                    onClick={handleLinking}
+                    disabled={isLinking || isLinkingProfile || isLinkingTwitterProfile}
+                  >
+                    {isLinking || isLinkingProfile || isLinkingTwitterProfile ? (
+                      <>
+                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                        {config.connectingLabel}
+                      </>
+                    ) : (
+                      <>
+                        <PlatformIcon className='mr-2 h-4 w-4' />
+                        Yes, connect {foundView.name}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant='outline'
+                    className='flex-1'
+                    onClick={handleWrongAccount}
+                    disabled={isLinking || isLinkingProfile || isLinkingTwitterProfile}
+                  >
+                    No, use another account
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!hasProfileInfo && !foundView && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
