@@ -12,6 +12,8 @@ import { usePostHog } from 'posthog-js/react'
 import { toast } from 'sonner'
 import { useOnboarding } from '@/stores/onboarding.store'
 import { useProfileStore } from '@/stores/profile.store'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { UserSubscriptionStatus } from '@/features/auth/interface/user.interface'
 import {
   useGetUserQuery,
@@ -23,7 +25,10 @@ import { PreviewDrafts } from '../components/preview-drafts'
 import { PreviewFeed, type PreviewMode } from '../components/preview-feed'
 import { PreviewPost } from '../components/preview-post'
 import { QuickSampleNote, QuickSampleTag } from '../components/quick-sample'
-import { useDerivationStatus } from '../hooks/useDeriveOnboardingSettings'
+import {
+  useDerivationStatus,
+  useDeriveOnboardingSettings,
+} from '../hooks/useDeriveOnboardingSettings'
 import { useExtensionGuard } from '../hooks/useExtensionGuard'
 import { useOnboardingFlow } from '../hooks/useOnboardingPlatform'
 import { usePreviewRun } from '../hooks/usePreviewRun'
@@ -31,6 +36,7 @@ import { useTrackStepView } from '../hooks/useTrackStepView'
 import { OnboardingCard } from '../onboarding-card'
 import { getStepNav } from '../onboarding-flow'
 import { OnboardingNavigation } from '../onboarding-navigation'
+import { parseTopics, setupHoldAction } from '../utils/setup-hold'
 
 /**
  * A thin sample is common and not a defect - a few keywords will not always
@@ -74,6 +80,8 @@ function previewCopy(opts: {
   commentEmpty: boolean
   searchFailed: boolean
   setupFailed: boolean
+  /** The retry failed too, and the topics field is on screen. */
+  askingForTopics: boolean
   needsReconnect: boolean
   mode: PreviewMode
   /** How many posts the run read and turned down, when it got that far. */
@@ -89,6 +97,7 @@ function previewCopy(opts: {
     commentEmpty,
     searchFailed,
     setupFailed,
+    askingForTopics,
     needsReconnect,
     mode,
     skippedCount,
@@ -139,8 +148,11 @@ function previewCopy(opts: {
   if (setupFailed) {
     return {
       title: 'We could not finish setting your agent up',
-      description:
-        'Working out what to look for did not complete, so the search never started. You can set your topics yourself from the dashboard in under a minute.',
+      // The button below is held until topics are saved, so the copy points
+      // at it rather than at a dashboard the agent could not yet run from.
+      description: askingForTopics
+        ? 'Working out what to look for did not complete. Add a few topics below and your agent starts from those. You can change them any time.'
+        : 'Working out what to look for did not complete, so the search never started. Continue and we will try once more.',
     }
   }
 
@@ -255,6 +267,14 @@ export function PreviewStep() {
   } = usePreviewRun(profileId)
 
   const derivation = useDerivationStatus(profileId)
+  const { retrySave } = useDeriveOnboardingSettings()
+  const setupFailed = !!derivation.saveError
+  // Shown only after a retry has failed as well: most failures are a request
+  // that did not come back, and asking for topics first would hand the user
+  // homework the second attempt usually makes unnecessary.
+  const [askingForTopics, setAskingForTopics] = useState(false)
+  const [topicsText, setTopicsText] = useState('')
+  const [savingSetup, setSavingSetup] = useState(false)
 
   // The saved setting wins once it has loaded; the wizard's own answer covers
   // the first render, before any results have come back.
@@ -332,7 +352,8 @@ export function PreviewStep() {
     preparing,
     commentEmpty,
     searchFailed,
-    setupFailed: !!derivation.saveError,
+    setupFailed,
+    askingForTopics,
     needsReconnect: !running && needsReconnect,
     mode,
     skippedCount: rejectedCount,
@@ -398,6 +419,40 @@ export function PreviewStep() {
       )
     } finally {
       setPublishing(false)
+    }
+  }
+
+  /**
+   * False keeps the user on this screen. A trial started with no topics is an
+   * agent that can never run, and no later screen would say so.
+   */
+  const clearSetupHold = async (): Promise<boolean> => {
+    const topics = parseTopics(topicsText)
+    const action = setupHoldAction({ setupFailed, askingForTopics, topics })
+    if (action === 'proceed') return true
+    if (action === 'ask-for-topics') {
+      toast.error(
+        'Add at least one topic so your agent knows what to look for.'
+      )
+      return false
+    }
+    if (!profileId) return false
+
+    const typed = action === 'save-typed-topics'
+    setSavingSetup(true)
+    try {
+      await retrySave(profileId, typed ? topics : undefined)
+      posthog?.capture('onboarding_preview_setup_recovered', { typed })
+      return true
+    } catch {
+      posthog?.capture('onboarding_preview_setup_held', { typed })
+      if (typed) {
+        toast.error('We could not save your topics just now. Please try again.')
+      }
+      setAskingForTopics(true)
+      return false
+    } finally {
+      setSavingSetup(false)
     }
   }
 
@@ -523,14 +578,32 @@ export function PreviewStep() {
               <div className='flex items-start gap-2.5'>
                 <Sparkles className='text-primary mt-0.5 h-4 w-4 shrink-0' />
                 <div className='space-y-1'>
-                  <p className='text-sm font-medium'>
-                    Want this every day?
-                  </p>
+                  <p className='text-sm font-medium'>Want this every day?</p>
                   <p className='text-muted-foreground text-sm'>
                     Your agent finds the posts and writes the comments for you.
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {setupFailed && askingForTopics && (
+            <div className='space-y-2'>
+              <Label htmlFor='setup-topics'>
+                What should your agent look for?
+              </Label>
+              <Input
+                id='setup-topics'
+                value={topicsText}
+                onChange={(e) => setTopicsText(e.target.value)}
+                placeholder='e.g. B2B sales, founder-led marketing, hiring'
+                disabled={savingSetup}
+                autoFocus
+              />
+              <p className='text-muted-foreground text-xs'>
+                Two to six topics, separated by commas. It searches LinkedIn for
+                posts about these every day.
+              </p>
             </div>
           )}
 
@@ -546,15 +619,18 @@ export function PreviewStep() {
           prevStep={nav.prev ?? '/onboarding/connect-account'}
           nextStep={nextStep}
           nextLabel={
-            publishedUrns.length
-              ? 'Keep it running'
-              : trialIsNext
-                ? 'Start free trial'
-                : 'Continue'
+            setupFailed && askingForTopics
+              ? 'Save topics and continue'
+              : publishedUrns.length
+                ? 'Keep it running'
+                : trialIsNext
+                  ? 'Start free trial'
+                  : 'Continue'
           }
           currentStep='preview'
-          loading={isUpdatingOnboardingStatus}
+          loading={isUpdatingOnboardingStatus || savingSetup}
           onNext={async () => {
+            if (!(await clearSetupHold())) return false
             markStepCompleted('preview')
             await updateOnboardingStatusAsync({
               status: 'in-progress',

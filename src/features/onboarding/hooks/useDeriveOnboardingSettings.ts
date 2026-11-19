@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useOnboarding } from '@/stores/onboarding.store'
-import { CommentLengthEnum } from '@/features/settings/enum/setting.enum'
 import {
   createOrUpdateSalesSetting,
   extractFromWebsite,
 } from '@/features/linkedin-sales/api/sales.api'
+import { CommentLengthEnum } from '@/features/settings/enum/setting.enum'
 import { ProfileQueryEnum } from '@/features/users/query/profile.query'
 import {
   analyzeOnboardingProfile,
@@ -303,31 +303,85 @@ export function useDeriveOnboardingSettings() {
    * that waits on it is the one that reports it.
    */
   const saveInBackground = useCallback(
-    (profileId: string) => {
-      const existing = stateOf(profileId)
-      if (existing.save) return existing.save
-
-      const save = run(profileId).then(
-        () => {
-          patch(profileId, { saved: true })
-        },
-        (error: unknown) => {
-          const wrapped =
-            error instanceof Error ? error : new Error(String(error))
-          patch(profileId, { saveError: wrapped })
-          throw wrapped
-        }
-      )
-      // A rejection nobody has attached to yet is an unhandled rejection the
-      // moment it settles; the stored promise is still the one awaited later.
-      save.catch(() => {})
-      patch(profileId, { save })
-      return save
-    },
+    (profileId: string) => beginSave(profileId, run),
     [run]
   )
 
-  return { start, saveInBackground }
+  /**
+   * A second attempt at a save that failed, for the preview step's Continue.
+   * Passing topics means the user typed their own, and those are what gets
+   * written.
+   */
+  const retrySave = useCallback(
+    (profileId: string, topics?: string[]) =>
+      retryFailedSave(profileId, run, topics),
+    [run]
+  )
+
+  return { start, saveInBackground, retrySave }
+}
+
+/**
+ * Module scope rather than inside the hook so the bookkeeping can be tested
+ * without rendering anything: `run` is the only part that needs React.
+ */
+export function beginSave(
+  profileId: string,
+  run: (profileId: string) => Promise<void>
+): Promise<void> {
+  const existing = stateOf(profileId)
+  if (existing.save) return existing.save
+
+  const save = run(profileId).then(
+    () => {
+      patch(profileId, { saved: true, saveError: null })
+    },
+    (error: unknown) => {
+      const wrapped = error instanceof Error ? error : new Error(String(error))
+      patch(profileId, { saveError: wrapped })
+      throw wrapped
+    }
+  )
+  // A rejection nobody has attached to yet is an unhandled rejection the
+  // moment it settles; the stored promise is still the one awaited later.
+  save.catch(() => {})
+  patch(profileId, { save })
+  return save
+}
+
+/**
+ * Runs the save again after it failed. A save that is in flight or already
+ * landed is returned as it is, so a double click cannot write twice.
+ *
+ * The old error stays in place until the new attempt settles: clearing it
+ * first would let the preview screen fall through to "everything you picked
+ * is saved" for the length of the request.
+ *
+ * Topics the user typed replace the derived ones, and the refine pass is
+ * dropped with them - it would otherwise write its own list over theirs a
+ * moment after the save.
+ */
+export function retryFailedSave(
+  profileId: string,
+  run: (profileId: string) => Promise<void>,
+  topics?: string[]
+): Promise<void> {
+  const state = stateOf(profileId)
+  if (state.save && !state.saveError) return state.save
+  if (topics?.length) {
+    patch(profileId, {
+      keywords: topics.slice(0, MAX_KEYWORDS),
+      refine: null,
+    })
+  }
+  patch(profileId, { save: null })
+  return beginSave(profileId, run)
+}
+
+/** Test seam: derivation state outlives a component, so it outlives a test. */
+export function resetDerivationStateForTest() {
+  states.clear()
+  listeners.clear()
 }
 
 function invalidateProfiles(queryClient: QueryClient) {
