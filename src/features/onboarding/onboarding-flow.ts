@@ -316,6 +316,33 @@ export function resolveSavedStep(
 }
 
 /**
+ * The step to save when a screen reports the one its user may now be on.
+ *
+ * Saved progress only moves forward: someone revisiting an earlier screen
+ * keeps the ground they have covered. `saved` has to be what the server holds
+ * at the moment of the save, not what this tab last loaded. A tab left open on
+ * an earlier step still believes the account is there, and when its Continue
+ * was pressed after the wizard had been finished elsewhere it wrote that
+ * earlier step over the later one - the account then sat on a screen it had
+ * already answered, and the trial page kept sending it back there.
+ *
+ * `rewind` is the one deliberate way back: the extension guard revoking
+ * progress when the extension is removed part way through.
+ */
+export function stepKeyToSave(
+  requested: OnboardingStepKey,
+  saved: { stepKey?: string; step?: number } | undefined,
+  flow: OnboardingFlowKind = 'linkedin',
+  rewind = false
+): OnboardingStepKey {
+  if (rewind) return requested
+  const reached = resolveSavedStep(saved ?? {}, flow)
+  return stepIndexOf(requested, flow) > stepIndexOf(reached, flow)
+    ? requested
+    : reached
+}
+
+/**
  * Agent Hub and the agent pages: where an account's agents are paused and the
  * account disconnected. None of the setup steps can do either.
  */

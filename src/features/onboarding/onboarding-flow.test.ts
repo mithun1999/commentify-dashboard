@@ -8,6 +8,7 @@ import {
   flowFor,
   getProgressSteps,
   onboardingRedirectTarget,
+  stepKeyToSave,
 } from './onboarding-flow'
 
 type Onboarding = IUser['metadata']['onboarding']
@@ -298,5 +299,45 @@ describe('getProgressSteps', () => {
 
   it('never shows AppSumo buyers the trial', () => {
     expect(keys('linkedin', true)).not.toContain('activate-trial')
+  })
+})
+
+describe('stepKeyToSave', () => {
+  it('moves saved progress forward', () => {
+    expect(stepKeyToSave('activate-trial', { stepKey: 'identity' })).toBe(
+      'activate-trial'
+    )
+  })
+
+  // A tab left open on connect-account, used after the same account had
+  // answered identity elsewhere: it asked for `preview`, and the trial page
+  // then bounced the account back to a question it had already answered.
+  it('keeps later progress when an earlier screen saves', () => {
+    expect(stepKeyToSave('preview', { stepKey: 'activate-trial' })).toBe(
+      'activate-trial'
+    )
+    expect(stepKeyToSave('identity', { stepKey: 'activate-trial' })).toBe(
+      'activate-trial'
+    )
+  })
+
+  it('goes backwards only when told to rewind', () => {
+    expect(
+      stepKeyToSave('extension', { stepKey: 'identity' }, 'linkedin', true)
+    ).toBe('extension')
+  })
+
+  it('reads progress saved as a number, and no progress at all', () => {
+    expect(stepKeyToSave('extension', { step: 6 })).toBe('activate-trial')
+    expect(stepKeyToSave('extension', undefined)).toBe('extension')
+  })
+
+  it('orders the steps by the flow the account is on', () => {
+    expect(
+      stepKeyToSave('post-settings', { stepKey: 'comment-settings' }, 'twitter')
+    ).toBe('comment-settings')
+    expect(
+      stepKeyToSave('preview', { stepKey: 'comment-settings' }, 'twitter-both')
+    ).toBe('preview')
   })
 })
