@@ -21,6 +21,7 @@ const FIELD_LABELS: Record<string, string> = {
   skipArticlePosts: 'Skip article posts',
   skipJobUpdatePosts: 'Skip job update posts',
   skipCompanyPosts: 'Skip company posts',
+  rules: 'Post evaluation rule',
 }
 
 function formatValue(value: unknown): string {
