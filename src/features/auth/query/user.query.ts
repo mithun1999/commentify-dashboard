@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '@/stores/auth.store'
+import { useOnboardingStore } from '@/stores/onboarding.store'
 import {
   flowFor,
-  resolveSavedStep,
   stepIndexOf,
+  stepKeyToSave,
   type OnboardingStepKey,
 } from '@/features/onboarding/onboarding-flow'
 import { getUser, updateOnboardingStatus } from '../api/user.api'
 import { IUser } from '../interface/user.interface'
-import { useAuthStore } from '@/stores/auth.store'
-import { useOnboardingStore } from '@/stores/onboarding.store'
 
 export enum UserQueryEnum {
   GET_USER = 'get-user',
@@ -59,28 +59,28 @@ export const useUpdateOnboardingStatus = () => {
     unknown,
     UpdateOnboardingArgs
   >({
-    mutationFn: ({ stepKey, rewind, ...rest }) => {
+    mutationFn: async ({ stepKey, rewind, ...rest }) => {
+      // Read the account again rather than trusting this tab's copy, which is
+      // as old as the tab. A wizard tab left open on an earlier step would
+      // otherwise save that step over progress made since in another tab. If
+      // the read fails the cached copy is the best there is, and the save
+      // should not be lost over it.
+      const current = await getUser().catch(() => user)
+      const onboarding = current?.metadata?.onboarding
       // The agent slug this call is writing outranks the saved one: the
       // agent-type step reports its pick and its next step together, and
       // reading the old slug there would order the steps by the flow the user
       // has just left.
       const flow = flowFor(
-        rest.selectedAgentType ?? user?.metadata?.onboarding?.selectedAgentType,
+        rest.selectedAgentType ?? onboarding?.selectedAgentType,
         { platform: pickedPlatform, capabilities: pickedCapabilities }
       )
-      const saved = resolveSavedStep(
-        {
-          stepKey: user?.metadata?.onboarding?.stepKey,
-          step: user?.metadata?.onboarding?.step,
-        },
-        flow
+      const target = stepKeyToSave(
+        stepKey,
+        { stepKey: onboarding?.stepKey, step: onboarding?.step },
+        flow,
+        rewind
       )
-      // Someone revisiting an earlier screen should not lose the ground they
-      // have already covered.
-      const target =
-        rewind || stepIndexOf(stepKey, flow) > stepIndexOf(saved, flow)
-          ? stepKey
-          : saved
       return updateOnboardingStatus({
         ...rest,
         stepKey: target,
